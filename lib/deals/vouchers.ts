@@ -28,27 +28,32 @@ async function readFromSupabase(): Promise<Coupon[] | null> {
 }
 
 export async function getVouchers(): Promise<Coupon[]> {
-  // 1. Đọc từ Supabase Cloud (được cập nhật bởi GitHub Actions)
+  const curated = getDailyShopeeCoupons();
+
+  // 1. Đọc thêm từ Supabase Cloud (được cập nhật bởi GitHub Actions) nếu có
+  let extraVouchers: Coupon[] = [];
   try {
     const cloudVouchers = await readFromSupabase();
     if (cloudVouchers && cloudVouchers.length > 0) {
-      return cloudVouchers;
+      extraVouchers = cloudVouchers;
     }
   } catch {}
 
-  // 2. Đọc từ file cache cục bộ nếu có
-  try {
-    const raw = await readFile(VOUCHER_CACHE_PATH, "utf-8");
-    const local = JSON.parse(raw);
-    if (Array.isArray(local) && local.length > 0) return local;
-  } catch {}
+  // 2. Đọc từ file cache cục bộ nếu không có từ cloud
+  if (extraVouchers.length === 0) {
+    try {
+      const raw = await readFile(VOUCHER_CACHE_PATH, "utf-8");
+      const local = JSON.parse(raw);
+      if (Array.isArray(local) && local.length > 0) {
+        extraVouchers = local;
+      }
+    } catch {}
+  }
 
-  try {
-    const rawFlash = await readFile(FLASH_SALE_CACHE_PATH, "utf-8");
-    const flash = JSON.parse(rawFlash);
-    if (Array.isArray(flash?.vouchers) && flash.vouchers.length > 0) return flash.vouchers;
-  } catch {}
+  // 3. Luôn đảm bảo các mã cố định và mã MXH (Facebook, Instagram, Youtube, Freeship, Mall, VIP)
+  // luôn xuất hiện đầu tiên, sau đó nối thêm các mã độc nhất khác từ cache/cloud
+  const curatedIds = new Set(curated.map((c) => c.id));
+  const uniqueExtras = extraVouchers.filter((v) => !curatedIds.has(v.id));
 
-  // 3. Fallback: Danh sách mã giảm giá Shopee thực tế được tính toán tự động theo ngày hiện tại
-  return getDailyShopeeCoupons();
+  return [...curated, ...uniqueExtras];
 }

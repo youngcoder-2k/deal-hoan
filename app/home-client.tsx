@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import type { User } from "@supabase/supabase-js";
@@ -7,6 +7,7 @@ import AccountModal from "@/app/components/account-modal";
 import { isAdminUser } from "@/lib/auth/admin";
 import { formatPrice, formatSold } from "@/lib/deals/format";
 import type { Deal, DealBundle, Coupon, CouponCategory, Platform } from "@/lib/deals/types";
+import { getDailyShopeeCoupons } from "@/lib/deals/coupons-static";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   buildShopeeAffiliateUrl,
@@ -429,10 +430,24 @@ export default function HomeClient({
   });
   const [tab, setTab] = useState(0);
   const [couponTab, setCouponTab] = useState<CouponCategory>("all");
+  const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [toast, setToast] = useState("");
 
-  const allCoupons = initialVouchers && initialVouchers.length > 0 ? initialVouchers : [];
+  const allCoupons = useMemo(() => {
+    const fallback = getDailyShopeeCoupons();
+    if (!initialVouchers || initialVouchers.length === 0) return fallback;
+    const hasSocial = initialVouchers.some(
+      (c) => c.category === "facebook" || c.socialType === "facebook",
+    );
+    if (!hasSocial) {
+      const fallbackIds = new Set(fallback.map((c) => c.id));
+      const extra = initialVouchers.filter((c) => !fallbackIds.has(c.id));
+      return [...fallback, ...extra];
+    }
+    return initialVouchers;
+  }, [initialVouchers]);
+
   const displayedCoupons =
     couponTab === "all"
       ? allCoupons
@@ -1345,6 +1360,41 @@ export default function HomeClient({
         </div>
       </section>
       <section className="container block" id="coupons">
+        {/* Hero banner section from preview.html */}
+        <div className="coupon-hero">
+          <div>
+            <div className="brand">
+              <span className="bag-logo">S</span> Shopee
+            </div>
+            <h2>
+              Mã giảm giá <span>Shopee</span>
+            </h2>
+            <p className="hero-sub">
+              Săn mã dễ dàng – mua sắm tiết kiệm – ưu tiên những mã hot nhất theo từng kênh.
+            </p>
+            <div className="benefits">
+              <div className="benefit">
+                <i>⚡</i>
+                <span>Cập nhật mỗi ngày</span>
+              </div>
+              <div className="benefit">
+                <i>✓</i>
+                <span>Áp dụng nhanh</span>
+              </div>
+              <div className="benefit">
+                <i>₫</i>
+                <span>Tiết kiệm hơn</span>
+              </div>
+            </div>
+          </div>
+          <div className="hero-art" aria-hidden="true">
+            <div className="coupon-float one">%</div>
+            <div className="coupon-float two">%</div>
+            <div className="coupon-float three">SALE</div>
+            <div className="shop-bag">Shopee</div>
+          </div>
+        </div>
+
         <div className="preview-section-head">
           <div>
             <h2>🔥 Mã giảm giá nổi bật</h2>
@@ -1357,7 +1407,10 @@ export default function HomeClient({
             <button
               key={t.key}
               className={`preview-tab ${couponTab === t.key ? "active" : ""}`}
-              onClick={() => setCouponTab(t.key)}
+              onClick={() => {
+                setCouponTab(t.key);
+                setShowAllCoupons(false);
+              }}
             >
               {t.label}
             </button>
@@ -1365,7 +1418,7 @@ export default function HomeClient({
         </div>
 
         <div className="preview-grid">
-          {displayedCoupons.map((c) => {
+          {displayedCoupons.slice(0, showAllCoupons ? undefined : 6).map((c) => {
             const theme = getCardLogoAndTheme(c);
             const isSocial =
               c.category === "facebook" ||
@@ -1428,6 +1481,26 @@ export default function HomeClient({
             );
           })}
         </div>
+
+        {displayedCoupons.length > 6 && (
+          <div className="preview-more-wrap">
+            <button
+              type="button"
+              className="preview-more-btn"
+              onClick={() => setShowAllCoupons((prev) => !prev)}
+            >
+              {showAllCoupons ? (
+                <>
+                  Thu gọn bớt <span>↑</span>
+                </>
+              ) : (
+                <>
+                  Xem thêm {displayedCoupons.length - 6} mã khác <span>↓</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
 
         <div className="preview-bottom">
           <div>

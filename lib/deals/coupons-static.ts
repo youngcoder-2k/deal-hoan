@@ -135,7 +135,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       url: "https://shopee.vn/m/shopee-live",
     },
     {
-      id: "shopee-coupon-mall-100k",
+      id: "shopee-coupon-mall-tech-100k",
       amount: "100k",
       unit: "hoàn xu",
       title: "Shopee Mall — Công nghệ & Đời sống chính hãng",
