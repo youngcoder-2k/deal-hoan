@@ -1146,11 +1146,6 @@ export default function HomeClient({
             <div className="flash-top-left">
               <h2>⚡ Deal chớp nhoáng</h2>
               <div className="flash-countdown-group">
-                {flashSlot && (
-                  <span className="flash-slot">
-                    {flashSlot}
-                  </span>
-                )}
                 <div className="timer">
                   <span>{tm[0]}</span>
                   <span className="timer-colon">:</span>
