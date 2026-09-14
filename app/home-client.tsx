@@ -908,7 +908,7 @@ export default function HomeClient({
                   if (linkInputRef.current) linkInputRef.current.scrollLeft = 0;
                 });
               }}
-              placeholder="Dán link sản phẩm Shopee, TikTok Shop hoặc Lazada…"
+              placeholder="Dán link sản phẩm Shopee, TikTok, Lazada…"
             />
             {link && (
               <button

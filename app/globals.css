@@ -206,13 +206,16 @@ header {
   min-width: 0;
   flex: 1;
 }
-.search input {
+.search input,
+.calculator input {
   font-family: "Be Vietnam Pro", sans-serif;
   font-size: 14px;
   color: #171717;
 }
-.search input::placeholder {
-  color: #737373;
+.search input::placeholder,
+.calculator input::placeholder {
+  color: #8e8e93;
+  font-size: 13.5px;
   opacity: 1;
 }
 .search button,
@@ -4064,6 +4067,12 @@ select.account-input.select-bank-field:focus {
     padding: 0 8px;
     text-overflow: ellipsis;
   }
+  .calculator input::placeholder {
+    font-size: 12.5px !important;
+    color: #8e8e93;
+    letter-spacing: -0.15px;
+    line-height: normal;
+  }
   .calculator-clear {
     width: 28px;
     height: 28px;
@@ -5028,6 +5037,9 @@ select.account-input.select-bank-field:focus {
     font-size: 11.5px;
     min-height: 30px;
     padding: 4px 14px;
+  }
+  .calculator input::placeholder {
+    font-size: 11.5px !important;
   }
   .buy-modal {
     padding: 16px 14px 0;
