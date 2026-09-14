@@ -1626,8 +1626,10 @@ export default function HomeClient({
             <span className="modal-badge">🛡 Lưu ý trước khi mua</span>
             <h3>Để không mất hoàn tiền</h3>
             <p>
-              Đây là các lỗi thường gặp khiến đơn không được ghi nhận hoặc bị
-              sàn từ chối.{" "}
+              <span className="buy-sub-desktop">
+                Đây là các lỗi thường gặp khiến đơn không được ghi nhận hoặc bị
+                sàn từ chối.{" "}
+              </span>
               <a href="#how" onClick={() => setBuyOpen(false)}>
                 Xem hướng dẫn ▸
               </a>
@@ -1643,8 +1645,8 @@ export default function HomeClient({
                   "sau khi đã mở link hoàn tiền.",
                 ],
                 [
-                  "Chờ khoảng 10 giây",
-                  "sau khi mở app sàn rồi mới đặt hàng — không thao tác quá nhanh.",
+                  "Chờ khoảng 10 giây sau khi mở app",
+                  "rồi mới đặt hàng — không thao tác quá nhanh.",
                 ],
                 [
                   "Không dùng trình duyệt ẩn danh",
@@ -1655,14 +1657,15 @@ export default function HomeClient({
                   "hoặc tài khoản liên quan nếu sàn không cho phép.",
                 ],
                 [
-                  "Đơn huỷ, hoàn trả hoặc không hợp lệ",
-                  "sẽ không được hoàn tiền.",
+                  "Đơn huỷ, hoàn trả không được hoàn tiền",
+                  "theo quy định đối soát của sàn.",
                 ],
               ].map(([head, body]) => (
                 <div key={head}>
                   <b>✓</b>
                   <span>
-                    <strong>{head}</strong> {body}
+                    <strong>{head}</strong>{" "}
+                    <span className="buy-rule-body">{body}</span>
                   </span>
                 </div>
               ))}
@@ -1700,7 +1703,8 @@ export default function HomeClient({
                     );
                   }}
                 >
-                  Tôi đã đọc, tiếp tục mua hàng →
+                  <span className="buy-btn-desktop">Tôi đã đọc, tiếp tục mua hàng →</span>
+                  <span className="buy-btn-mobile">Tiếp tục mua hàng →</span>
                 </button>
               </div>
             </div>

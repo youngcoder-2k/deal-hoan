@@ -900,6 +900,18 @@ h2,
   background: #dcfce7;
   color: #16a34a;
 }
+.buy-rule-body {
+  display: inline;
+}
+.buy-sub-desktop {
+  display: inline;
+}
+.buy-btn-desktop {
+  display: inline;
+}
+.buy-btn-mobile {
+  display: none;
+}
 .buy-actions {
   display: flex;
   justify-content: flex-end;
@@ -4697,77 +4709,91 @@ select.account-input.select-bank-field:focus {
     padding: 5px 11px;
   }
   .buy-modal h3 {
-    font-size: 19px;
-    margin: 10px 0 6px;
-    letter-spacing: -0.4px;
+    font-size: 17.5px;
+    margin: 8px 0 4px;
+    letter-spacing: -0.3px;
   }
   .buy-modal > p {
-    font-size: 13px;
-    line-height: 1.5;
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 0;
+  }
+  .buy-sub-desktop {
+    display: none !important;
   }
   .buy-rules {
     grid-template-columns: 1fr;
-    gap: 8px;
-    margin-top: 14px;
+    gap: 6px;
+    margin-top: 10px;
   }
   .buy-rules div {
-    padding: 10px 12px;
-    border-radius: 11px;
+    padding: 7px 10px;
+    border-radius: 9px;
     gap: 8px;
-    font-size: 12.5px;
-    line-height: 1.45;
+    font-size: 12px;
+    line-height: 1.35;
+    align-items: center;
   }
   .buy-rules div span {
-    font-size: 12.5px;
-    line-height: 1.45;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .buy-rules div strong {
+    font-size: 12px;
+    font-weight: 700;
   }
   .buy-rules b {
-    width: 20px;
-    height: 20px;
-    font-size: 11px;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+  }
+  .buy-rule-body {
+    display: none !important;
   }
   .buy-warning {
-    margin-top: 10px;
-    padding: 10px 12px;
-    font-size: 12px;
-    line-height: 1.5;
-    border-radius: 11px;
+    display: none !important;
   }
   .buy-bottom {
     display: block;
-    padding: 14px 0 16px;
+    padding: 10px 0 12px;
   }
   .buy-dont-show {
-    margin-bottom: 12px;
-    font-size: 13px;
+    margin-bottom: 8px;
+    font-size: 12px;
   }
   .buy-actions {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
   }
   .buy-actions .primary,
   .buy-actions > button:first-child {
     width: 100%;
-    height: 48px;
-    font-size: 14px;
+    height: 44px;
+    font-size: 13.5px;
     font-weight: 700;
-    border-radius: 12px;
+    border-radius: 11px;
   }
   .buy-actions > button:first-child {
-    height: 42px;
-    font-size: 13.5px;
+    height: 38px;
+    font-size: 12.5px;
     font-weight: 600;
   }
   .buy-actions .primary {
     order: -1;
   }
+  .buy-btn-desktop {
+    display: none !important;
+  }
+  .buy-btn-mobile {
+    display: inline !important;
+  }
   .buy-modal > footer {
     margin: 0 -18px;
-    padding: 11px 18px calc(11px + env(safe-area-inset-bottom, 0px));
-    font-size: 11px;
-    line-height: 1.45;
+    padding: 8px 18px calc(8px + env(safe-area-inset-bottom, 0px));
+    font-size: 10.5px;
+    line-height: 1.35;
   }
 
   /* Account Modal Mobile Bottom Sheet */
