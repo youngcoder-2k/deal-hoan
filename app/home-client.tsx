@@ -468,7 +468,7 @@ export default function HomeClient({
     return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
   });
   const [busy, setBusy] = useState(false);
-  const [calcTimer, setCalcTimer] = useState(0);
+  const [calcPercent, setCalcPercent] = useState(1);
   const [inputError, setInputError] = useState(false);
   const [refCopied, setRefCopied] = useState(false);
   const [trackedLink, setTrackedLink] = useState("");
@@ -509,14 +509,22 @@ export default function HomeClient({
   }, [user]);
 
   useEffect(() => {
-    if (!busy) return;
-    const start = Date.now();
+    if (!busy) {
+      setCalcPercent(1);
+      return;
+    }
+    setCalcPercent(1);
     const interval = setInterval(() => {
-      setCalcTimer((Date.now() - start) / 1000);
-    }, 100);
+      setCalcPercent((prev) => {
+        if (prev >= 95) return prev;
+        if (prev < 35) return prev + Math.floor(Math.random() * 4 + 3);
+        if (prev < 70) return prev + Math.floor(Math.random() * 3 + 2);
+        if (prev < 88) return prev + 1;
+        return Math.min(95, prev + (Math.random() > 0.6 ? 1 : 0));
+      });
+    }, 45);
     return () => {
       clearInterval(interval);
-      setCalcTimer(0);
     };
   }, [busy]);
 
@@ -547,9 +555,11 @@ export default function HomeClient({
       if (flashPauseTimeoutRef.current) clearTimeout(flashPauseTimeoutRef.current);
     };
   }, []);
+  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const notify = (m: string) => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast(m);
-    setTimeout(() => setToast(""), 2400);
+    toastTimeoutRef.current = setTimeout(() => setToast(""), 2400);
   };
 
   const toggleFavoriteDeal = (deal: Deal, e?: React.MouseEvent) => {
@@ -592,13 +602,13 @@ export default function HomeClient({
     notify(
       exists
         ? "Đã bỏ lưu deal"
-        : "❤️ Đã lưu deal vào danh sách yêu thích",
+        : "❤️ Đã lưu vào yêu thích",
     );
   };
   const signInWithGoogle = async () => {
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
-      notify("Đang mở tài khoản Demo để trải nghiệm chức năng ví & rút tiền...");
+      notify("Đang mở tài khoản Demo...");
       const demoUser = {
         id: "demo-user-123",
         email: "demo@dealhoan.vn",
@@ -625,7 +635,7 @@ export default function HomeClient({
     });
     if (error) {
       setAuthPending(false);
-      notify("Không thể mở đăng nhập Google. Vui lòng thử lại.");
+      notify("Lỗi đăng nhập, vui lòng thử lại");
     }
   };
   const signOut = async () => {
@@ -633,14 +643,14 @@ export default function HomeClient({
     if (!supabase) {
       setUser(null);
       setUserBalance(null);
-      notify("Đã đăng xuất tài khoản Demo");
+      notify("Đã đăng xuất Demo");
       return;
     }
 
     setAuthPending(true);
     const { error } = await supabase.auth.signOut();
     setAuthPending(false);
-    if (error) return notify("Không thể đăng xuất. Vui lòng thử lại.");
+    if (error) return notify("Lỗi đăng xuất, vui lòng thử lại");
     setUser(null);
     setUserBalance(null);
     notify("Đã đăng xuất");
@@ -682,7 +692,7 @@ export default function HomeClient({
       setTimeout(() => {
         (document.activeElement as HTMLElement | null)?.blur();
       }, 1000);
-      return notify("Dán link sản phẩm trước đã nhé 🙂");
+      return notify("Vui lòng dán link sản phẩm 🙂");
     }
 
     if (rawClean && rawClean !== targetUrl) {
@@ -701,13 +711,15 @@ export default function HomeClient({
       const localTracked = isShopeeUrl(trimmed)
         ? buildShopeeAffiliateUrl(trimmed, { subId })
         : buildCustomShortUrl(trimmed, { baseUrl, subId });
+      setCalcPercent(100);
+      await new Promise((r) => setTimeout(r, 180));
       setCalculatedProduct(chipProduct);
       setTrackedLink(localTracked);
       setCopiedTracked(false);
       setResultClosing(false);
       setResult(chipProduct.platform);
       setBusy(false);
-      notify("Đã tính xong — đã gắn mã hoàn tiền 100% DealHoàn");
+      notify("✓ Đã gắn mã hoàn tiền DealHoàn");
       return;
     }
 
@@ -719,6 +731,8 @@ export default function HomeClient({
 
     // 3. Wait until server returns ALL real data before dropping down receipt
     const allAvailableDeals = [...hotDeals, ...flashDeals];
+    let resolvedProduct: CalculatedProduct | null = null;
+    let resolvedTracked = "";
     try {
       const res = await fetch("/api/deals/resolve", {
         method: "POST",
@@ -729,34 +743,35 @@ export default function HomeClient({
       if (res.ok) {
         const data = await res.json();
         if (data.product) {
-          // Set full data first
-          setCalculatedProduct(data.product);
+          resolvedProduct = data.product;
           if (data.trackedLink) {
-            setTrackedLink(data.trackedLink);
+            resolvedTracked = data.trackedLink;
           }
-          setCopiedTracked(false);
-          setResultClosing(false);
-          // ONLY drop down the receipt after all data is completely ready
-          setResult(data.product.platform);
         }
       } else {
         throw new Error("Server resolve failed");
       }
     } catch {
       // Fallback only if server request completely fails
-      const localProduct = resolveProductLocally(trimmed, allAvailableDeals);
+      resolvedProduct = resolveProductLocally(trimmed, allAvailableDeals);
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
-      const localTracked = isShopeeUrl(trimmed)
+      resolvedTracked = isShopeeUrl(trimmed)
         ? buildShopeeAffiliateUrl(trimmed, { subId })
         : buildCustomShortUrl(trimmed, { baseUrl, subId });
-      setCalculatedProduct(localProduct);
-      setTrackedLink(localTracked);
-      setCopiedTracked(false);
-      setResultClosing(false);
-      setResult(localProduct.platform);
     } finally {
+      if (resolvedProduct) {
+        setCalcPercent(100);
+        await new Promise((r) => setTimeout(r, 200));
+        setCalculatedProduct(resolvedProduct);
+        if (resolvedTracked) {
+          setTrackedLink(resolvedTracked);
+        }
+        setCopiedTracked(false);
+        setResultClosing(false);
+        setResult(resolvedProduct.platform);
+      }
       setBusy(false);
-      notify("Đã tính xong — đã gắn mã hoàn tiền 100% DealHoàn");
+      notify("✓ Đã gắn mã hoàn tiền DealHoàn");
     }
   };
 
@@ -940,7 +955,7 @@ export default function HomeClient({
                 <span className="calculating-content">
                   <span className="calc-spinner" aria-hidden="true" />
                   <span>Đang tính…</span>
-                  <span className="calc-timer-tag">{calcTimer.toFixed(1)}s</span>
+                  <span className="calc-timer-tag">{calcPercent}%</span>
                 </span>
               ) : (
                 "⚡ Tính hoàn tiền"
@@ -967,7 +982,7 @@ export default function HomeClient({
                         confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
                       } catch {}
                       setTimeout(() => setCopiedTracked(false), 1500);
-                      notify("Đã copy link hoàn tiền");
+                      notify("✓ Đã copy link hoàn tiền");
                     }}
                     onBuy={() => {
                       if (buyDontShow) {
@@ -976,9 +991,7 @@ export default function HomeClient({
                           "_blank",
                           "noopener",
                         );
-                        notify(
-                          `Đã mở ${result} — ghi nhận trong 24 giờ, nhận hoàn sau 14–15 ngày`,
-                        );
+                        notify(`Đang chuyển tới ${result}...`);
                       } else setBuyOpen(true);
                     }}
                     onClear={() => {
@@ -1450,9 +1463,7 @@ export default function HomeClient({
                     onClick={() => {
                       linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
                       linkInputRef.current?.focus();
-                      notify(
-                        `⚡ Đang chọn ${c.title}! Hãy dán link sản phẩm Shopee vào ô trên để DealHoàn tạo link săn mã giảm giá.`
-                      );
+                      notify("⚡ Dán link sản phẩm vào ô trên nhé");
                     }}
                   >
                     Lấy mã ngay <span>→</span>
@@ -1467,7 +1478,7 @@ export default function HomeClient({
                       if (c.code) {
                         navigator.clipboard?.writeText(c.code);
                         setCopiedCode(c.code);
-                        notify(`✓ Đã copy mã ${c.code} — Đang mở Shopee để bạn lưu mã...`);
+                        notify(`✓ Đã copy mã ${c.code}`);
                         setTimeout(() => setCopiedCode(null), 3000);
                       }
                     }}
@@ -1569,7 +1580,7 @@ export default function HomeClient({
                   confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
                 } catch {}
                 setTimeout(() => setRefCopied(false), 2500);
-                notify("Đã copy link giới thiệu của bạn");
+                notify("✓ Đã copy link giới thiệu");
               }}
             >
               {refCopied ? "✓ Đã copy link" : "Copy link giới thiệu"}
@@ -1698,9 +1709,7 @@ export default function HomeClient({
                       "_blank",
                       "noopener",
                     );
-                    notify(
-                      `Đã mở ${result} — ghi nhận trong 24 giờ, nhận hoàn sau 14–15 ngày`,
-                    );
+                    notify(`Đang chuyển tới ${result}...`);
                   }}
                 >
                   <span className="buy-btn-desktop">Tôi đã đọc, tiếp tục mua hàng →</span>

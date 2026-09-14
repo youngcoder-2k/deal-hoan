@@ -379,13 +379,15 @@ h2,
   max-width: 720px;
   margin: 0 auto 14px;
   padding: 9px;
-  border: 1.5px solid #ececec;
+  border: 1.5px solid #ee4d2d;
   border-radius: 16px;
   background: #fff;
-  box-shadow: 0 16px 40px #ee4d2d1a;
+  box-shadow: 0 16px 40px rgba(238, 77, 45, 0.12);
+  transition: box-shadow 0.2s ease;
 }
 .calculator:focus-within {
   border-color: #ee4d2d;
+  box-shadow: 0 18px 44px rgba(238, 77, 45, 0.22);
 }
 .calculator.input-error {
   border-color: #f87171;
@@ -459,7 +461,12 @@ h2,
   }
 }
 .calc-timer-tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
   background: rgba(0, 0, 0, 0.2);
   padding: 2px 6px;
   border-radius: 6px;
@@ -2706,16 +2713,19 @@ h2,
 }
 .toast {
   position: fixed;
-  z-index: 100;
+  z-index: 99999;
+  top: 24px;
   right: 24px;
-  bottom: 24px;
-  padding: 12px 20px;
+  max-width: 400px;
+  padding: 11px 18px;
   border-radius: 12px;
   background: #171717;
   color: #fff;
-  box-shadow: 0 12px 32px #0004;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
   font-size: 13.5px;
   font-weight: 600;
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  pointer-events: none;
 }
 @keyframes pulse {
   50% {
@@ -3899,15 +3909,18 @@ select.account-input.select-bank-field:focus {
     font-size: 14px;
   }
   .toast {
-    right: auto;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100vw - 32px);
-    max-width: 380px;
+    top: max(16px, env(safe-area-inset-top, 16px));
+    right: 16px;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: auto;
+    max-width: calc(100vw - 32px);
     font-size: 12.5px;
-    padding: 10px 14px;
-    text-align: center;
+    padding: 10px 15px;
+    text-align: left;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.24);
   }
   .container {
     padding-left: 16px;
@@ -4049,6 +4062,7 @@ select.account-input.select-bank-field:focus {
     flex-wrap: wrap;
     gap: 8px;
     padding: 8px;
+    border: 1.5px solid #ee4d2d;
     border-radius: 14px;
     box-shadow: 0 10px 30px rgba(238, 77, 45, 0.12);
   }
@@ -4916,15 +4930,15 @@ select.account-input.select-bank-field:focus {
 
   /* Toast notification */
   .toast {
-    right: auto;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: calc(100vw - 32px);
-    max-width: 380px;
-    font-size: 12.5px;
-    padding: 10px 14px;
-    text-align: center;
+    top: max(12px, env(safe-area-inset-top, 12px));
+    right: 12px;
+    bottom: auto;
+    left: auto;
+    transform: none;
+    width: auto;
+    max-width: calc(100vw - 24px);
+    font-size: 12px;
+    padding: 9px 13px;
   }
 }
 

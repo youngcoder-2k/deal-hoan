@@ -219,8 +219,8 @@ export default function AdminUsersClient({
         }
         showToast(
           data.isRealData
-            ? `✓ Đã cập nhật ${data.users.length} người dùng thật từ CSDL`
-            : "✓ Đã cập nhật dữ liệu mới nhất"
+            ? `✓ Đã tải CSDL (${data.users.length} user)`
+            : "✓ Đã làm mới dữ liệu"
         );
       } else {
         showToast("⚠️ " + (data.error || "Không thể tải dữ liệu"));
@@ -294,7 +294,7 @@ export default function AdminUsersClient({
           localStorage.setItem("dealhoan_admin_balance_overrides", JSON.stringify(map));
         } catch {}
 
-        showToast("✅ Đã cập nhật số dư cho " + selectedUser.fullName);
+        showToast("✅ Đã cập nhật số dư");
         setUsers((prev) =>
           prev.map((u) =>
             u.id === selectedUser.id
@@ -352,8 +352,8 @@ export default function AdminUsersClient({
       if (res.ok) {
         showToast(
           newStatus === "completed"
-            ? "✅ Đã xác nhận chuyển tiền thành công!"
-            : "❌ Đã từ chối lệnh rút tiền"
+            ? "✅ Đã duyệt chuyển tiền"
+            : "❌ Đã từ chối lệnh rút"
         );
         setUserWithdrawals((prev) =>
           prev.map((w) =>
@@ -363,14 +363,14 @@ export default function AdminUsersClient({
         refreshData();
       }
     } catch {
-      showToast("⚠️ Lỗi khi cập nhật trạng thái lệnh rút");
+      showToast("⚠️ Lỗi cập nhật lệnh rút");
     }
   };
 
   // Xuất file CSV danh sách người dùng & ngân hàng
   const exportToCsv = () => {
     if (filteredUsers.length === 0) {
-      return showToast("⚠️ Không có người dùng nào để xuất file");
+      return showToast("⚠️ Không có dữ liệu để xuất file");
     }
 
     const headers = [
@@ -418,7 +418,7 @@ export default function AdminUsersClient({
     link.click();
     document.body.removeChild(link);
 
-    showToast(`📥 Đã tải xuống CSV (${filteredUsers.length} người dùng)`);
+    showToast(`📥 Đã xuất CSV (${filteredUsers.length} user)`);
   };
 
   // Lọc và sắp xếp phía Client

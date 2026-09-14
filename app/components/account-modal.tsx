@@ -297,16 +297,16 @@ export default function AccountModal({
     const cleanName = accountName.trim().toUpperCase();
 
     if (!bankName) {
-      return onNotify("⚠️ Vui lòng chọn ngân hàng nhận tiền!");
+      return onNotify("⚠️ Vui lòng chọn ngân hàng!");
     }
     if (!cleanNo || cleanNo.length < 6 || cleanNo.length > 20) {
-      return onNotify("⚠️ Số tài khoản ngân hàng không hợp lệ (phải từ 6 đến 20 chữ số)!");
+      return onNotify("⚠️ STK phải từ 6 - 20 số!");
     }
     if (!cleanName || cleanName.length < 3) {
-      return onNotify("⚠️ Tên chủ tài khoản phải có ít nhất 3 ký tự!");
+      return onNotify("⚠️ Tên chủ tài khoản từ 3 ký tự!");
     }
     if (/[0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(cleanName)) {
-      return onNotify("⚠️ Tên chủ tài khoản chỉ gồm chữ cái, không chứa số hoặc ký tự đặc biệt!");
+      return onNotify("⚠️ Tên tài khoản không chứa số/ký tự đặc biệt!");
     }
 
     // 1. Lưu ngay vào localStorage
@@ -339,7 +339,7 @@ export default function AccountModal({
       if (res.ok) {
         setBankSavedSuccess(true);
         setTimeout(() => setBankSavedSuccess(false), 3000);
-        onNotify("✅ Đã lưu thông tin tài khoản ngân hàng");
+        onNotify("✅ Đã lưu tài khoản ngân hàng");
         setWallet((prev) => ({
           ...prev,
           bank_name: bankName,
@@ -347,10 +347,10 @@ export default function AccountModal({
           bank_account_name: cleanName,
         }));
       } else {
-        onNotify(data.error || "Không thể lưu thông tin ngân hàng.");
+        onNotify("⚠️ " + (data.error || "Không thể lưu thông tin"));
       }
     } catch {
-      onNotify("✅ Đã ghi nhớ tài khoản trên thiết bị của bạn");
+      onNotify("✅ Đã lưu trên thiết bị");
       setWallet((prev) => ({
         ...prev,
         bank_name: bankName,
@@ -387,7 +387,7 @@ export default function AccountModal({
       const data = await res.json();
 
       if (res.ok) {
-        onNotify(`🎉 ${data.message || "Tạo yêu cầu rút tiền thành công!"}`);
+        onNotify("🎉 Đã tạo yêu cầu rút tiền!");
         setWithdrawAmount("");
         setWallet((prev) => ({
           ...prev,
