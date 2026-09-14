@@ -42,7 +42,17 @@ export interface DealProvider {
   fetchDeals(): Promise<Deal[]>;
 }
 
-export type CouponCategory = "all" | "toan_san" | "freeship" | "vip" | "mall" | "live";
+export type CouponCategory =
+  | "all"
+  | "social"
+  | "facebook"
+  | "instagram"
+  | "youtube"
+  | "toan_san"
+  | "freeship"
+  | "vip"
+  | "mall"
+  | "live";
 
 export type Coupon = {
   id: string;
@@ -51,9 +61,12 @@ export type Coupon = {
   title: string;
   condition: string;
   code: string;
-  color: "orange" | "black" | "green" | "blue";
+  color: "orange" | "black" | "green" | "blue" | "red" | "pink";
   category: CouponCategory;
   platform?: Platform;
   url?: string;
+  socialType?: "facebook" | "instagram" | "youtube";
+  badge?: string;
+  usagePercent?: number;
 };
 

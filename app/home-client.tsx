@@ -54,6 +54,9 @@ const HOT_SORTERS: ((a: Deal, b: Deal) => number)[] = [
 
 const COUPON_TABS: { key: CouponCategory; label: string }[] = [
   { key: "all", label: "Tất cả" },
+  { key: "facebook", label: "🔵 Facebook" },
+  { key: "instagram", label: "🟣 Instagram" },
+  { key: "youtube", label: "🔴 YouTube" },
   { key: "toan_san", label: "Toàn sàn" },
   { key: "freeship", label: "Freeship 0đ" },
   { key: "vip", label: "Gói Shopee VIP" },
@@ -342,6 +345,14 @@ export default function HomeClient({
   const displayedCoupons =
     couponTab === "all"
       ? allCoupons
+      : couponTab === "social"
+      ? allCoupons.filter(
+          (c) =>
+            c.category === "facebook" ||
+            c.category === "instagram" ||
+            c.category === "youtube" ||
+            c.category === "social",
+        )
       : allCoupons.filter((c) => c.category === couponTab);
 
 
@@ -1260,6 +1271,17 @@ export default function HomeClient({
         </div>
 
         <div className="coupon-hubs">
+          <button
+            type="button"
+            className="coupon-hub-pill social"
+            onClick={() => setCouponTab("facebook")}
+          >
+            <span className="hub-icon">📱</span>
+            <div>
+              <b>Mã Mạng Xã Hội</b>
+              <small>Facebook 25% · IG · YT ↓</small>
+            </div>
+          </button>
           <a
             href={getAffiliateUrl("https://shopee.vn/m/ma-giam-gia")}
             target="_blank"
@@ -1310,37 +1332,82 @@ export default function HomeClient({
           ))}
         </div>
         <div className="coupon-grid">
-          {displayedCoupons.map((c) => (
-            <article className={"coupon " + c.color} key={c.id}>
-              <div>
-                <b>{c.amount}</b>
-                <small>{c.unit}</small>
-              </div>
-              <section>
-                <strong>{c.title}</strong>
-                <p>{c.condition}</p>
-                <footer>
-                  <code>{c.code}</code>
-                  <a
-                    href={getAffiliateUrl(c.url || "https://shopee.vn/m/ma-giam-gia")}
-                    target="_blank"
-                    rel="noopener noreferrer nofollow"
-                    className="coupon-action-btn"
-                    onClick={() => {
-                      if (c.code) {
-                        navigator.clipboard?.writeText(c.code);
-                        setCopiedCode(c.code);
-                        notify(`✓ Đã copy mã ${c.code} — Đang mở Shopee để bạn lưu mã...`);
-                        setTimeout(() => setCopiedCode(null), 3000);
-                      }
-                    }}
-                  >
-                    {copiedCode === c.code ? "✓ Đang mở Shopee" : "Lấy mã & Mở App ↗"}
-                  </a>
-                </footer>
-              </section>
-            </article>
-          ))}
+          {displayedCoupons.map((c) => {
+            const isSocial =
+              c.category === "facebook" ||
+              c.category === "instagram" ||
+              c.category === "youtube" ||
+              c.category === "social";
+
+            return (
+              <article className={"coupon " + c.color} key={c.id}>
+                <div>
+                  {c.category === "facebook" ? (
+                    <span className="coupon-brand-icon fb">f</span>
+                  ) : c.category === "instagram" ? (
+                    <span className="coupon-brand-icon ig">📸</span>
+                  ) : c.category === "youtube" ? (
+                    <span className="coupon-brand-icon yt">▶</span>
+                  ) : null}
+                  <b>{c.amount}</b>
+                  <small>{c.unit}</small>
+                </div>
+                <section>
+                  <div className="coupon-top-row">
+                    <strong>{c.title}</strong>
+                    {c.badge && <span className={`coupon-badge ${c.category}`}>{c.badge}</span>}
+                  </div>
+                  <p>{c.condition}</p>
+                  {typeof c.usagePercent === "number" && (
+                    <div className="coupon-progress-wrap">
+                      <div className="coupon-progress-bar">
+                        <div
+                          className="coupon-progress-fill"
+                          style={{ width: `${c.usagePercent}%` }}
+                        />
+                      </div>
+                      <small className="coupon-usage-text">Đã dùng {c.usagePercent}%</small>
+                    </div>
+                  )}
+                  <footer>
+                    <code>{c.code}</code>
+                    {isSocial ? (
+                      <button
+                        type="button"
+                        className="coupon-action-btn social-btn"
+                        onClick={() => {
+                          linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                          linkInputRef.current?.focus();
+                          notify(
+                            `⚡ Đang chọn ${c.title}! Hãy dán link sản phẩm Shopee vào ô trên để DealHoàn tạo link săn mã giảm giá.`
+                          );
+                        }}
+                      >
+                        Săn mã này ↗
+                      </button>
+                    ) : (
+                      <a
+                        href={getAffiliateUrl(c.url || "https://shopee.vn/m/ma-giam-gia")}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="coupon-action-btn"
+                        onClick={() => {
+                          if (c.code) {
+                            navigator.clipboard?.writeText(c.code);
+                            setCopiedCode(c.code);
+                            notify(`✓ Đã copy mã ${c.code} — Đang mở Shopee để bạn lưu mã...`);
+                            setTimeout(() => setCopiedCode(null), 3000);
+                          }
+                        }}
+                      >
+                        {copiedCode === c.code ? "✓ Đang mở Shopee" : "Lấy mã & Mở App ↗"}
+                      </a>
+                    )}
+                  </footer>
+                </section>
+              </article>
+            );
+          })}
         </div>
       </section>
       <section className="container block" id="how">
