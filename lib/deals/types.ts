@@ -59,6 +59,7 @@ export type Coupon = {
   amount: string;
   unit: string;
   title: string;
+  subtitle?: string;
   condition: string;
   code: string;
   color: "orange" | "black" | "green" | "blue" | "red" | "pink";

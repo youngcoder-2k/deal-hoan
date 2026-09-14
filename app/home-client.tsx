@@ -54,15 +54,106 @@ const HOT_SORTERS: ((a: Deal, b: Deal) => number)[] = [
 
 const COUPON_TABS: { key: CouponCategory; label: string }[] = [
   { key: "all", label: "Tất cả" },
-  { key: "facebook", label: "🔵 Facebook" },
-  { key: "instagram", label: "🟣 Instagram" },
-  { key: "youtube", label: "🔴 YouTube" },
-  { key: "toan_san", label: "Toàn sàn" },
-  { key: "freeship", label: "Freeship 0đ" },
-  { key: "vip", label: "Gói Shopee VIP" },
+  { key: "social", label: "Mạng xã hội" },
+  { key: "freeship", label: "Freeship" },
   { key: "mall", label: "Shopee Mall" },
-  { key: "live", label: "Shopee Live" },
+  { key: "vip", label: "Shopee VIP" },
 ];
+
+function getCardLogoAndTheme(c: Coupon) {
+  const cat = c.category;
+  if (cat === "facebook" || c.socialType === "facebook") {
+    return {
+      cardClass: "fb-card",
+      logoClass: "fb",
+      tag: c.badge || "ĐỘC QUYỀN",
+      svg: (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M14 8h3V4.5c-.5-.1-2-.2-3.4-.2-3.3 0-5.6 2-5.6 5.7V13H4v4h4v7h5v-7h3.4l.6-4H13V10.4C13 9.2 13.4 8 14 8z" />
+        </svg>
+      ),
+    };
+  }
+  if (cat === "instagram" || c.socialType === "instagram") {
+    return {
+      cardClass: "ig-card",
+      logoClass: "ig",
+      tag: c.badge || "ĐỘC QUYỀN",
+      svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="3" width="18" height="18" rx="5" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none" />
+        </svg>
+      ),
+    };
+  }
+  if (cat === "youtube" || c.socialType === "youtube") {
+    return {
+      cardClass: "yt-card",
+      logoClass: "yt",
+      tag: c.badge || "ĐỘC QUYỀN",
+      svg: (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22 12s0-3.4-.4-5c-.2-1-1-1.8-2-2C18 4.5 12 4.5 12 4.5S6 4.5 4.4 5c-1 .2-1.8 1-2 2C2 8.6 2 12 2 12s0 3.4.4 5c.2 1 1 1.8 2 2 1.6.5 7.6.5 7.6.5s6 0 7.6-.5c1-.2 1.8-1 2-2 .4-1.6.4-5 .4-5zM10 15.5v-7l6 3.5-6 3.5z" />
+        </svg>
+      ),
+    };
+  }
+  if (cat === "freeship") {
+    return {
+      cardClass: "ship-card",
+      logoClass: "ship",
+      tag: c.badge || "TOÀN SÀN",
+      svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M3 6h11v10H3z" />
+          <path d="M14 10h4l3 3v3h-7z" />
+          <circle cx="7" cy="18" r="2" />
+          <circle cx="18" cy="18" r="2" />
+        </svg>
+      ),
+    };
+  }
+  if (cat === "mall") {
+    return {
+      cardClass: "mall-card",
+      logoClass: "mall",
+      tag: c.badge || "SHOPEE MALL",
+      svg: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 8h12l-1 12H7L6 8z" />
+          <path d="M9 8V6a3 3 0 0 1 6 0v2" />
+        </svg>
+      ),
+    };
+  }
+  if (cat === "vip") {
+    return {
+      cardClass: "vip-card",
+      logoClass: "vip",
+      tag: c.badge || "THÀNH VIÊN",
+      svg: (
+        <svg viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 8l4 3 5-6 5 6 4-3-2 11H5L3 8z" />
+        </svg>
+      ),
+    };
+  }
+  return {
+    cardClass: "ship-card",
+    logoClass: "ship",
+    tag: c.badge || "TOÀN SÀN",
+    svg: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M3 6h11v10H3z" />
+        <path d="M14 10h4l3 3v3h-7z" />
+        <circle cx="7" cy="18" r="2" />
+        <circle cx="18" cy="18" r="2" />
+      </svg>
+    ),
+  };
+}
 
 function LazadaLogo({ color = "#0F4C81" }: { color?: string }) {
   return (
@@ -1254,85 +1345,28 @@ export default function HomeClient({
         </div>
       </section>
       <section className="container block" id="coupons">
-        <div className="heading heading-with-sub">
-          <div className="heading-main">
-            <h2>Mã giảm giá nổi bật</h2>
-            <a
-              href={getAffiliateUrl("https://shopee.vn/m/ma-giam-gia")}
-              target="_blank"
-              rel="noopener noreferrer nofollow"
-            >
-              Tất cả mã Shopee →
-            </a>
+        <div className="preview-section-head">
+          <div>
+            <h2>🔥 Mã giảm giá nổi bật</h2>
+            <p>Chọn nhanh theo kênh hoặc loại ưu đãi bạn quan tâm.</p>
           </div>
-          <p className="deal-source">
-            Mã giảm giá Shopee hôm nay — tự động cập nhật và áp cùng cashback hoàn tiền.
-          </p>
         </div>
 
-        <div className="coupon-hubs">
-          <button
-            type="button"
-            className="coupon-hub-pill social"
-            onClick={() => setCouponTab("facebook")}
-          >
-            <span className="hub-icon">📱</span>
-            <div>
-              <b>Mã Mạng Xã Hội</b>
-              <small>Facebook 25% · IG · YT ↓</small>
-            </div>
-          </button>
-          <a
-            href={getAffiliateUrl("https://shopee.vn/m/ma-giam-gia")}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="coupon-hub-pill"
-          >
-            <span className="hub-icon">🎟️</span>
-            <div>
-              <b>Kho Voucher Toàn Sàn</b>
-              <small>shopee.vn/m/ma-giam-gia ↗</small>
-            </div>
-          </a>
-          <a
-            href={getAffiliateUrl("https://shopee.vn/m/mien-phi-van-chuyen")}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="coupon-hub-pill"
-          >
-            <span className="hub-icon">🚚</span>
-            <div>
-              <b>Mã Freeship 0đ</b>
-              <small>shopee.vn/m/mien-phi-van-chuyen ↗</small>
-            </div>
-          </a>
-          <a
-            href={getAffiliateUrl("https://shopee.vn/m/goi-ShopeeVIP")}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-            className="coupon-hub-pill vip"
-          >
-            <span className="hub-icon">⭐</span>
-            <div>
-              <b>Gói Shopee VIP</b>
-              <small>shopee.vn/m/goi-ShopeeVIP ↗</small>
-            </div>
-          </a>
-        </div>
-
-        <div className="tabs">
+        <div className="preview-tabs">
           {COUPON_TABS.map((t) => (
             <button
               key={t.key}
-              className={couponTab === t.key ? "selected" : ""}
+              className={`preview-tab ${couponTab === t.key ? "active" : ""}`}
               onClick={() => setCouponTab(t.key)}
             >
               {t.label}
             </button>
           ))}
         </div>
-        <div className="coupon-grid">
+
+        <div className="preview-grid">
           {displayedCoupons.map((c) => {
+            const theme = getCardLogoAndTheme(c);
             const isSocial =
               c.category === "facebook" ||
               c.category === "instagram" ||
@@ -1340,74 +1374,74 @@ export default function HomeClient({
               c.category === "social";
 
             return (
-              <article className={"coupon " + c.color} key={c.id}>
-                <div>
-                  {c.category === "facebook" ? (
-                    <span className="coupon-brand-icon fb">f</span>
-                  ) : c.category === "instagram" ? (
-                    <span className="coupon-brand-icon ig">📸</span>
-                  ) : c.category === "youtube" ? (
-                    <span className="coupon-brand-icon yt">▶</span>
-                  ) : null}
-                  <b>{c.amount}</b>
-                  <small>{c.unit}</small>
-                </div>
-                <section>
-                  <div className="coupon-top-row">
-                    <strong>{c.title}</strong>
-                    {c.badge && <span className={`coupon-badge ${c.category}`}>{c.badge}</span>}
+              <article className={`preview-card ${theme.cardClass}`} key={c.id}>
+                <span className="preview-tag">{theme.tag}</span>
+                <div className="preview-card-top">
+                  <div className={`preview-logo ${theme.logoClass}`} aria-label={c.title}>
+                    {theme.svg}
                   </div>
-                  <p>{c.condition}</p>
-                  {typeof c.usagePercent === "number" && (
-                    <div className="coupon-progress-wrap">
-                      <div className="coupon-progress-bar">
-                        <div
-                          className="coupon-progress-fill"
-                          style={{ width: `${c.usagePercent}%` }}
-                        />
-                      </div>
-                      <small className="coupon-usage-text">Đã dùng {c.usagePercent}%</small>
-                    </div>
-                  )}
-                  <footer>
-                    <code>{c.code}</code>
-                    {isSocial ? (
-                      <button
-                        type="button"
-                        className="coupon-action-btn social-btn"
-                        onClick={() => {
-                          linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                          linkInputRef.current?.focus();
-                          notify(
-                            `⚡ Đang chọn ${c.title}! Hãy dán link sản phẩm Shopee vào ô trên để DealHoàn tạo link săn mã giảm giá.`
-                          );
-                        }}
-                      >
-                        Săn mã này ↗
-                      </button>
+                  <div>
+                    <h3>{c.title}</h3>
+                    <div className="sub">{c.subtitle || `${c.amount} ${c.unit}`}</div>
+                  </div>
+                </div>
+                <div className="preview-meta">{c.condition}</div>
+                {isSocial ? (
+                  <button
+                    type="button"
+                    className="preview-cta"
+                    onClick={() => {
+                      linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      linkInputRef.current?.focus();
+                      notify(
+                        `⚡ Đang chọn ${c.title}! Hãy dán link sản phẩm Shopee vào ô trên để DealHoàn tạo link săn mã giảm giá.`
+                      );
+                    }}
+                  >
+                    Lấy mã ngay <span>→</span>
+                  </button>
+                ) : (
+                  <a
+                    href={getAffiliateUrl(c.url || "https://shopee.vn/m/ma-giam-gia")}
+                    target="_blank"
+                    rel="noopener noreferrer nofollow"
+                    className="preview-cta"
+                    onClick={() => {
+                      if (c.code) {
+                        navigator.clipboard?.writeText(c.code);
+                        setCopiedCode(c.code);
+                        notify(`✓ Đã copy mã ${c.code} — Đang mở Shopee để bạn lưu mã...`);
+                        setTimeout(() => setCopiedCode(null), 3000);
+                      }
+                    }}
+                  >
+                    {copiedCode === c.code ? (
+                      "✓ Đang mở Shopee"
                     ) : (
-                      <a
-                        href={getAffiliateUrl(c.url || "https://shopee.vn/m/ma-giam-gia")}
-                        target="_blank"
-                        rel="noopener noreferrer nofollow"
-                        className="coupon-action-btn"
-                        onClick={() => {
-                          if (c.code) {
-                            navigator.clipboard?.writeText(c.code);
-                            setCopiedCode(c.code);
-                            notify(`✓ Đã copy mã ${c.code} — Đang mở Shopee để bạn lưu mã...`);
-                            setTimeout(() => setCopiedCode(null), 3000);
-                          }
-                        }}
-                      >
-                        {copiedCode === c.code ? "✓ Đang mở Shopee" : "Lấy mã & Mở App ↗"}
-                      </a>
+                      <>
+                        {c.category === "vip" ? "Xem ưu đãi" : "Lấy mã ngay"} <span>→</span>
+                      </>
                     )}
-                  </footer>
-                </section>
+                  </a>
+                )}
               </article>
             );
           })}
+        </div>
+
+        <div className="preview-bottom">
+          <div>
+            <strong>Mở Shopee để săn thêm nhiều mã hot</strong>
+            <p>Giao diện này cố tình chỉ giữ lại các nhóm voucher quan trọng để nhìn thoáng và dễ chọn hơn.</p>
+          </div>
+          <a
+            className="preview-open-app"
+            href={getAffiliateUrl("https://shopee.vn/m/ma-giam-gia")}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            Mở Shopee App →
+          </a>
         </div>
       </section>
       <section className="container block" id="how">
