@@ -91,9 +91,23 @@ export default function AdminUsersClient({
   // Tự động tải dữ liệu thực tế mới nhất từ CSDL khi trang mount
   useEffect(() => {
     let isMounted = true;
+
+    // Lưu secret key vào cookie nếu được truyền qua URL query (?key=...)
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      const key = urlParams.get("key");
+      if (key) {
+        document.cookie = `dealhoan_admin_key=${encodeURIComponent(key)}; path=/; max-age=2592000; SameSite=Lax`;
+      }
+    }
+
     async function syncRealData() {
       try {
         const res = await fetch("/api/admin/users");
+        if (res.status === 403) {
+          window.location.href = "/admin";
+          return;
+        }
         const data = await res.json();
         if (isMounted && res.ok && data.users) {
           setUsers(data.users);

@@ -1,3 +1,4 @@
+import type { NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   AdminKPIStats,
@@ -6,6 +7,57 @@ import {
   getSupabaseAdminClient,
   isAdminUser,
 } from "./admin";
+
+/**
+ * Kiểm tra quyền Quản trị viên cho các Admin API Route (/api/admin/*)
+ * - Yêu cầu:
+ *   1. User đăng nhập qua Supabase Auth có email thuộc Whitelist hoặc role admin.
+ *   2. Hoặc request mang ADMIN_SECRET_KEY hợp lệ (được cấu hình tường minh trong biến môi trường).
+ * - Tuyệt đối không có cơ chế bypass dev/demo hoặc fallback mật khẩu mặc định.
+ */
+export async function checkAdminApiAuth(request: NextRequest): Promise<{
+  isAuthorized: boolean;
+  user?: any;
+  method?: string;
+  error?: string;
+}> {
+  // 1. Kiểm tra session Supabase người dùng hiện tại
+  try {
+    const supabase = await createSupabaseServerClient();
+    if (supabase) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user && isAdminUser(user)) {
+        return { isAuthorized: true, user, method: "supabase_session" };
+      }
+    }
+  } catch (err) {
+    console.warn("Check admin API auth error:", err);
+  }
+
+  // 2. Kiểm tra Header, Cookie hoặc Query Secret Key (nếu ADMIN_SECRET_KEY được thiết lập tường minh)
+  const configuredKey = process.env.ADMIN_SECRET_KEY?.trim();
+  if (configuredKey) {
+    const headerKey = request.headers.get("x-admin-key")?.trim();
+    const cookieKey = request.cookies.get("dealhoan_admin_key")?.value?.trim();
+    const queryKey = request.nextUrl.searchParams.get("key")?.trim();
+
+    if (
+      (headerKey && headerKey === configuredKey) ||
+      (cookieKey && cookieKey === configuredKey) ||
+      (queryKey && queryKey === configuredKey)
+    ) {
+      return { isAuthorized: true, method: "admin_key" };
+    }
+  }
+
+  return {
+    isAuthorized: false,
+    error: "Chỉ quản trị viên hệ thống DealHoàn mới có quyền truy cập.",
+  };
+}
 
 /**
  * Tính toán số liệu thống kê KPI từ danh sách người dùng

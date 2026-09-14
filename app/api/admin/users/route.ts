@@ -1,58 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
 import {
   AdminUserItem,
   DEMO_ADMIN_USERS,
   getAdminEmails,
   getSupabaseAdminClient,
-  isAdminUser,
 } from "@/lib/auth/admin";
-import { calculateKPIStats, fetchRealAdminUsers } from "@/lib/auth/admin-server";
+import {
+  calculateKPIStats,
+  checkAdminApiAuth,
+  fetchRealAdminUsers,
+} from "@/lib/auth/admin-server";
 
 export const dynamic = "force-dynamic";
 
 // Bộ nhớ tạm in-memory cho môi trường dev/demo
 const inMemoryUsers: AdminUserItem[] = [...DEMO_ADMIN_USERS];
 
-async function checkAdminAuth(request: NextRequest) {
-  // 1. Kiểm tra session Supabase người dùng hiện tại
-  try {
-    const supabase = await createSupabaseServerClient();
-    if (supabase) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user && isAdminUser(user)) {
-        return { isAuthorized: true, user, method: "supabase_session" };
-      }
-    }
-  } catch (err) {
-    console.warn("Check admin auth error:", err);
-  }
-
-  // 2. Kiểm tra Header hoặc Cookie Secret Key
-  const adminKey =
-    request.headers.get("x-admin-key") ||
-    request.cookies.get("dealhoan_admin_key")?.value;
-  const configuredKey = process.env.ADMIN_SECRET_KEY || "dealhoan2025";
-
-  if (adminKey && adminKey === configuredKey) {
-    return { isAuthorized: true, method: "admin_key" };
-  }
-
-  // 3. Cho phép truy cập trong môi trường demo/dev khi chưa cấu hình Supabase
-  if (!hasSupabaseConfig) {
-    return { isAuthorized: true, method: "dev_mode" };
-  }
-
-  return { isAuthorized: false };
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const auth = await checkAdminAuth(request);
+    const auth = await checkAdminApiAuth(request);
     if (!auth.isAuthorized) {
       return NextResponse.json(
         {
@@ -168,7 +134,7 @@ export async function GET(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   try {
-    const auth = await checkAdminAuth(request);
+    const auth = await checkAdminApiAuth(request);
     if (!auth.isAuthorized) {
       return NextResponse.json(
         { error: "Không có quyền thực hiện thao tác này." },

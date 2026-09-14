@@ -48,7 +48,9 @@ export function getAdminEmails(): string[] {
   const envEmails = process.env.ADMIN_EMAILS
     ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase())
     : [];
-  return Array.from(new Set([...DEFAULT_ADMIN_EMAILS, ...envEmails]));
+  return Array.from(
+    new Set([...DEFAULT_ADMIN_EMAILS.map((e) => e.toLowerCase()), ...envEmails])
+  );
 }
 
 export function isAdminUser(user: {

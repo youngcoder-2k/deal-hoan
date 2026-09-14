@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
+import { checkAdminApiAuth } from "@/lib/auth/admin-server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
@@ -87,10 +88,18 @@ const inMemoryWithdrawals: WithdrawalRecord[] = [
 ];
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await checkAdminApiAuth(request);
+    if (!auth.isAuthorized) {
+      return NextResponse.json(
+        { error: "Không có quyền truy cập danh sách yêu cầu rút tiền." },
+        { status: 403 }
+      );
+    }
+
     const { id: userId } = await context.params;
 
     const supabaseAdmin = getSupabaseAdminClient();
@@ -121,6 +130,14 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const auth = await checkAdminApiAuth(request);
+    if (!auth.isAuthorized) {
+      return NextResponse.json(
+        { error: "Không có quyền cập nhật trạng thái yêu cầu rút tiền." },
+        { status: 403 }
+      );
+    }
+
     await context.params;
     const body = await request.json();
     const { withdrawalId, status, note } = body;
