@@ -76,20 +76,54 @@ function getVietQrBankCode(bankName: string): string {
 export default function AdminUsersClient({
   initialUsers,
   initialStats,
+  isInitialRealData = false,
 }: {
   initialUsers: AdminUserItem[];
   initialStats: AdminKPIStats;
+  isInitialRealData?: boolean;
 }) {
   const [users, setUsers] = useState<AdminUserItem[]>(initialUsers);
   const [stats, setStats] = useState<AdminKPIStats>(initialStats);
+  const [isRealData, setIsRealData] = useState<boolean>(isInitialRealData);
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Tự động tải dữ liệu thực tế mới nhất từ CSDL khi trang mount
+  useEffect(() => {
+    let isMounted = true;
+    async function syncRealData() {
+      try {
+        const res = await fetch("/api/admin/users");
+        const data = await res.json();
+        if (isMounted && res.ok && data.users) {
+          setUsers(data.users);
+          if (data.stats) setStats(data.stats);
+          if (typeof data.isRealData === "boolean") {
+            setIsRealData(data.isRealData);
+          }
+        }
+      } catch (err) {
+        console.warn("Auto-sync real users error:", err);
+      }
+    }
+    syncRealData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Bộ lọc
   const [searchQuery, setSearchQuery] = useState("");
   const [bankFilter, setBankFilter] = useState<"all" | "linked" | "unlinked">("all");
   const [balanceFilter, setBalanceFilter] = useState<"all" | "positive" | "zero" | "pending">("all");
-  const [sortBy, setSortBy] = useState<"balance_desc" | "balance_asc" | "created_desc" | "withdrawn_desc" | "name_asc">("balance_desc");
+  const [sortBy, setSortBy] = useState<
+    | "smart_desc"
+    | "created_desc"
+    | "balance_desc"
+    | "balance_asc"
+    | "withdrawn_desc"
+    | "name_asc"
+  >("smart_desc");
 
   // Phân trang
   const [currentPage, setCurrentPage] = useState(1);
@@ -139,7 +173,14 @@ export default function AdminUsersClient({
       if (res.ok && data.users) {
         setUsers(data.users);
         if (data.stats) setStats(data.stats);
-        showToast("✓ Đã cập nhật dữ liệu mới nhất");
+        if (typeof data.isRealData === "boolean") {
+          setIsRealData(data.isRealData);
+        }
+        showToast(
+          data.isRealData
+            ? `✓ Đã cập nhật ${data.users.length} người dùng thật từ CSDL`
+            : "✓ Đã cập nhật dữ liệu mới nhất"
+        );
       } else {
         showToast("⚠️ " + (data.error || "Không thể tải dữ liệu"));
       }
@@ -360,12 +401,44 @@ export default function AdminUsersClient({
   }
 
   const filteredUsers = [...filtered].sort((a, b) => {
-    if (sortBy === "balance_desc") return b.balance - a.balance;
-    if (sortBy === "balance_asc") return a.balance - b.balance;
-    if (sortBy === "created_desc")
+    if (sortBy === "smart_desc" || !sortBy) {
+      const now = Date.now();
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const aIsNew = now - new Date(a.createdAt).getTime() < SEVEN_DAYS_MS;
+      const bIsNew = now - new Date(b.createdAt).getTime() < SEVEN_DAYS_MS;
+
+      // Cả 2 đều mới (trong 7 ngày): ưu tiên số dư, nếu bằng nhau thì ai mới hơn lên trước
+      if (aIsNew && bIsNew) {
+        if (b.balance !== a.balance) return b.balance - a.balance;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      if (aIsNew && !bIsNew) return -1;
+      if (!aIsNew && bIsNew) return 1;
+
+      // Cả 2 đều đã đăng ký > 7 ngày: ưu tiên số dư khả dụng cao nhất
+      if (b.balance !== a.balance) return b.balance - a.balance;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    if (sortBy === "withdrawn_desc") return b.totalWithdrawn - a.totalWithdrawn;
-    if (sortBy === "name_asc") return a.fullName.localeCompare(b.fullName, "vi");
+    }
+    if (sortBy === "balance_desc") {
+      if (b.balance !== a.balance) return b.balance - a.balance;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    if (sortBy === "balance_asc") {
+      if (a.balance !== b.balance) return a.balance - b.balance;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+    if (sortBy === "created_desc") {
+      const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (timeDiff !== 0) return timeDiff;
+      return b.balance - a.balance;
+    }
+    if (sortBy === "withdrawn_desc") {
+      if (b.totalWithdrawn !== a.totalWithdrawn) return b.totalWithdrawn - a.totalWithdrawn;
+      return b.balance - a.balance;
+    }
+    if (sortBy === "name_asc") {
+      return a.fullName.localeCompare(b.fullName, "vi");
+    }
     return 0;
   });
 
@@ -420,6 +493,21 @@ export default function AdminUsersClient({
                 <img src="/brand/deal-hoan-mark.png" alt="DealHoàn" className="admin-logo-mark" />
                 <h1 className="admin-heading">Quản Lý Người Dùng & Số Dư</h1>
                 <span className="admin-role-tag">🛡️ Admin Portal</span>
+                {isRealData ? (
+                  <span
+                    className="admin-status-badge badge-live"
+                    title="Đang hiển thị dữ liệu tài khoản người dùng thực từ Supabase"
+                  >
+                    <span className="live-dot" /> Dữ liệu thật
+                  </span>
+                ) : (
+                  <span
+                    className="admin-status-badge badge-demo"
+                    title="Chưa có người dùng thực trong CSDL, đang hiển thị dữ liệu mẫu"
+                  >
+                    Demo Mode
+                  </span>
+                )}
               </div>
               <p className="admin-subheading">
                 Tra cứu danh sách thành viên, số dư ví khả dụng, tài khoản ngân hàng nhận tiền và đối soát chi trả.
@@ -620,18 +708,20 @@ export default function AdminUsersClient({
                 onChange={(e) =>
                   setSortBy(
                     e.target.value as
+                      | "smart_desc"
+                      | "created_desc"
                       | "balance_desc"
                       | "balance_asc"
-                      | "created_desc"
                       | "withdrawn_desc"
                       | "name_asc"
                   )
                 }
                 className="admin-select"
               >
-                <option value="balance_desc">Số dư cao nhất ↓</option>
+                <option value="smart_desc">✨ Mới nhất & Số dư lớn nhất (Mặc định)</option>
+                <option value="created_desc">Mới tham gia nhất (Mới nhất) ↓</option>
+                <option value="balance_desc">Số dư khả dụng cao nhất ↓</option>
                 <option value="balance_asc">Số dư thấp nhất ↑</option>
-                <option value="created_desc">Mới tham gia nhất ↓</option>
                 <option value="withdrawn_desc">Đã rút nhiều nhất ↓</option>
                 <option value="name_asc">Tên A → Z</option>
               </select>

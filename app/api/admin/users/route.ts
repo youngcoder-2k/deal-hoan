@@ -3,12 +3,12 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import {
   AdminUserItem,
-  AdminKPIStats,
   DEMO_ADMIN_USERS,
   getAdminEmails,
   getSupabaseAdminClient,
   isAdminUser,
 } from "@/lib/auth/admin";
+import { calculateKPIStats, fetchRealAdminUsers } from "@/lib/auth/admin-server";
 
 export const dynamic = "force-dynamic";
 
@@ -67,136 +67,11 @@ export async function GET(request: NextRequest) {
     const query = (searchParams.get("q") || "").trim().toLowerCase();
     const bankStatus = searchParams.get("bank_status") || "all";
     const balanceStatus = searchParams.get("balance_status") || "all";
-    const sort = searchParams.get("sort") || "balance_desc";
+    const sort = searchParams.get("sort") || "smart_desc";
 
-    let rawUsers: AdminUserItem[] = [];
-
-    const supabaseAdmin = getSupabaseAdminClient();
-
-    if (supabaseAdmin) {
-      try {
-        // 1. Lấy danh sách users từ auth.users nếu có quyền admin
-        const { data: authData, error: authListErr } =
-          await supabaseAdmin.auth.admin.listUsers({
-            page: 1,
-            perPage: 500,
-          });
-
-        // 2. Lấy dữ liệu ví từ user_wallets
-        const { data: walletsData } = await supabaseAdmin
-          .from("user_wallets")
-          .select("*");
-
-        // 3. Lấy dữ liệu rút tiền từ withdrawal_requests
-        const { data: withdrawalsData } = await supabaseAdmin
-          .from("withdrawal_requests")
-          .select("*")
-          .order("created_at", { ascending: false });
-
-        if (!authListErr && authData?.users && authData.users.length > 0) {
-          const walletsMap = new Map<string, Record<string, unknown>>();
-          (walletsData || []).forEach((w) => {
-            if (w.user_id) walletsMap.set(String(w.user_id), w);
-          });
-
-          const withdrawalsMap = new Map<string, Array<Record<string, unknown>>>();
-          (withdrawalsData || []).forEach((w) => {
-            const uid = String(w.user_id);
-            if (!withdrawalsMap.has(uid)) withdrawalsMap.set(uid, []);
-            withdrawalsMap.get(uid)?.push(w);
-          });
-
-          rawUsers = authData.users.map((u) => {
-            const wallet = walletsMap.get(u.id);
-            const userWithdrawals = withdrawalsMap.get(u.id) || [];
-            const latestW = userWithdrawals[0];
-
-            const metaBankName = String(u.user_metadata?.bank_name || "");
-            const metaAccountNo = String(u.user_metadata?.bank_account_no || "");
-            const metaAccountName = String(u.user_metadata?.bank_account_name || "");
-
-            const bankName = String(wallet?.bank_name || metaBankName || "");
-            const bankAccountNo = String(wallet?.bank_account_no || metaAccountNo || "");
-            const bankAccountName = String(wallet?.bank_account_name || metaAccountName || "");
-
-            const balance = Number(wallet?.balance ?? 0);
-            const pendingBalance = Number(wallet?.pending_balance ?? 0);
-            const totalWithdrawn = Number(wallet?.total_withdrawn ?? 0);
-
-            const isBankConfigured = Boolean(
-              bankName && bankAccountNo && bankAccountName
-            );
-
-            return {
-              id: u.id,
-              refCode: `u_${u.id.slice(0, 8)}`,
-              email: u.email || "",
-              fullName:
-                String(
-                  u.user_metadata?.full_name ||
-                    u.user_metadata?.name ||
-                    u.email?.split("@")[0] ||
-                    "Người dùng"
-                ),
-              avatarUrl:
-                String(u.user_metadata?.avatar_url || u.user_metadata?.picture || "") || undefined,
-              role: isAdminUser(u) ? "admin" : "user",
-              createdAt: u.created_at,
-              lastSignInAt: u.last_sign_in_at,
-              balance,
-              pendingBalance,
-              totalWithdrawn,
-              totalEarned: balance + totalWithdrawn,
-              bankName,
-              bankAccountNo,
-              bankAccountName,
-              isBankConfigured,
-              withdrawalCount: userWithdrawals.length,
-              latestWithdrawal: latestW
-                ? {
-                    id: String(latestW.id),
-                    amount: Number(latestW.amount),
-                    status: latestW.status as "pending" | "completed" | "rejected",
-                    createdAt: String(latestW.created_at),
-                    note: latestW.note ? String(latestW.note) : null,
-                  }
-                : null,
-            };
-          });
-        } else {
-          rawUsers = inMemoryUsers;
-        }
-      } catch (err) {
-        console.warn("Supabase query fallback to in-memory:", err);
-        rawUsers = inMemoryUsers;
-      }
-    } else {
-      rawUsers = inMemoryUsers;
-    }
-
-    // Tính toán KPI Stats trên toàn bộ tập dữ liệu
-    const totalUsers = rawUsers.length;
-    const totalBalance = rawUsers.reduce((sum, u) => sum + (u.balance || 0), 0);
-    const totalPendingBalance = rawUsers.reduce(
-      (sum, u) => sum + (u.pendingBalance || 0),
-      0
-    );
-    const totalWithdrawn = rawUsers.reduce(
-      (sum, u) => sum + (u.totalWithdrawn || 0),
-      0
-    );
-    const bankLinkedUsers = rawUsers.filter((u) => u.isBankConfigured).length;
-    const bankLinkedRate =
-      totalUsers > 0 ? Math.round((bankLinkedUsers / totalUsers) * 100) : 0;
-
-    const stats: AdminKPIStats = {
-      totalUsers,
-      totalBalance,
-      totalPendingBalance,
-      totalWithdrawn,
-      bankLinkedUsers,
-      bankLinkedRate,
-    };
+    // Lấy dữ liệu người dùng thật từ Supabase (auth.users + user_wallets + withdrawal_requests)
+    const { users: rawUsers, isRealData } = await fetchRealAdminUsers();
+    const stats = calculateKPIStats(rawUsers);
 
     // Áp dụng bộ lọc tìm kiếm
     let filtered = [...rawUsers];
@@ -231,22 +106,45 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((u) => u.pendingBalance > 0);
     }
 
-    // Sắp xếp
+    // Sắp xếp: Ưu tiên người dùng mới nhất và có số dư lớn nhất lên đầu
     filtered.sort((a, b) => {
+      if (sort === "smart_desc" || !sort) {
+        const now = Date.now();
+        const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+        const aIsNew = now - new Date(a.createdAt).getTime() < SEVEN_DAYS_MS;
+        const bIsNew = now - new Date(b.createdAt).getTime() < SEVEN_DAYS_MS;
+
+        // Cả 2 đều mới (trong 7 ngày)
+        if (aIsNew && bIsNew) {
+          if (b.balance !== a.balance) return b.balance - a.balance;
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        }
+        if (aIsNew && !bIsNew) return -1;
+        if (!aIsNew && bIsNew) return 1;
+
+        // Cả 2 đều đã đăng ký > 7 ngày: ưu tiên số dư khả dụng cao nhất
+        if (b.balance !== a.balance) return b.balance - a.balance;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
       if (sort === "balance_desc") {
-        return b.balance - a.balance;
+        if (b.balance !== a.balance) return b.balance - a.balance;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       if (sort === "balance_asc") {
-        return a.balance - b.balance;
+        if (a.balance !== b.balance) return a.balance - b.balance;
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       }
       if (sort === "created_desc") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        const timeDiff = new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        if (timeDiff !== 0) return timeDiff;
+        return b.balance - a.balance;
       }
       if (sort === "created_asc") {
         return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
       }
       if (sort === "withdrawn_desc") {
-        return b.totalWithdrawn - a.totalWithdrawn;
+        if (b.totalWithdrawn !== a.totalWithdrawn) return b.totalWithdrawn - a.totalWithdrawn;
+        return b.balance - a.balance;
       }
       if (sort === "name_asc") {
         return a.fullName.localeCompare(b.fullName, "vi");
@@ -260,6 +158,7 @@ export async function GET(request: NextRequest) {
       users: filtered,
       totalCount: rawUsers.length,
       filteredCount: filtered.length,
+      isRealData,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";

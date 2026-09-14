@@ -2,11 +2,8 @@ import { Metadata } from "next";
 import { cookies } from "next/headers";
 import Link from "next/link";
 import AdminUsersClient from "./admin-users-client";
-import {
-  AdminKPIStats,
-  DEMO_ADMIN_USERS,
-  isAdminUser,
-} from "@/lib/auth/admin";
+import { isAdminUser } from "@/lib/auth/admin";
+import { calculateKPIStats, fetchRealAdminUsers } from "@/lib/auth/admin-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 
@@ -82,27 +79,15 @@ export default async function AdminPage() {
     );
   }
 
-  // Tính toán KPI ban đầu từ dữ liệu nền
-  const totalUsers = DEMO_ADMIN_USERS.length;
-  const totalBalance = DEMO_ADMIN_USERS.reduce((sum, u) => sum + u.balance, 0);
-  const totalPendingBalance = DEMO_ADMIN_USERS.reduce((sum, u) => sum + u.pendingBalance, 0);
-  const totalWithdrawn = DEMO_ADMIN_USERS.reduce((sum, u) => sum + u.totalWithdrawn, 0);
-  const bankLinkedUsers = DEMO_ADMIN_USERS.filter((u) => u.isBankConfigured).length;
-  const bankLinkedRate = totalUsers > 0 ? Math.round((bankLinkedUsers / totalUsers) * 100) : 0;
-
-  const initialStats: AdminKPIStats = {
-    totalUsers,
-    totalBalance,
-    totalPendingBalance,
-    totalWithdrawn,
-    bankLinkedUsers,
-    bankLinkedRate,
-  };
+  // Lấy dữ liệu người dùng THẬT từ Supabase (auth.users, user_wallets, withdrawal_requests)
+  const { users: realUsers, isRealData } = await fetchRealAdminUsers();
+  const initialStats = calculateKPIStats(realUsers);
 
   return (
     <AdminUsersClient
-      initialUsers={DEMO_ADMIN_USERS}
+      initialUsers={realUsers}
       initialStats={initialStats}
+      isInitialRealData={isRealData}
     />
   );
 }
