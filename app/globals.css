@@ -1286,9 +1286,11 @@ h2,
 }
 .flash-top h2 {
   margin: 0;
-  font-size: 23px;
+  font-size: 24px;
   font-weight: 800;
   color: #fff;
+  letter-spacing: -0.5px;
+  line-height: 1.25;
 }
 .flash-nav-btn {
   width: 32px;
@@ -1445,13 +1447,14 @@ h2,
 .how h2,
 .referral h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: -0.7px;
+  letter-spacing: -0.5px;
+  line-height: 1.25;
 }
 .how h2 {
-  font-size: 27px;
-  letter-spacing: -0.6px;
+  font-size: 24px;
+  letter-spacing: -0.5px;
 }
 .heading p,
 .how > div > p {
@@ -1493,7 +1496,40 @@ h2,
   border: 1px solid #ececec;
   border-radius: 15px;
   background: #fff;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.22s ease;
 }
+.deal:hover {
+  transform: translateY(-3px);
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+}
+.deal .placeholder img.deal-image {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.deal:hover .placeholder img.deal-image {
+  transform: scale(1.03);
+}
+
+/* SMOOTH FILTER TRANSITIONS */
+@keyframes filterContentFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.deal-fade-in {
+  animation: filterContentFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.coupon-fade-in {
+  animation: filterContentFadeIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
 .deal .placeholder {
   height: 164px;
 }
@@ -2049,10 +2085,11 @@ h2,
 }
 .preview-section-head h2 {
   margin: 0;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
   color: #111827;
-  letter-spacing: -0.7px;
+  letter-spacing: -0.5px;
+  line-height: 1.25;
 }
 .preview-tabs {
   display: flex;
@@ -2156,15 +2193,16 @@ h2,
 }
 .preview-tag {
   position: absolute;
-  right: 14px;
-  top: 14px;
-  padding: 3px 8px;
+  right: 12px;
+  top: 12px;
+  padding: 2px 6px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 700;
   background: #f1f5f9;
   color: #475569;
   letter-spacing: 0.2px;
+  line-height: 1.2;
 }
 .preview-meta {
   margin: 12px 0 12px;
@@ -2303,7 +2341,7 @@ h2,
     align-items: flex-start;
   }
   .preview-section-head h2 {
-    font-size: 22px;
+    font-size: 20px;
     font-weight: 800;
   }
   .preview-tabs {

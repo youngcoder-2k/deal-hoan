@@ -1288,9 +1288,13 @@ export default function HomeClient({
             </button>
           ))}
         </div>
-        <div className="deal-grid">
-          {visibleHotDeals.map((deal) => (
-            <article className="deal" key={deal.id}>
+        <div className="deal-grid" key={`hot-deals-${tab}`}>
+          {visibleHotDeals.map((deal, idx) => (
+            <article
+              className="deal deal-fade-in"
+              key={deal.id}
+              style={{ animationDelay: `${Math.min(idx * 35, 280)}ms` }}
+            >
               <div className="placeholder">
                 <a
                   href={getAffiliateUrl(deal.productUrl)}
@@ -1416,8 +1420,8 @@ export default function HomeClient({
           ))}
         </div>
 
-        <div className="preview-grid">
-          {displayedCoupons.slice(0, showAllCoupons ? undefined : 6).map((c) => {
+        <div className="preview-grid" key={`coupons-${couponTab}-${showAllCoupons}`}>
+          {displayedCoupons.slice(0, showAllCoupons ? undefined : 6).map((c, idx) => {
             const theme = getCardLogoAndTheme(c);
             const isSocial =
               c.category === "facebook" ||
@@ -1426,7 +1430,11 @@ export default function HomeClient({
               c.category === "social";
 
             return (
-              <article className={`preview-card ${theme.cardClass}`} key={c.id}>
+              <article
+                className={`preview-card ${theme.cardClass} coupon-fade-in`}
+                key={c.id}
+                style={{ animationDelay: `${Math.min(idx * 30, 200)}ms` }}
+              >
                 <span className="preview-tag">{theme.tag}</span>
                 <div className="preview-card-top">
                   <div className={`preview-logo ${theme.logoClass}`} aria-label={c.title}>
