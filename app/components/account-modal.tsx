@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
+import { isAdminUser } from "@/lib/auth/admin";
 
 export interface WalletData {
   balance: number;
@@ -420,6 +422,7 @@ export default function AccountModal({
 
   const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Huy Quang Vũ";
+  const isAdmin = isAdminUser(user);
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -464,6 +467,16 @@ export default function AccountModal({
               <div className="account-profile-texts">
                 <div className="account-name-row">
                   <h3 className="account-user-name">{displayName}</h3>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      className="account-admin-badge-btn"
+                      onClick={onClose}
+                      title="Mở Bảng Quản Trị Hệ Thống"
+                    >
+                      🛡️ Admin
+                    </Link>
+                  )}
                   <button
                     type="button"
                     className="account-ref-badge"
@@ -877,6 +890,16 @@ export default function AccountModal({
 
         {/* Modal Footer (Matches Image 1 & 2) */}
         <div className="account-modal-foot">
+          {isAdmin && (
+            <Link
+              href="/admin"
+              className="account-admin-link-btn"
+              onClick={onClose}
+              title="Vào Trang Quản Trị Hệ Thống"
+            >
+              🛡️ Trang Quản Trị Admin
+            </Link>
+          )}
           <button type="button" className="account-signout-btn" onClick={onSignOut}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />

@@ -4,6 +4,7 @@ import Link from "next/link";
 import confetti from "canvas-confetti";
 import type { User } from "@supabase/supabase-js";
 import AccountModal from "@/app/components/account-modal";
+import { isAdminUser } from "@/lib/auth/admin";
 import { formatPrice, formatSold } from "@/lib/deals/format";
 import type { Deal, DealBundle, Coupon, CouponCategory, Platform } from "@/lib/deals/types";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -321,7 +322,17 @@ export default function HomeClient({
   const [link, setLink] = useState("");
   const [result, setResult] = useState("");
   const [resultClosing, setResultClosing] = useState(false);
-  const [savedDealIds, setSavedDealIds] = useState<string[]>([]);
+  const [savedDealIds, setSavedDealIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("dealhoan_favorite_deal_ids");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) return parsed.map(String);
+      }
+    } catch {}
+    return [];
+  });
   const [tab, setTab] = useState(0);
   const [couponTab, setCouponTab] = useState<CouponCategory>("all");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -423,20 +434,6 @@ export default function HomeClient({
     setToast(m);
     setTimeout(() => setToast(""), 2400);
   };
-
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem("dealhoan_favorite_deal_ids");
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) {
-          setSavedDealIds(parsed.map(String));
-        }
-      }
-    } catch {
-      // ignore localStorage errors
-    }
-  }, []);
 
   const toggleFavoriteDeal = (deal: Deal, e?: React.MouseEvent) => {
     if (e) {
@@ -691,6 +688,15 @@ export default function HomeClient({
           <div className="account">
             {user ? (
               <>
+                {isAdminUser(user) && (
+                  <Link
+                    href="/admin"
+                    className="header-admin-btn"
+                    title="Bảng Quản Trị Hệ Thống (Admin)"
+                  >
+                    🛡️ Quản trị
+                  </Link>
+                )}
                 <button
                   type="button"
                   className="account-wallet-btn"
