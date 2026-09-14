@@ -1430,13 +1430,15 @@ export default function HomeClient({
                 key={c.id}
                 style={{ animationDelay: `${Math.min(idx * 30, 200)}ms` }}
               >
-                <span className="preview-tag">{theme.tag}</span>
                 <div className="preview-card-top">
                   <div className={`preview-logo ${theme.logoClass}`} aria-label={c.title}>
                     {theme.svg}
                   </div>
-                  <div>
-                    <h3>{c.title}</h3>
+                  <div className="preview-card-info">
+                    <div className="preview-card-title-wrap">
+                      <h3>{c.title}</h3>
+                      <span className="preview-tag">{theme.tag}</span>
+                    </div>
                     <div className="sub">{c.subtitle || `${c.amount} ${c.unit}`}</div>
                   </div>
                 </div>
