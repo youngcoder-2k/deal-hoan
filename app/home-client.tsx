@@ -541,7 +541,7 @@ export default function HomeClient({
             el.scrollLeft >= max - 10 ? 0 : Math.min(el.scrollLeft + 246, max),
           behavior: "smooth",
         });
-    }, 4500);
+    }, 3000);
     return () => {
       clearInterval(timer);
       if (flashPauseTimeoutRef.current) clearTimeout(flashPauseTimeoutRef.current);
@@ -1277,12 +1277,12 @@ export default function HomeClient({
           </div>
           <a>Xem tất cả →</a>
         </div>
-        <div className="tabs">
+        <div className="preview-tabs">
           {HOT_TABS.map((x, i) => (
             <button
-              className={tab === i ? "selected" : ""}
-              onClick={() => setTab(i)}
               key={x}
+              className={`preview-tab ${tab === i ? "active" : ""}`}
+              onClick={() => setTab(i)}
             >
               {x}
             </button>
@@ -1398,7 +1398,6 @@ export default function HomeClient({
         <div className="preview-section-head">
           <div>
             <h2>🔥 Mã giảm giá nổi bật</h2>
-            <p>Chọn nhanh theo kênh hoặc loại ưu đãi bạn quan tâm.</p>
           </div>
         </div>
 
@@ -1501,21 +1500,6 @@ export default function HomeClient({
             </button>
           </div>
         )}
-
-        <div className="preview-bottom">
-          <div>
-            <strong>Mở Shopee để săn thêm nhiều mã hot</strong>
-            <p>Giao diện này cố tình chỉ giữ lại các nhóm voucher quan trọng để nhìn thoáng và dễ chọn hơn.</p>
-          </div>
-          <a
-            className="preview-open-app"
-            href={getAffiliateUrl("https://shopee.vn/m/ma-giam-gia")}
-            target="_blank"
-            rel="noopener noreferrer nofollow"
-          >
-            Mở Shopee App →
-          </a>
-        </div>
       </section>
       <section className="container block" id="how">
         <div className="how">

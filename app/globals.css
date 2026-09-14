@@ -2042,22 +2042,17 @@ h2,
 /* PREVIEW.HTML COUPON SECTION DESIGN */
 .preview-section-head {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 12px 0 16px;
+  margin: 28px 0 16px;
 }
 .preview-section-head h2 {
   margin: 0;
-  font-size: 20px;
-  font-weight: 700;
-  color: #0f172a;
-  letter-spacing: -0.3px;
-}
-.preview-section-head p {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 13.5px;
+  font-size: 28px;
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -0.7px;
 }
 .preview-tabs {
   display: flex;
@@ -2267,49 +2262,6 @@ h2,
   transition: transform 0.2s ease;
 }
 
-.preview-bottom {
-  margin: 22px 0 36px;
-  border: 1px solid #e2e8f0;
-  border-radius: 16px;
-  background: #fff;
-  padding: 18px 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
-}
-.preview-bottom strong {
-  font-size: 15.5px;
-  font-weight: 700;
-  color: #0f172a;
-  display: block;
-}
-.preview-bottom p {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 13px;
-}
-.preview-open-app {
-  background: #ee4d2d;
-  color: #fff !important;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 3px 10px rgba(238, 77, 45, 0.22);
-}
-.preview-open-app:hover {
-  background: #d73211;
-  transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(238, 77, 45, 0.3);
-}
-
 @media (max-width: 900px) {
   .coupon-hero {
     grid-template-columns: 1fr;
@@ -2349,16 +2301,24 @@ h2,
   }
   .preview-section-head {
     align-items: flex-start;
-    flex-direction: column;
   }
-  .preview-bottom {
-    align-items: flex-start;
-    flex-direction: column;
+  .preview-section-head h2 {
+    font-size: 22px;
+    font-weight: 800;
   }
-  .preview-open-app {
-    width: 100%;
-    justify-content: center;
-    text-align: center;
+  .preview-tabs {
+    flex-wrap: nowrap;
+    margin: 10px -16px 14px;
+    padding: 0 16px 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .preview-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .preview-tab {
+    flex: none;
   }
 }
 .coupon-action-btn,
