@@ -234,9 +234,15 @@ export async function fetchRealAdminUsers(): Promise<{
         const bankAccountNo = String(wallet?.bank_account_no || metaAccountNo || "");
         const bankAccountName = String(wallet?.bank_account_name || metaAccountName || "");
 
-        const balance = Number(wallet?.balance ?? 0);
-        const pendingBalance = Number(wallet?.pending_balance ?? 0);
-        const totalWithdrawn = Number(wallet?.total_withdrawn ?? 0);
+        const balance = Number(
+          wallet?.balance ?? u.user_metadata?.balance ?? 0
+        );
+        const pendingBalance = Number(
+          wallet?.pending_balance ?? u.user_metadata?.pending_balance ?? 0
+        );
+        const totalWithdrawn = Number(
+          wallet?.total_withdrawn ?? u.user_metadata?.total_withdrawn ?? 0
+        );
 
         return {
           id: u.id,

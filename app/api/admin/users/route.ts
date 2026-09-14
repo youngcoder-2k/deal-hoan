@@ -154,6 +154,10 @@ export async function PATCH(request: NextRequest) {
 
     const supabaseAdmin = getSupabaseAdminClient();
 
+    let walletSaved = false;
+    let metaSaved = false;
+    let walletErrorMsg = "";
+
     if (supabaseAdmin) {
       const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
@@ -164,35 +168,83 @@ export async function PATCH(request: NextRequest) {
       if (typeof bankAccountNo === "string") updateData.bank_account_no = bankAccountNo;
       if (typeof bankAccountName === "string") updateData.bank_account_name = bankAccountName;
 
-      await supabaseAdmin
-        .from("user_wallets")
-        .upsert({
-          user_id: userId,
-          ...updateData,
-        });
+      // 1. Lưu vào bảng user_wallets
+      try {
+        const { error: upsertError } = await supabaseAdmin
+          .from("user_wallets")
+          .upsert(
+            {
+              user_id: userId,
+              ...updateData,
+            },
+            { onConflict: "user_id" }
+          );
+
+        if (!upsertError) {
+          walletSaved = true;
+        } else {
+          walletErrorMsg = upsertError.message;
+          console.warn("user_wallets upsert warning:", upsertError.message);
+        }
+      } catch (wErr) {
+        console.warn("user_wallets upsert catch error:", wErr);
+      }
+
+      // 2. Đồng thời lưu trực tiếp vào user_metadata của auth.users qua Admin API
+      // Đảm bảo số dư LUÔN ĐƯỢC LƯU VĨNH VIỄN trên Supabase dù bảng user_wallets chưa tạo
+      try {
+        if (supabaseAdmin.auth?.admin) {
+          const metaUpdate: Record<string, unknown> = {};
+          if (typeof balance === "number") metaUpdate.balance = balance;
+          if (typeof pendingBalance === "number") metaUpdate.pending_balance = pendingBalance;
+          if (typeof bankName === "string") metaUpdate.bank_name = bankName;
+          if (typeof bankAccountNo === "string") metaUpdate.bank_account_no = bankAccountNo;
+          if (typeof bankAccountName === "string") metaUpdate.bank_account_name = bankAccountName;
+
+          const { error: metaErr } = await supabaseAdmin.auth.admin.updateUserById(
+            userId,
+            { user_metadata: metaUpdate }
+          );
+
+          if (!metaErr) {
+            metaSaved = true;
+          } else {
+            console.warn("auth.admin.updateUserById warning:", metaErr.message);
+          }
+        }
+      } catch (mErr) {
+        console.warn("auth.admin.updateUserById error:", mErr);
+      }
     }
 
-    // Cập nhật cả inMemoryUsers
+    // 3. Cập nhật in-memory (phòng trường hợp là demo user)
+    const updateInMemoryItem = (item: AdminUserItem) => {
+      item.balance = typeof balance === "number" ? balance : item.balance;
+      item.pendingBalance = typeof pendingBalance === "number" ? pendingBalance : item.pendingBalance;
+      item.bankName = typeof bankName === "string" ? bankName : item.bankName;
+      item.bankAccountNo = typeof bankAccountNo === "string" ? bankAccountNo : item.bankAccountNo;
+      item.bankAccountName = typeof bankAccountName === "string" ? bankAccountName : item.bankAccountName;
+      item.isBankConfigured = Boolean(
+        (typeof bankAccountNo === "string" ? bankAccountNo : item.bankAccountNo) &&
+        (typeof bankName === "string" ? bankName : item.bankName)
+      );
+    };
+
     const idx = inMemoryUsers.findIndex((u) => u.id === userId);
     if (idx !== -1) {
-      const existing = inMemoryUsers[idx];
-      inMemoryUsers[idx] = {
-        ...existing,
-        balance: typeof balance === "number" ? balance : existing.balance,
-        pendingBalance: typeof pendingBalance === "number" ? pendingBalance : existing.pendingBalance,
-        bankName: typeof bankName === "string" ? bankName : existing.bankName,
-        bankAccountNo: typeof bankAccountNo === "string" ? bankAccountNo : existing.bankAccountNo,
-        bankAccountName: typeof bankAccountName === "string" ? bankAccountName : existing.bankAccountName,
-        isBankConfigured: Boolean(
-          (typeof bankAccountNo === "string" ? bankAccountNo : existing.bankAccountNo) &&
-          (typeof bankName === "string" ? bankName : existing.bankName)
-        ),
-      };
+      updateInMemoryItem(inMemoryUsers[idx]);
+    }
+    const demoIdx = DEMO_ADMIN_USERS.findIndex((u) => u.id === userId);
+    if (demoIdx !== -1) {
+      updateInMemoryItem(DEMO_ADMIN_USERS[demoIdx]);
     }
 
     return NextResponse.json({
       success: true,
       message: "Cập nhật thông tin người dùng thành công.",
+      walletSaved,
+      metaSaved,
+      warning: !walletSaved && walletErrorMsg ? `Bảng user_wallets chưa nhận: ${walletErrorMsg}` : undefined,
       updatedUser: inMemoryUsers.find((u) => u.id === userId),
     });
   } catch (err: unknown) {

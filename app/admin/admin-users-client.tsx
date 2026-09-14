@@ -73,16 +73,41 @@ function getVietQrBankCode(bankName: string): string {
   return "MB";
 }
 
+// Hàm hỗ trợ hòa trộn các điều chỉnh số dư vừa lưu vào danh sách người dùng
+function applyLocalBalanceOverrides(usersList: AdminUserItem[]): AdminUserItem[] {
+  if (typeof window === "undefined") return usersList;
+  try {
+    const raw = localStorage.getItem("dealhoan_admin_balance_overrides");
+    if (!raw) return usersList;
+    const map = JSON.parse(raw);
+    const now = Date.now();
+    return usersList.map((u) => {
+      const ov = map[u.id];
+      if (ov && now - ov.updatedAt < 24 * 3600 * 1000) {
+        return {
+          ...u,
+          balance: ov.balance,
+          pendingBalance: ov.pendingBalance,
+          totalEarned: ov.balance + u.totalWithdrawn,
+        };
+      }
+      return u;
+    });
+  } catch {
+    return usersList;
+  }
+}
+
 export default function AdminUsersClient({
   initialUsers,
   initialStats,
-  isInitialRealData = false,
+  isInitialRealData,
 }: {
   initialUsers: AdminUserItem[];
   initialStats: AdminKPIStats;
-  isInitialRealData?: boolean;
+  isInitialRealData: boolean;
 }) {
-  const [users, setUsers] = useState<AdminUserItem[]>(initialUsers);
+  const [users, setUsers] = useState<AdminUserItem[]>(() => applyLocalBalanceOverrides(initialUsers));
   const [stats, setStats] = useState<AdminKPIStats>(initialStats);
   const [isRealData, setIsRealData] = useState<boolean>(isInitialRealData);
   const [loading, setLoading] = useState(false);
@@ -110,7 +135,8 @@ export default function AdminUsersClient({
         }
         const data = await res.json();
         if (isMounted && res.ok && data.users) {
-          setUsers(data.users);
+          const merged = applyLocalBalanceOverrides(data.users);
+          setUsers(merged);
           if (data.stats) setStats(data.stats);
           if (typeof data.isRealData === "boolean") {
             setIsRealData(data.isRealData);
@@ -185,7 +211,8 @@ export default function AdminUsersClient({
       const res = await fetch("/api/admin/users");
       const data = await res.json();
       if (res.ok && data.users) {
-        setUsers(data.users);
+        const merged = applyLocalBalanceOverrides(data.users);
+        setUsers(merged);
         if (data.stats) setStats(data.stats);
         if (typeof data.isRealData === "boolean") {
           setIsRealData(data.isRealData);
@@ -211,9 +238,9 @@ export default function AdminUsersClient({
     navigator.clipboard.writeText(text);
     if (idForAnim) {
       setCopiedId(idForAnim);
-      setTimeout(() => setCopiedId(null), 2000);
+      setTimeout(() => setCopiedId((curr) => (curr === idForAnim ? null : curr)), 1800);
     }
-    showToast(`✓ Đã sao chép ${label}: ${text}`);
+    showToast(`✓ Đã sao chép ${label}`);
   };
 
   // Mở modal xem chi tiết người dùng
@@ -222,7 +249,6 @@ export default function AdminUsersClient({
     setNewBalance(user.balance);
     setNewPending(user.pendingBalance);
     setAdjustBalanceMode(false);
-    setAdjustNote("");
     setLoadingWithdrawals(true);
 
     try {
@@ -256,6 +282,18 @@ export default function AdminUsersClient({
       });
       const data = await res.json();
       if (res.ok) {
+        // Lưu override vào localStorage để chống việc tải lại trang bị reset
+        try {
+          const raw = localStorage.getItem("dealhoan_admin_balance_overrides");
+          const map = raw ? JSON.parse(raw) : {};
+          map[selectedUser.id] = {
+            balance: Number(newBalance),
+            pendingBalance: Number(newPending),
+            updatedAt: Date.now(),
+          };
+          localStorage.setItem("dealhoan_admin_balance_overrides", JSON.stringify(map));
+        } catch {}
+
         showToast("✅ Đã cập nhật số dư cho " + selectedUser.fullName);
         setUsers((prev) =>
           prev.map((u) =>
