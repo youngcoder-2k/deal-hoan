@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
     const isShopee = isShopeeUrl(rawUrl);
     const cleanUrl = isShopee ? cleanShopeeUrl(rawUrl) : rawUrl;
-    const affiliateUrl = isShopee ? buildShopeeAffiliateUrl(rawUrl, { subId }) : rawUrl;
+    const affiliateUrl = isShopee ? buildShopeeAffiliateUrl(cleanUrl, { subId }) : rawUrl;
 
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
     const proto = request.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
@@ -32,8 +32,8 @@ export async function POST(request: NextRequest) {
       cleanUrl,
       affiliateUrl,
       shortUrl: customShortLink,
-      // The primary link to open / copy:
-      trackedLink: customShortLink,
+      // The primary link to open / copy (Shopee gets direct affiliate link, others use customShortLink):
+      trackedLink: isShopee ? affiliateUrl : customShortLink,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";

@@ -550,6 +550,9 @@ export default function HomeClient({
     if (!url) return "https://shopee.vn";
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
     const subId = user ? `u_${user.id.slice(0, 8)}` : "dealhoan";
+    if (isShopeeUrl(url)) {
+      return buildShopeeAffiliateUrl(url, { subId });
+    }
     return buildCustomShortUrl(url, { baseUrl, subId });
   };
 
@@ -578,7 +581,9 @@ export default function HomeClient({
     if (SAMPLE_CHIP_PRODUCTS[trimmed]) {
       const chipProduct = SAMPLE_CHIP_PRODUCTS[trimmed];
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
-      const localTracked = buildCustomShortUrl(trimmed, { baseUrl, subId });
+      const localTracked = isShopeeUrl(trimmed)
+        ? buildShopeeAffiliateUrl(trimmed, { subId })
+        : buildCustomShortUrl(trimmed, { baseUrl, subId });
       setCalculatedProduct(chipProduct);
       setTrackedLink(localTracked);
       setCopiedTracked(false);
@@ -624,7 +629,9 @@ export default function HomeClient({
       // Fallback only if server request completely fails
       const localProduct = resolveProductLocally(trimmed, allAvailableDeals);
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
-      const localTracked = buildCustomShortUrl(trimmed, { baseUrl, subId });
+      const localTracked = isShopeeUrl(trimmed)
+        ? buildShopeeAffiliateUrl(trimmed, { subId })
+        : buildCustomShortUrl(trimmed, { baseUrl, subId });
       setCalculatedProduct(localProduct);
       setTrackedLink(localTracked);
       setCopiedTracked(false);

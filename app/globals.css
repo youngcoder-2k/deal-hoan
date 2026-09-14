@@ -4405,6 +4405,55 @@ select.account-input.select-bank-field:focus {
   padding-bottom: 60px;
 }
 
+/* Forbidden Screen */
+.admin-forbidden-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #fbf7f4;
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+.admin-forbidden-card {
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 100%;
+  padding: 40px 32px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(234, 88, 12, 0.08);
+}
+.forbidden-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+.admin-forbidden-card h2 {
+  font-family: "Archivo", sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  color: #18181b;
+  margin: 0 0 12px;
+}
+.admin-forbidden-card p {
+  font-size: 14px;
+  color: #71717a;
+  line-height: 1.6;
+  margin: 0 0 24px;
+}
+.forbidden-actions {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.forbidden-note {
+  font-size: 12px;
+  color: #a1a1aa;
+  border-top: 1px dashed #e4e4e7;
+  padding-top: 16px;
+}
+
 /* Toast */
 .admin-toast {
   position: fixed;

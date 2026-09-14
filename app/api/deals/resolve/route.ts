@@ -222,12 +222,21 @@ export async function POST(request: NextRequest) {
     const siteBase = host
       ? `${proto}://${host}`
       : request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.vn";
-    const trackedLink = buildCustomShortUrl(canonicalUrl, {
-      baseUrl: siteBase,
-      subId,
-      shopId: fastShopeeProduct?.shopId,
-      itemId: fastShopeeProduct?.itemId,
-    });
+    let trackedLink: string;
+    if (isShopee) {
+      const cleanShopeeLink =
+        fastShopeeProduct?.shopId && fastShopeeProduct?.itemId
+          ? `https://shopee.vn/product/${fastShopeeProduct.shopId}/${fastShopeeProduct.itemId}`
+          : cleanShopeeUrl(canonicalUrl);
+      trackedLink = buildShopeeAffiliateUrl(cleanShopeeLink, { subId });
+    } else {
+      trackedLink = buildCustomShortUrl(canonicalUrl, {
+        baseUrl: siteBase,
+        subId,
+        shopId: fastShopeeProduct?.shopId,
+        itemId: fastShopeeProduct?.itemId,
+      });
+    }
 
     const resolvedProduct: CalculatedProduct = {
       name: finalName,
