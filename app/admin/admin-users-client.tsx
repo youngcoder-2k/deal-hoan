@@ -555,6 +555,20 @@ export default function AdminUsersClient({
       </header>
 
       <main className="admin-main">
+        {/* Banner thông báo khi chưa có cấu hình Supabase */}
+        {!isRealData && (
+          <div className="admin-demo-alert">
+            <span className="demo-alert-icon">⚠️</span>
+            <div className="demo-alert-text">
+              <strong>Đang ở chế độ Demo Mode (Dữ liệu mẫu)</strong>
+              <p>
+                Hệ thống chưa kết nối được CSDL Supabase do file <code>.env.local</code> chưa có <code>NEXT_PUBLIC_SUPABASE_URL</code> và <code>SUPABASE_SERVICE_ROLE_KEY</code>.
+                Vui lòng cấu hình các biến này để hệ thống tải toàn bộ tài khoản người dùng thật.
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* KPI Stats Grid (5 Cards) */}
         <section className="admin-kpi-grid">
           {/* Card 1: Tổng người dùng */}

@@ -5298,6 +5298,50 @@ select.account-input.select-bank-field:focus {
   gap: 24px;
 }
 
+.admin-demo-alert {
+  background: #fffbeb;
+  border: 1px solid #fed7aa;
+  border-left: 4px solid #f97316;
+  border-radius: 12px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(249, 115, 22, 0.06);
+}
+
+.demo-alert-icon {
+  font-size: 20px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.demo-alert-text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: #9a3412;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.demo-alert-text p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #78350f;
+}
+
+.demo-alert-text code {
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #c2410c;
+  border: 1px solid #fde68a;
+}
+
 /* KPI Cards Grid */
 .admin-kpi-grid {
   display: grid;
