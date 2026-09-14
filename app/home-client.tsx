@@ -113,7 +113,7 @@ function Receipt({
     product?.savingsPercent ??
     (price > 0 ? Math.round((cashback / price) * 100) : 5);
   const productName = product?.name || "Tai nghe Bluetooth chống ồn Sony WF-C710N";
-  const productImg = product?.imageUrl || null;
+  const productImg = product?.imageUrl || "/demo/sony-wf-c710n.jpg";
   const displayPlatform = product?.platform || platform;
 
   return (
@@ -216,7 +216,15 @@ function DemoReceipt() {
         <span>🔥 Deal Score 94</span>
       </div>
       <div className="demo-receipt-product">
-        <div className="placeholder demo-image">ảnh SP</div>
+        <div className="placeholder demo-image">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/demo/sony-wf-c710n.jpg"
+            alt="Tai nghe Bluetooth chống ồn Sony WF-C710N"
+            className="deal-image"
+            loading="lazy"
+          />
+        </div>
         <div>
           <b>Tai nghe Bluetooth chống ồn Sony WF-C710N</b>
           <p>

@@ -22,7 +22,7 @@ export type CalculatedProduct = {
 export const SAMPLE_CHIP_PRODUCTS: Record<string, CalculatedProduct> = {
   "https://shopee.vn/tai-nghe-sony": {
     name: "Tai nghe Bluetooth chống ồn Sony WF-C710N",
-    imageUrl: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/demo/sony-wf-c710n.jpg",
     price: 1540000,
     originalPrice: 1990000,
     cashback: 77000,
