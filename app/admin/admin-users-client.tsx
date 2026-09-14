@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import type { AdminUserItem, AdminKPIStats } from "@/lib/auth/admin";
 
@@ -34,6 +34,20 @@ function formatDateShort(iso: string) {
   } catch {
     return iso;
   }
+}
+
+// Tạo danh sách trang thông minh với dấu ba chấm
+function getPageNumbers(current: number, total: number): (number | string)[] {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 3) {
+    return [1, 2, 3, 4, "...", total];
+  }
+  if (current >= total - 2) {
+    return [1, "...", total - 3, total - 2, total - 1, total];
+  }
+  return [1, "...", current - 1, current, current + 1, "...", total];
 }
 
 // Map tên ngân hàng sang mã VietQR
@@ -76,6 +90,15 @@ export default function AdminUsersClient({
   const [bankFilter, setBankFilter] = useState<"all" | "linked" | "unlinked">("all");
   const [balanceFilter, setBalanceFilter] = useState<"all" | "positive" | "zero" | "pending">("all");
   const [sortBy, setSortBy] = useState<"balance_desc" | "balance_asc" | "created_desc" | "withdrawn_desc" | "name_asc">("balance_desc");
+
+  // Phân trang
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Tự động trở về trang 1 khi thay đổi điều kiện lọc, tìm kiếm hoặc sắp xếp
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, bankFilter, balanceFilter, sortBy]);
 
   // Modal Chi tiết User
   const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
@@ -345,6 +368,26 @@ export default function AdminUsersClient({
     if (sortBy === "name_asc") return a.fullName.localeCompare(b.fullName, "vi");
     return 0;
   });
+
+  // Tính toán dữ liệu phân trang
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const startIndex = (safeCurrentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filteredUsers.length);
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    if (typeof window !== "undefined") {
+      const tableEl = document.querySelector(".admin-table-container");
+      if (tableEl) {
+        const rect = tableEl.getBoundingClientRect();
+        if (rect.top < 0) {
+          tableEl.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }
+    }
+  };
 
   const initials = (name: string) => {
     const parts = (name || "").trim().split(/\s+/);
@@ -620,7 +663,8 @@ export default function AdminUsersClient({
               </button>
             </div>
           ) : (
-            <div className="table-responsive">
+            <>
+              <div className="table-responsive">
               <table className="admin-data-table">
                 <thead>
                   <tr>
@@ -632,7 +676,7 @@ export default function AdminUsersClient({
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((u) => (
+                  {paginatedUsers.map((u) => (
                     <tr key={u.id} className="admin-table-row">
                       {/* Cột 1: Người dùng */}
                       <td className="cell-user">
@@ -775,7 +819,96 @@ export default function AdminUsersClient({
                 </tbody>
               </table>
             </div>
-          )}
+
+            {/* Thanh phân trang */}
+            <div className="admin-pagination-bar">
+              <div className="pagination-info">
+                <span>
+                  Hiển thị <b>{filteredUsers.length > 0 ? startIndex + 1 : 0}</b>–
+                  <b>{endIndex}</b> trên <b>{filteredUsers.length}</b> người dùng
+                </span>
+                <div className="pagination-size-wrap">
+                  <label htmlFor="pageSizeSelect">Số hàng / trang:</label>
+                  <select
+                    id="pageSizeSelect"
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setCurrentPage(1);
+                    }}
+                    className="pagination-select"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={20}>20</option>
+                    <option value={50}>50</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pagination-controls">
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(1)}
+                  disabled={safeCurrentPage === 1}
+                  className="pagination-btn pagination-nav"
+                  title="Trang đầu"
+                >
+                  «
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(Math.max(1, safeCurrentPage - 1))}
+                  disabled={safeCurrentPage === 1}
+                  className="pagination-btn pagination-nav"
+                  title="Trang trước"
+                >
+                  ‹ Trước
+                </button>
+
+                <div className="pagination-pages">
+                  {getPageNumbers(safeCurrentPage, totalPages).map((page, idx) =>
+                    page === "..." ? (
+                      <span key={`ellipsis-${idx}`} className="pagination-ellipsis">
+                        …
+                      </span>
+                    ) : (
+                      <button
+                        key={`page-${page}`}
+                        type="button"
+                        onClick={() => handlePageChange(Number(page))}
+                        className={`pagination-btn pagination-num ${
+                          safeCurrentPage === page ? "active" : ""
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(Math.min(totalPages, safeCurrentPage + 1))}
+                  disabled={safeCurrentPage === totalPages}
+                  className="pagination-btn pagination-nav"
+                  title="Trang sau"
+                >
+                  Sau ›
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePageChange(totalPages)}
+                  disabled={safeCurrentPage === totalPages}
+                  className="pagination-btn pagination-nav"
+                  title="Trang cuối"
+                >
+                  »
+                </button>
+              </div>
+            </div>
+          </>
+        )}
         </section>
       </main>
 

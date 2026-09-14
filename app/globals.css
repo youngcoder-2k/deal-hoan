@@ -5818,6 +5818,121 @@ select.account-input.select-bank-field:focus {
   border-color: #ea580c;
 }
 
+/* Pagination Bar */
+.admin-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 14px 20px;
+  background: #fafaf9;
+  border-top: 1px solid #e7e5e4;
+  font-size: 13px;
+  color: #52525b;
+}
+
+.pagination-info {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pagination-size-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: #71717a;
+}
+
+.pagination-select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #18181b;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.pagination-select:focus {
+  border-color: #ea580c;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid #e4e4e7;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #3f3f46;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #fff7ed;
+  border-color: #fed7aa;
+  color: #ea580c;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.pagination-btn.active {
+  background: #ea580c;
+  border-color: #ea580c;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(234, 88, 12, 0.25);
+}
+
+.pagination-num {
+  min-width: 32px;
+  padding: 0 6px;
+}
+
+.pagination-nav {
+  font-size: 12px;
+}
+
+.pagination-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  color: #a1a1aa;
+  font-weight: 700;
+  user-select: none;
+}
+
 /* Modal */
 .admin-modal-backdrop {
   position: fixed;
@@ -6289,6 +6404,20 @@ select.account-input.select-bank-field:focus {
   }
   .adjust-grid {
     grid-template-columns: 1fr;
+  }
+  .admin-pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .pagination-info {
+    justify-content: center;
+    text-align: center;
+  }
+  .pagination-controls {
+    flex-wrap: wrap;
+    justify-content: center;
   }
 }
 
