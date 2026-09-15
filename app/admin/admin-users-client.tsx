@@ -188,6 +188,22 @@ export default function AdminUsersClient({
   }>>([]);
   const [loadingWithdrawals, setLoadingWithdrawals] = useState(false);
 
+  // Danh sách đơn hoàn tiền của user trong Modal
+  const [userOrders, setUserOrders] = useState<Array<{
+    id: string;
+    order_id: string;
+    platform: string;
+    product_name?: string | null;
+    order_value?: number;
+    cashback_amount: number;
+    status: "pending" | "completed" | "rejected";
+    note?: string | null;
+    created_at: string;
+    ordered_at?: string;
+  }>>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [isSimulatingOrder, setIsSimulatingOrder] = useState(false);
+
   // Modal điều chỉnh số dư
   const [adjustBalanceMode, setAdjustBalanceMode] = useState(false);
   const [newBalance, setNewBalance] = useState<number>(0);
@@ -250,6 +266,7 @@ export default function AdminUsersClient({
     setNewPending(user.pendingBalance);
     setAdjustBalanceMode(false);
     setLoadingWithdrawals(true);
+    setLoadingOrders(true);
 
     try {
       const res = await fetch(`/api/admin/users/${user.id}/withdrawals`);
@@ -263,6 +280,20 @@ export default function AdminUsersClient({
       setUserWithdrawals([]);
     } finally {
       setLoadingWithdrawals(false);
+    }
+
+    try {
+      const oRes = await fetch(`/api/admin/orders?userId=${user.id}`);
+      const oData = await oRes.json();
+      if (oRes.ok && Array.isArray(oData.orders)) {
+        setUserOrders(oData.orders);
+      } else {
+        setUserOrders([]);
+      }
+    } catch {
+      setUserOrders([]);
+    } finally {
+      setLoadingOrders(false);
     }
   };
 
@@ -364,6 +395,106 @@ export default function AdminUsersClient({
       }
     } catch {
       showToast("⚠️ Lỗi cập nhật lệnh rút");
+    }
+  };
+
+  // Giả lập đơn hàng hoàn tiền thử nghiệm cho user (Admin test)
+  const handleSimulateOrder = async (platformName: "TikTok Shop" | "Shopee", orderStatus: "pending" | "completed") => {
+    if (!selectedUser) return;
+    setIsSimulatingOrder(true);
+    try {
+      const testOrderId = `${platformName === "TikTok Shop" ? "TT" : "SP"}_${Date.now().toString().slice(-6)}`;
+      const orderVal = 350000;
+      const cbVal = 35000;
+      const res = await fetch("/api/admin/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          orderId: testOrderId,
+          platform: platformName,
+          productName: `Đơn test ${platformName} (${new Date().toLocaleTimeString("vi-VN")})`,
+          orderValue: orderVal,
+          commissionAmount: 45000,
+          cashbackAmount: cbVal,
+          status: orderStatus,
+          note: `Đơn thử nghiệm bởi Admin (${orderStatus === "completed" ? "Cộng ví ngay" : "Chờ duyệt"})`,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.order) {
+        showToast(`🎉 Đã tạo đơn test ${platformName} (+${formatVnd(cbVal)})`);
+        setUserOrders((prev) => [data.order, ...prev]);
+
+        // Cập nhật ngay số dư trong giao diện
+        if (orderStatus === "completed") {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === selectedUser.id
+                ? { ...u, balance: u.balance + cbVal, totalEarned: u.totalEarned + cbVal }
+                : u
+            )
+          );
+          setSelectedUser((prev) =>
+            prev
+              ? { ...prev, balance: prev.balance + cbVal, totalEarned: prev.totalEarned + cbVal }
+              : null
+          );
+          setNewBalance((b) => b + cbVal);
+        } else {
+          setUsers((prev) =>
+            prev.map((u) =>
+              u.id === selectedUser.id
+                ? { ...u, pendingBalance: u.pendingBalance + cbVal }
+                : u
+            )
+          );
+          setSelectedUser((prev) =>
+            prev
+              ? { ...prev, pendingBalance: prev.pendingBalance + cbVal }
+              : null
+          );
+          setNewPending((p) => p + cbVal);
+        }
+      } else {
+        showToast("⚠️ " + (data.error || "Không thể tạo đơn test"));
+      }
+    } catch {
+      showToast("⚠️ Lỗi kết nối khi tạo đơn test");
+    } finally {
+      setIsSimulatingOrder(false);
+    }
+  };
+
+  // Cập nhật trạng thái đơn hàng (Duyệt hoặc Hủy)
+  const handleUpdateOrderStatus = async (
+    orderId: string,
+    platform: string,
+    newStatus: "completed" | "rejected"
+  ) => {
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          platform,
+          status: newStatus,
+          note: newStatus === "completed" ? "Admin đã duyệt hoàn tiền" : "Admin từ chối đơn hàng",
+        }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast(newStatus === "completed" ? "✅ Đã duyệt hoàn tiền thành công!" : "❌ Đã từ chối đơn hàng!");
+        setUserOrders((prev) =>
+          prev.map((o) => (o.order_id === orderId ? { ...o, status: newStatus } : o))
+        );
+        refreshData();
+      } else {
+        showToast("⚠️ " + (data.error || "Không thể cập nhật đơn"));
+      }
+    } catch {
+      showToast("⚠️ Lỗi kết nối khi cập nhật đơn");
     }
   };
 
@@ -1288,7 +1419,108 @@ export default function AdminUsersClient({
                 )}
               </div>
 
-              {/* Section 4: Lịch sử các lệnh rút tiền */}
+              {/* Section 4: Đơn Hàng Hoàn Tiền */}
+              <div className="modal-card-block">
+                <div className="block-title-row">
+                  <div className="flex items-center gap-2">
+                    <span className="block-icon">🛍️</span>
+                    <h4 className="block-title">
+                      Đơn Hàng Hoàn Tiền ({userOrders.length})
+                    </h4>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      type="button"
+                      disabled={isSimulatingOrder}
+                      onClick={() => handleSimulateOrder("TikTok Shop", "completed")}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-md bg-stone-900 hover:bg-stone-800 text-white transition-all shadow-sm disabled:opacity-50"
+                      title="Mô phỏng 1 đơn TikTok Shop đã mua thành công, cộng ngay 35.000đ vào số dư khả dụng"
+                    >
+                      {isSimulatingOrder ? "..." : "+ Test TikTok (+35k)"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSimulatingOrder}
+                      onClick={() => handleSimulateOrder("Shopee", "pending")}
+                      className="px-2.5 py-1 text-xs font-semibold rounded-md bg-orange-600 hover:bg-orange-700 text-white transition-all shadow-sm disabled:opacity-50"
+                      title="Mô phỏng 1 đơn Shopee đang chờ duyệt, cộng 35.000đ vào tiền chờ duyệt"
+                    >
+                      {isSimulatingOrder ? "..." : "+ Test Shopee (Chờ)"}
+                    </button>
+                  </div>
+                </div>
+
+                {loadingOrders ? (
+                  <div className="p-4 text-center text-stone-500 text-sm">Đang tải danh sách đơn hàng...</div>
+                ) : userOrders.length === 0 ? (
+                  <div className="p-4 text-center text-stone-500 text-sm">
+                    Người dùng này chưa có đơn hàng hoàn tiền nào. Bạn có thể bấm nút <b>+ Test</b> phía trên để tạo đơn thử nghiệm.
+                  </div>
+                ) : (
+                  <div className="modal-withdrawals-list">
+                    {userOrders.map((ord) => (
+                      <div key={ord.id || ord.order_id} className="modal-w-item">
+                        <div className="w-item-left">
+                          <div className="flex items-center gap-2">
+                            <span className={`inline-block px-1.5 py-0.5 text-[11px] font-bold rounded ${
+                              ord.platform?.toLowerCase().includes("tiktok")
+                                ? "bg-black text-white"
+                                : "bg-orange-500 text-white"
+                            }`}>
+                              {ord.platform}
+                            </span>
+                            <span className="text-xs font-mono font-medium text-stone-500">
+                              #{ord.order_id}
+                            </span>
+                          </div>
+                          <div className="text-sm font-semibold text-stone-800 mt-1">
+                            {ord.product_name || "Sản phẩm hoàn tiền"}
+                          </div>
+                          <div className="text-xs text-stone-500 mt-0.5 flex items-center gap-3">
+                            <span>Giá trị đơn: <b>{formatVnd(ord.order_value || 0)}</b></span>
+                            <span>Hoàn tiền: <b className="text-emerald-600">+{formatVnd(ord.cashback_amount)}</b></span>
+                          </div>
+                          <div className="w-item-date mt-1">{formatDate(ord.created_at || ord.ordered_at || "")}</div>
+                          {ord.note && <div className="w-item-note">{ord.note}</div>}
+                        </div>
+                        <div className="w-item-right">
+                          {ord.status === "completed" && (
+                            <span className="w-badge w-completed">✅ Đã hoàn ví</span>
+                          )}
+                          {ord.status === "rejected" && (
+                            <span className="w-badge w-rejected">❌ Bị hủy</span>
+                          )}
+                          {ord.status === "pending" && (
+                            <div className="pending-actions-wrap">
+                              <span className="w-badge w-pending">⏳ Chờ duyệt</span>
+                              <div className="flex gap-1 mt-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "completed")}
+                                  className="btn-approve-mini"
+                                  title="Duyệt đơn và cộng tiền vào ví khả dụng của user"
+                                >
+                                  ✓ Duyệt
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "rejected")}
+                                  className="btn-reject-mini"
+                                  title="Từ chối đơn hoàn tiền này"
+                                >
+                                  ✕ Hủy
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Section 5: Lịch sử các lệnh rút tiền */}
               <div className="modal-card-block">
                 <div className="block-title-row">
                   <div className="flex items-center gap-2">

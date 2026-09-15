@@ -187,3 +187,30 @@ export function buildCustomShortUrl(
     return shortUrl.toString();
   }
 }
+
+/**
+ * Standardizes subId format for tracking user cashbacks.
+ * Format: u_{userId} (e.g. u_1f162a51-8baa-404e-b16a-ca4e2d2c4b8d)
+ */
+export function formatSubIdForUser(userId?: string | null): string {
+  if (!userId) return "dealhoan";
+  const cleanId = userId.trim();
+  if (!cleanId || cleanId === "calc" || cleanId === "dealhoan") return "dealhoan";
+  if (cleanId.startsWith("u_")) return cleanId;
+  return `u_${cleanId}`;
+}
+
+/**
+ * Extracts userId from a tracking subId string.
+ * Handles u_{uuid}, raw {uuid}, or prefixes.
+ */
+export function parseUserIdFromSubId(subId?: string | null): string | null {
+  if (!subId) return null;
+  const clean = subId.trim();
+  if (!clean || clean === "dealhoan" || clean === "calc") return null;
+  if (clean.startsWith("u_")) {
+    return clean.slice(2);
+  }
+  return clean;
+}
+

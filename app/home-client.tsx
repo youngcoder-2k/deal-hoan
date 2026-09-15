@@ -14,6 +14,7 @@ import {
   isShopeeUrl,
   buildCustomShortUrl,
   extractUrlFromText,
+  formatSubIdForUser,
 } from "@/lib/deals/affiliate";
 import { cashbackFor } from "@/lib/deals/score";
 import { resolveProductLocally, matchProductFromCatalog, SAMPLE_CHIP_PRODUCTS, type CalculatedProduct } from "@/lib/deals/resolve";
@@ -676,7 +677,7 @@ export default function HomeClient({
   const getAffiliateUrl = (url?: string | null) => {
     if (!url) return "https://shopee.vn";
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
-    const subId = user ? `u_${user.id.slice(0, 8)}` : "dealhoan";
+    const subId = user ? formatSubIdForUser(user.id) : "dealhoan";
     if (isShopeeUrl(url)) {
       return buildShopeeAffiliateUrl(url, { subId });
     }
@@ -702,7 +703,7 @@ export default function HomeClient({
     (document.activeElement as HTMLElement | null)?.blur();
     setBusy(true);
 
-    const subId = user ? `u_${user.id.slice(0, 8)}` : "calc";
+    const subId = user ? formatSubIdForUser(user.id) : "calc";
 
     // 1. If it is a sample chip demo (e.g. clicked chip buttons), display immediately
     if (SAMPLE_CHIP_PRODUCTS[trimmed]) {

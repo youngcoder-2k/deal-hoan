@@ -25,6 +25,19 @@ export interface WithdrawalItem {
   created_at: string;
 }
 
+export interface CashbackOrderItem {
+  id: string;
+  order_id: string;
+  platform: "Shopee" | "TikTok Shop" | "Lazada";
+  product_name?: string | null;
+  product_image?: string | null;
+  order_value: number;
+  cashback_amount: number;
+  status: "pending" | "completed" | "rejected";
+  note?: string | null;
+  ordered_at: string;
+}
+
 const VN_BANKS = [
   "Vietcombank (VCB)",
   "MB Bank (MBB)",
@@ -85,7 +98,7 @@ export default function AccountModal({
   onSignOut: () => void;
   onNotify: (msg: string) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"withdraw" | "history">("withdraw");
+  const [activeTab, setActiveTab] = useState<"orders" | "withdraw" | "history">("orders");
   const [wallet, setWallet] = useState<WalletData>(() => {
     // Hydrate initial bank info from localStorage if available
     let savedBank = { bank_name: "", bank_account_no: "", bank_account_name: "" };
@@ -110,6 +123,12 @@ export default function AccountModal({
     };
   });
   const [history, setHistory] = useState<WithdrawalItem[]>([]);
+  const [orders, setOrders] = useState<CashbackOrderItem[]>([]);
+  const [showClaimForm, setShowClaimForm] = useState(false);
+  const [claimOrderId, setClaimOrderId] = useState("");
+  const [claimPlatform, setClaimPlatform] = useState<"Shopee" | "TikTok Shop" | "Lazada">("Shopee");
+  const [claimOrderValue, setClaimOrderValue] = useState("");
+  const [claiming, setClaiming] = useState(false);
 
   // Form Ngân hàng
   const [bankName, setBankName] = useState(() => {
@@ -217,6 +236,15 @@ export default function AccountModal({
         }
       })
       .catch((err) => console.warn("Fetch history error:", err));
+
+    fetch("/api/wallet/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && Array.isArray(data.orders)) {
+          setOrders(data.orders);
+        }
+      })
+      .catch((err) => console.warn("Fetch orders error:", err));
 
     return () => {
       cancelled = true;
@@ -420,6 +448,39 @@ export default function AccountModal({
     }
   };
 
+  const handleSubmitClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!claimOrderId.trim()) {
+      return onNotify("⚠️ Vui lòng nhập mã đơn hàng!");
+    }
+    try {
+      setClaiming(true);
+      const res = await fetch("/api/wallet/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: claimOrderId.trim(),
+          platform: claimPlatform,
+          orderValue: Number(claimOrderValue.replace(/\D/g, "")) || 0,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.order) {
+        setOrders((prev) => [data.order, ...prev]);
+        setClaimOrderId("");
+        setClaimOrderValue("");
+        setShowClaimForm(false);
+        onNotify("✅ Đã tiếp nhận tra cứu đơn hàng!");
+      } else {
+        onNotify("⚠️ " + (data.error || "Không thể gửi tra cứu"));
+      }
+    } catch {
+      onNotify("⚠️ Lỗi kết nối máy chủ");
+    } finally {
+      setClaiming(false);
+    }
+  };
+
   const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Huy Quang Vũ";
   const isAdmin = isAdminUser(user);
@@ -551,8 +612,20 @@ export default function AccountModal({
           </div>
         </div>
 
-        {/* Tabs (Matches Image 1 & 2) */}
+        {/* Tabs */}
         <div className="account-tabs">
+          <button
+            className={`account-tab-btn ${activeTab === "orders" ? "active" : ""}`}
+            onClick={() => setActiveTab("orders")}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="8" cy="21" r="1" />
+              <circle cx="19" cy="21" r="1" />
+              <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+            </svg>
+            <span>Đơn hoàn tiền</span>
+            {orders.length > 0 && <span className="tab-count-badge">{orders.length}</span>}
+          </button>
           <button
             className={`account-tab-btn ${activeTab === "withdraw" ? "active" : ""}`}
             onClick={() => setActiveTab("withdraw")}
@@ -578,6 +651,162 @@ export default function AccountModal({
             {history.length > 0 && <span className="tab-count-badge">{history.length}</span>}
           </button>
         </div>
+
+        {/* Tab Content: Đơn hoàn tiền */}
+        {activeTab === "orders" && (
+          <div className="account-tab-pane">
+            <div className="order-notice-banner">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <path d="m9 12 2 2 4-4" />
+              </svg>
+              <div>
+                <b>Tự động ghi nhận:</b> Đơn hàng bạn mua qua link DealHoàn sẽ được sàn đối soát và cập nhật vào đây trong 1 – 24 giờ.
+              </div>
+            </div>
+
+            {orders.length === 0 ? (
+              <div className="history-empty-wrapper">
+                <div className="empty-receipt-illustration">
+                  <svg width="120" height="90" viewBox="0 0 160 120" fill="none">
+                    <rect x="35" y="20" width="90" height="80" rx="10" fill="#f8fafc" stroke="#e2e8f0" strokeWidth="2" />
+                    <circle cx="80" cy="52" r="18" fill="#e2e8f0" />
+                    <path d="M72 52h16M80 44v16" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+                    <rect x="52" y="78" width="56" height="6" rx="3" fill="#cbd5e1" />
+                  </svg>
+                </div>
+                <h4 className="history-empty-title">Chưa có đơn hàng nào</h4>
+                <p className="history-empty-sub">
+                  Dán link sản phẩm Shopee, TikTok Shop hoặc Lazada vào ô trên trang chủ DealHoàn trước khi mua sắm để được nhận hoàn tiền nhé!
+                </p>
+              </div>
+            ) : (
+              <div className="order-list">
+                {orders.map((order) => {
+                  const platformClass =
+                    order.platform === "TikTok Shop"
+                      ? "platform-tiktok"
+                      : order.platform === "Lazada"
+                        ? "platform-lazada"
+                        : "platform-shopee";
+
+                  return (
+                    <div key={order.id} className="order-item">
+                      <div className="order-item-head">
+                        <span className={`order-platform-tag ${platformClass}`}>
+                          {order.platform}
+                        </span>
+                        <span className="order-code-badge">#{order.order_id}</span>
+                        <div>
+                          {order.status === "completed" && (
+                            <span className="status-badge status-completed">✅ Đã hoàn tất</span>
+                          )}
+                          {order.status === "pending" && (
+                            <span className="status-badge status-pending">⏳ Chờ duyệt</span>
+                          )}
+                          {order.status === "rejected" && (
+                            <span className="status-badge status-rejected">❌ Bị hủy</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="order-item-body">
+                        <div className="order-product-name">
+                          {order.product_name || "Sản phẩm mua qua DealHoàn"}
+                        </div>
+                        <div className="order-cashback-amt">
+                          +{formatVnd(order.cashback_amount)}
+                        </div>
+                      </div>
+
+                      <div className="order-item-foot">
+                        <span>Giá trị đơn: <b>{formatVnd(order.order_value)}</b></span>
+                        <span>{formatDate(order.ordered_at)}</span>
+                      </div>
+                      {order.note && (
+                        <div className="history-note" style={{ maxWidth: "100%", textAlign: "left", color: "#6b7280" }}>
+                          ℹ️ {order.note}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Tra cứu / Báo sót đơn hàng */}
+            {!showClaimForm ? (
+              <button
+                type="button"
+                className="order-claim-btn"
+                onClick={() => setShowClaimForm(true)}
+              >
+                🔍 Tra cứu / Báo sót đơn hàng chưa thấy hoàn tiền
+              </button>
+            ) : (
+              <form onSubmit={handleSubmitClaim} className="order-claim-form">
+                <div style={{ fontSize: "13px", fontWeight: "700", color: "#1e293b" }}>
+                  Tra cứu mã đơn hàng
+                </div>
+                <div style={{ fontSize: "12px", color: "#64748b" }}>
+                  Nếu bạn đã mua qua link DealHoàn hơn 24 giờ mà chưa thấy đơn, hãy nhập mã đơn để hệ thống đối soát ngay.
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: "11.5px" }}>Sàn mua sắm</label>
+                  <select
+                    className="account-input select-bank-field"
+                    style={{ height: "36px", fontSize: "12.5px" }}
+                    value={claimPlatform}
+                    onChange={(e) => setClaimPlatform(e.target.value as any)}
+                  >
+                    <option value="Shopee">Shopee</option>
+                    <option value="TikTok Shop">TikTok Shop</option>
+                    <option value="Lazada">Lazada</option>
+                  </select>
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: "11.5px" }}>Mã đơn hàng trên Shopee/TikTok</label>
+                  <input
+                    type="text"
+                    className="account-input"
+                    style={{ height: "36px", fontSize: "12.5px" }}
+                    placeholder="Ví dụ: 240915123456789..."
+                    value={claimOrderId}
+                    onChange={(e) => setClaimOrderId(e.target.value)}
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label className="form-label" style={{ fontSize: "11.5px" }}>Giá trị đơn hàng (VNĐ)</label>
+                  <input
+                    type="text"
+                    className="account-input"
+                    style={{ height: "36px", fontSize: "12.5px" }}
+                    placeholder="Ví dụ: 250.000"
+                    value={claimOrderValue}
+                    onChange={(e) => setClaimOrderValue(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                  <button
+                    type="button"
+                    style={{ flex: 1, height: "36px", fontSize: "12.5px", background: "#f1f5f9", border: 0, borderRadius: "8px", fontWeight: "600", cursor: "pointer" }}
+                    onClick={() => setShowClaimForm(false)}
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="submit"
+                    className="primary"
+                    disabled={claiming}
+                    style={{ flex: 2, height: "36px", fontSize: "12.5px", borderRadius: "8px", fontWeight: "700" }}
+                  >
+                    {claiming ? "Đang tra cứu..." : "Gửi yêu cầu tra cứu"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
 
         {/* Tab Content 1: Rút tiền (Matches Image 1) */}
         {activeTab === "withdraw" && (
