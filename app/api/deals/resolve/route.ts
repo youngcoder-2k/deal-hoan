@@ -3,8 +3,12 @@ import {
   buildShopeeAffiliateUrl,
   cleanShopeeUrl,
   isShopeeUrl,
+  isTikTokUrl,
+  cleanTikTokUrl,
+  generateAccessTradeTikTokLink,
   buildCustomShortUrl,
   extractUrlFromText,
+  formatSubIdForUser,
 } from "@/lib/deals/affiliate";
 import { cashbackFor } from "@/lib/deals/score";
 import type { Platform } from "@/lib/deals/types";
@@ -229,6 +233,11 @@ export async function POST(request: NextRequest) {
           ? `https://shopee.vn/product/${fastShopeeProduct.shopId}/${fastShopeeProduct.itemId}`
           : cleanShopeeUrl(canonicalUrl);
       trackedLink = buildShopeeAffiliateUrl(cleanShopeeLink, { subId });
+    } else if (isTikTokUrl(canonicalUrl)) {
+      const atResult = await generateAccessTradeTikTokLink(canonicalUrl, { subId });
+      trackedLink = atResult.success && atResult.affiliateUrl
+        ? atResult.affiliateUrl
+        : buildCustomShortUrl(canonicalUrl, { baseUrl: siteBase, subId });
     } else {
       trackedLink = buildCustomShortUrl(canonicalUrl, {
         baseUrl: siteBase,

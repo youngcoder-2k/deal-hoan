@@ -121,6 +121,129 @@ export function isShopeeUrl(rawUrl: string): boolean {
 }
 
 /**
+ * Checks if a URL belongs to TikTok or TikTok Shop
+ */
+export function isTikTokUrl(rawUrl: string): boolean {
+  try {
+    const extracted = extractUrlFromText(rawUrl);
+    const lower = extracted.toLowerCase();
+    return (
+      lower.includes("tiktok.com") ||
+      lower.includes("vt.tiktok.com") ||
+      lower.includes("shop.tiktok.com") ||
+      lower.includes("v.douyin.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Cleans a TikTok URL by removing trailing junk or whitespace
+ */
+export function cleanTikTokUrl(rawUrl: string): string {
+  try {
+    const extracted = extractUrlFromText(rawUrl);
+    if (!extracted.startsWith("http://") && !extracted.startsWith("https://")) {
+      return extracted;
+    }
+    const parsed = new URL(extracted);
+    return parsed.toString();
+  } catch {
+    return extractUrlFromText(rawUrl);
+  }
+}
+
+export type AccessTradeCreateLinkResult = {
+  success: boolean;
+  affiliateUrl: string;
+  shortUrl?: string;
+  message?: string;
+  code?: string;
+};
+
+/**
+ * Generates an official tracked TikTok Shop affiliate link via AccessTrade API (v2)
+ */
+export async function generateAccessTradeTikTokLink(
+  productUrl: string,
+  options?: {
+    subId?: string;
+    authToken?: string;
+  }
+): Promise<AccessTradeCreateLinkResult> {
+  const cleanUrl = cleanTikTokUrl(productUrl);
+  const token = options?.authToken || process.env.ACCESSTRADE_TOKEN;
+  const subId = options?.subId ? formatSubIdForUser(options.subId) : "dealhoan";
+
+  if (!token) {
+    return {
+      success: false,
+      affiliateUrl: cleanUrl,
+      message: "Chưa cấu hình ACCESSTRADE_TOKEN trong hệ thống",
+    };
+  }
+
+  try {
+    const endpoint = "https://api.accesstrade.vn/v2/tiktokshop_product_feeds/create_link";
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Token ${token}`,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        product_url: cleanUrl,
+        sub_1: subId,
+        utm_source: "dealhoan",
+        utm_medium: "affiliate",
+      }),
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
+
+    if (!res.ok) {
+      return {
+        success: false,
+        affiliateUrl: cleanUrl,
+        message: `Lỗi kết nối AccessTrade API (HTTP ${res.status})`,
+      };
+    }
+
+    const body = await res.json();
+    if (body.status && body.data) {
+      const affLink = body.data.short_link || body.data.aff_link || body.data;
+      if (typeof affLink === "string" && affLink.startsWith("http")) {
+        return {
+          success: true,
+          affiliateUrl: affLink,
+          shortUrl: body.data.short_link || affLink,
+          message: "Tạo link affiliate TikTok Shop thành công",
+        };
+      }
+    }
+
+    return {
+      success: false,
+      affiliateUrl: cleanUrl,
+      message:
+        body.message === "The link is not part of the campaign"
+          ? "Sản phẩm này người bán chưa bật hoa hồng mở trên TikTok Shop"
+          : (body.message || "Không thể tạo link tiếp thị cho sản phẩm này"),
+      code: body.code,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Network error";
+    return {
+      success: false,
+      affiliateUrl: cleanUrl,
+      message: msg,
+    };
+  }
+}
+
+/**
  * Generates a clean, branded DealHoàn short link
  * e.g.:
  * - For Shopee product: https://dealhoan.vn/go?s=401425654.17054556097

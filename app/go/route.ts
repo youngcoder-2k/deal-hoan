@@ -1,5 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { buildShopeeAffiliateUrl, isShopeeUrl, cleanShopeeUrl } from "@/lib/deals/affiliate";
+import {
+  buildShopeeAffiliateUrl,
+  isShopeeUrl,
+  cleanShopeeUrl,
+  isTikTokUrl,
+  cleanTikTokUrl,
+  generateAccessTradeTikTokLink,
+} from "@/lib/deals/affiliate";
 import { lookupFastShopeeProduct } from "@/lib/deals/providers/fast-shopee";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +31,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // If it's Shopee, convert to official Shopee Affiliate tracking link
+  // 1. Shopee: Convert to official Shopee Affiliate tracking link
   if (isShopeeUrl(targetUrl)) {
     let cleanTarget = cleanShopeeUrl(targetUrl);
     // If it's a shortlink (s.shopee.vn, vn.shp.ee) without explicit /product/ or -i.
@@ -47,7 +54,20 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // Direct redirect for other URLs
+  // 2. TikTok Shop: Convert via AccessTrade API
+  if (isTikTokUrl(targetUrl)) {
+    const cleanTarget = cleanTikTokUrl(targetUrl);
+    const atResult = await generateAccessTradeTikTokLink(cleanTarget, { subId });
+    const redirectUrl = atResult.success && atResult.affiliateUrl ? atResult.affiliateUrl : cleanTarget;
+    return NextResponse.redirect(redirectUrl, {
+      status: 307,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  }
+
+  // 3. Direct redirect for other URLs
   return NextResponse.redirect(targetUrl, {
     status: 307,
     headers: {
