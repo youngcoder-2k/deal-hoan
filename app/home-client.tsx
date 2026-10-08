@@ -1,6 +1,13 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
+import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
+import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
+import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
+import { XIcon } from "@phosphor-icons/react/dist/csr/X";
+import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
+import styles from "./home-redesign.module.css";
 import confetti from "canvas-confetti";
 import type { User } from "@supabase/supabase-js";
 import AccountModal from "@/app/components/account-modal";
@@ -185,129 +192,6 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function Receipt({
-  platform = "Shopee Mall",
-  product,
-  trackedLink,
-  copied,
-  onCopy,
-  onBuy,
-  onClear,
-}: {
-  platform?: string;
-  product?: CalculatedProduct | null;
-  trackedLink?: string;
-  copied?: boolean;
-  onCopy?: () => void;
-  onBuy?: () => void;
-  onClear?: () => void;
-}) {
-  const price = product?.price ?? 1540000;
-  const originalPrice = product?.originalPrice ?? 1990000;
-  const cashback = product?.cashback ?? 77000;
-  const actualCost = price - cashback;
-  const cashbackRate = product?.cashbackRate;
-  const savingsPercent =
-    product?.savingsPercent ??
-    (cashbackRate != null
-      ? cashbackRate
-      : (price > 0 ? Math.round((cashback / price) * 100) : 5));
-  const productName = product?.name || "Tai nghe Bluetooth chống ồn Sony WF-C710N";
-  const productImg = product?.imageUrl || "/demo/sony-wf-c710n.jpg";
-  const displayPlatform = product?.platform || platform;
-
-  return (
-    <div className="receipt">
-      <div className="receipt-head">
-        <b>⚡ Hoàn tiền cho link của bạn</b>
-        <span>{displayPlatform}</span>
-      </div>
-      <div className="receipt-product">
-        <div className="placeholder small">
-          {productImg ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={productImg}
-              alt={productName}
-              className="deal-image"
-              loading="lazy"
-            />
-          ) : (
-            "ảnh SP"
-          )}
-        </div>
-        <div>
-          <b>{productName}</b>
-          <p>
-            {displayPlatform} {product?.seller ? `· ${product.seller}` : ""} ·{" "}
-            <em className="green">
-              Hoàn {cashbackRate != null ? `${cashbackRate}%` : `đến ${savingsPercent}%`}
-            </em>
-          </p>
-        </div>
-      </div>
-      <div className="price-lines">
-        {originalPrice > price && (
-          <div>
-            <span>Giá niêm yết</span>
-            <s>{formatPrice(originalPrice)}</s>
-          </div>
-        )}
-        <hr />
-        <div className="total">
-          <b>Thanh toán hôm nay</b>
-          <strong>{formatPrice(price)}</strong>
-        </div>
-        <div>
-          <span>
-            {product?.isExactCashback ? "Hoàn tiền đến" : "Hoàn về ví"}{" "}
-            <b className="green">sau 14–15 ngày</b>
-          </span>
-          <b className="green">+{formatPrice(cashback)}</b>
-        </div>
-        <div className="actual-cost">
-          <b>Chi phí thực sau khi nhận hoàn</b>
-          <span>
-            <strong>{formatPrice(actualCost)}</strong>
-            <em>tiết kiệm {savingsPercent}%</em>
-          </span>
-        </div>
-      </div>
-      {trackedLink && (
-        <div className="tracked-link">
-          <span>
-            <small>Link mới</small>
-            <a
-              href={trackedLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="tracked-url"
-              title="Nhấp để mở link hoặc bấm Copy link"
-            >
-              <b>{trackedLink}</b>
-            </a>
-          </span>
-          <button className={copied ? "is-copied" : ""} onClick={onCopy}>
-            {copied ? "✓ Đã copy" : "Copy link"}
-          </button>
-        </div>
-      )}
-      <button className="primary wide" onClick={onBuy}>
-        Mua ngay &amp; Nhận hoàn tiền →
-      </button>
-      {onClear && (
-        <div className="receipt-foot">
-          <span>
-            Mua qua link mới hoặc nút trên — ghi nhận trong 24 giờ, nhận hoàn
-            sau 14–15 ngày · <a href="#how">điều kiện</a>
-          </span>
-          <button className="result-reset" onClick={onClear}>Tính link khác</button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function DemoReceipt() {
   return (
     <div className="demo-receipt" aria-label="Minh hoạ cách tính hoàn tiền">
@@ -407,6 +291,10 @@ export default function HomeClient({
   flashSlot?: string;
 }) {
   const linkInputRef = useRef<HTMLInputElement>(null);
+  const calculationIdRef = useRef(0);
+  const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const flashScrollRef = useRef<HTMLDivElement>(null);
   const isFlashHoveredRef = useRef(false);
   const flashPauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -699,6 +587,12 @@ export default function HomeClient({
       return notify("Vui lòng dán link sản phẩm 🙂");
     }
 
+    const calculationId = ++calculationIdRef.current;
+    if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    setCopiedTracked(false);
+    setResultClosing(false);
+
     if (rawClean && rawClean !== targetUrl) {
       setLink(rawClean);
     }
@@ -717,6 +611,7 @@ export default function HomeClient({
         : buildCustomShortUrl(trimmed, { baseUrl, subId });
       setCalcPercent(100);
       await new Promise((r) => setTimeout(r, 180));
+      if (calculationId !== calculationIdRef.current) return;
       setCalculatedProduct(chipProduct);
       setTrackedLink(localTracked);
       setCopiedTracked(false);
@@ -763,9 +658,11 @@ export default function HomeClient({
         ? buildShopeeAffiliateUrl(trimmed, { subId })
         : buildCustomShortUrl(trimmed, { baseUrl, subId });
     } finally {
+      if (calculationId !== calculationIdRef.current) return;
       if (resolvedProduct) {
         setCalcPercent(100);
         await new Promise((r) => setTimeout(r, 200));
+        if (calculationId !== calculationIdRef.current) return;
         setCalculatedProduct(resolvedProduct);
         if (resolvedTracked) {
           setTrackedLink(resolvedTracked);
@@ -775,7 +672,7 @@ export default function HomeClient({
         setResult(resolvedProduct.platform);
       }
       setBusy(false);
-      notify("✓ Đã gắn mã hoàn tiền DealHoàn");
+      notify(resolvedProduct ? "✓ Đã gắn mã hoàn tiền DealHoàn" : "Chưa lấy được thông tin sản phẩm. Bạn thử lại nhé.");
     }
   };
 
@@ -783,30 +680,69 @@ export default function HomeClient({
     e.preventDefault();
     executeCalculation(link);
   };
-  const visibleHotDeals = [...hotDeals].sort(HOT_SORTERS[tab]);
+  const resetCalculation = (clearInput = true) => {
+    calculationIdRef.current += 1;
+    setBusy(false);
+    if (clearInput) setLink("");
+    if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    setCopiedTracked(false);
+    if (result) {
+      setResultClosing(true);
+      closingTimerRef.current = setTimeout(() => {
+        setResult("");
+        setCalculatedProduct(null);
+        setTrackedLink("");
+        setResultClosing(false);
+        if (clearInput) linkInputRef.current?.focus({ preventScroll: true });
+      }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320);
+    } else if (clearInput) {
+      linkInputRef.current?.focus({ preventScroll: true });
+    }
+  };
+  const copyTrackedLink = async () => {
+    const calculationId = calculationIdRef.current;
+    try {
+      await navigator.clipboard.writeText(trackedLink);
+      if (calculationId !== calculationIdRef.current) return;
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      setCopiedTracked(true);
+      confetti({ particleCount: 65, spread: 65, origin: { y: 0.65 }, disableForReducedMotion: true });
+      copyTimerRef.current = setTimeout(() => setCopiedTracked(false), 1500);
+      notify("✓ Đã copy link hoàn tiền");
+    } catch {
+      if (calculationId !== calculationIdRef.current) return;
+      notify("Chưa copy được. Bạn có thể nhấn giữ link để sao chép.");
+    }
+  };
+  useEffect(() => () => {
+    calculationIdRef.current += 1;
+    if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+  }, []);
+  const visibleHotDeals = hotDeals
+    .filter((deal) => deal.name.toLocaleLowerCase("vi").includes(searchQuery.toLocaleLowerCase("vi")))
+    .sort(HOT_SORTERS[tab]);
   const tm = [
     Math.floor(seconds / 3600),
     Math.floor((seconds % 3600) / 60),
     seconds % 60,
   ].map((x) => String(x).padStart(2, "0"));
   return (
-    <main>
+    <main className={styles.page}>
       <div className="utility">
         <div className="container">
           <div className="utility-left">
-            <span>Hoàn tiền từ Shopee · TikTok Shop · Lazada</span>
-            <a href="#how">Cách hoạt động</a>
-            <a href="#faq">Câu hỏi thường gặp</a>
+            <span>Mua sắm thông minh · Hoàn tiền thật · Tiết kiệm mỗi ngày</span>
           </div>
           <div className="utility-right">
-            <a>Tải app</a>
-            <a className="mint" href="#referral">
-              Mời bạn — nhận hoa hồng
-            </a>
+            <a href="#how">Cách hoạt động</a>
+            <a href="#faq">Câu hỏi thường gặp</a>
+            <a href="#contact">Liên hệ</a>
           </div>
         </div>
       </div>
-      <header>
+      <header className={styles.header}>
         <div className="container nav">
           <Link className="brand" href="/" title="DealHoàn — dán link, nhận hoàn tiền">
             <span className="brand-mark" aria-hidden="true">
@@ -816,14 +752,14 @@ export default function HomeClient({
               <img src="/brand/deal-hoan-logo.png" alt="DealHoàn — Săn deal · Hoàn tiền" />
             </span>
           </Link>
-          <form className="search" onSubmit={calc}>
-            <span>⌕</span>
-            <input placeholder="Tìm sản phẩm, deal, mã giảm giá…" />
+          <form className="search" onSubmit={(e) => { e.preventDefault(); document.getElementById("deals")?.scrollIntoView({ behavior: "smooth" }); }}>
+            <MagnifyingGlassIcon size={19} aria-hidden="true" />
+            <input aria-label="Tìm sản phẩm, deal, mã giảm giá" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm sản phẩm, deal, mã giảm giá…" />
             <button>Tìm deal</button>
           </form>
           <nav>
             <a className="active" href="#deals">
-              Deal hot
+              <FlameIcon size={19} weight="fill" aria-hidden="true" /> Deal hot
             </a>
             <a href="#coupons">Mã giảm giá</a>
             <a href="#how">Cashback</a>
@@ -879,190 +815,64 @@ export default function HomeClient({
           </div>
         </div>
       </header>
-      <section className="hero">
-        <i className="orb peach" />
-        <i className="orb mint-orb" />
-        <div className="container hero-inner">
-          <div className="badge">
-            <i />
-            1.248 deal mới hôm nay
-          </div>
-          <h1>
-            Mua sắm ngay,
-            <br />
-            <span>Hoàn tiền liền tay</span>
-          </h1>
-          <p>
-            Tự áp mã, so giá và tính sẵn{" "}
-            <b>chi phí thực sau hoàn tiền</b> trước khi mua.
-          </p>
-          <form
-            className={`calculator ${inputError ? "input-error" : ""} ${link ? "has-link" : ""}`}
-            onSubmit={calc}
-          >
-            <i>🔗</i>
-            <input
-              ref={linkInputRef}
-              value={link}
-              onChange={(e) => {
-                const nextLink = e.target.value;
-                setLink(nextLink);
-                if (!nextLink.trim() && result && !resultClosing) {
-                  setResultClosing(true);
-                  setTimeout(() => {
-                    setResult("");
-                    setCalculatedProduct(null);
-                    setResultClosing(false);
-                  }, 420);
-                }
-              }}
-              onPaste={(e) => {
-                const pasted = e.clipboardData?.getData("text") || "";
-                const extracted = extractUrlFromText(pasted);
-                if (extracted && extracted !== pasted) {
-                  e.preventDefault();
-                  setLink(extracted);
-                }
-                requestAnimationFrame(() => {
-                  if (linkInputRef.current) linkInputRef.current.scrollLeft = 0;
-                });
-              }}
-              placeholder="Dán link sản phẩm Shopee, TikTok, Lazada…"
-            />
-            {link && (
-              <button
-                type="button"
-                className="calculator-clear"
-                aria-label="Xoá link"
-                onClick={() => {
-                  setLink("");
-                  if (result && !resultClosing) {
-                    setResultClosing(true);
-                    setTimeout(() => {
-                      setResult("");
-                      setCalculatedProduct(null);
-                      setResultClosing(false);
-                    }, 420);
-                  }
-                  linkInputRef.current?.focus();
-                }}
-              >
-                ×
+      <section className={styles.hero} aria-label="Tính tiền hoàn sản phẩm">
+        <div className={styles.heroGrid}>
+          <CashbackStory />
+          <div className={styles.calculatorPanel} aria-busy={busy}>
+            <form className={styles.calculator} onSubmit={calc}>
+              <div className={`${styles.inputWrap} ${inputError ? styles.inputError : ""}`}>
+                <LinkIcon className={styles.inputIcon} size={23} aria-hidden="true" />
+                <input
+                  ref={linkInputRef}
+                  aria-label="Link sản phẩm"
+                  aria-invalid={inputError}
+                  type="text"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={link}
+                  onChange={(e) => {
+                    const nextLink = e.target.value;
+                    setLink(nextLink);
+                    if (!nextLink.trim()) resetCalculation(false);
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData("text");
+                    e.preventDefault();
+                    setLink(extractUrlFromText(pasted) || pasted);
+                    requestAnimationFrame(() => {
+                      linkInputRef.current?.setSelectionRange(0, 0);
+                      if (linkInputRef.current) linkInputRef.current.scrollLeft = 0;
+                    });
+                  }}
+                  placeholder="Dán link sản phẩm tại đây…"
+                />
+                {link && <button type="button" className={styles.clearInput} aria-label="Xoá link" onClick={() => resetCalculation()}><XIcon size={17} weight="bold" aria-hidden="true" /></button>}
+              </div>
+              <button type="submit" className={styles.calculateButton} disabled={busy}>
+                {busy ? <><span className="calc-spinner" aria-hidden="true" /> Đang tính… <small>{calcPercent}%</small></> : <><LightningIcon size={22} weight="fill" aria-hidden="true" /> Tính hoàn tiền</>}
               </button>
-            )}
-            <button
-              type="submit"
-              className={`primary ${busy ? "is-calculating" : ""}`}
-              disabled={busy}
-            >
-              {busy ? (
-                <span className="calculating-content">
-                  <span className="calc-spinner" aria-hidden="true" />
-                  <span>Đang tính…</span>
-                  <span className="calc-timer-tag">{calcPercent}%</span>
-                </span>
-              ) : (
-                "⚡ Tính hoàn tiền"
-              )}
-            </button>
-          </form>
-          {result && (
-            <div
-              className={`result-collapse ${resultClosing ? "is-closing" : ""}`}
-            >
-              <div className="result-clip">
-                <div
-                  className={`result ${resultClosing ? "result-closing" : ""}`}
-                >
-                  <Receipt
-                    platform={result}
+            </form>
+            <div className={styles.calculatorState}>
+              {result && calculatedProduct ? (
+                <div className={`${styles.resultState} ${resultClosing ? styles.resultClosing : ""}`}>
+                  <CashbackReceipt
                     product={calculatedProduct}
                     trackedLink={trackedLink}
                     copied={copiedTracked}
-                    onCopy={() => {
-                      navigator.clipboard?.writeText(trackedLink);
-                      setCopiedTracked(true);
-                      try {
-                        confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
-                      } catch {}
-                      setTimeout(() => setCopiedTracked(false), 1500);
-                      notify("✓ Đã copy link hoàn tiền");
-                    }}
+                    onCopy={copyTrackedLink}
                     onBuy={() => setBuyOpen(true)}
-                    onClear={() => {
-                      if (resultClosing) return;
-                      setResultClosing(true);
-                      setTimeout(() => {
-                        setLink("");
-                        setResult("");
-                        setCalculatedProduct(null);
-                        setResultClosing(false);
-                        linkInputRef.current?.focus();
-                      }, 420);
-                    }}
+                    onClear={() => resetCalculation()}
                   />
                 </div>
-              </div>
+              ) : <CashbackEmpty busy={busy} />}
             </div>
-          )}
-          <div className="chips">
-            <span className="chips-label">Hỗ trợ:</span>
-            <button
-              type="button"
-              onClick={() => {
-                const sample = "https://shopee.vn/tai-nghe-sony";
-                setLink(sample);
-                executeCalculation(sample);
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M6.6 8.4h10.8L18.5 19a1.8 1.8 0 0 1-1.8 2H7.3A1.8 1.8 0 0 1 5.5 19zM9 8.2V6.8a3 3 0 0 1 6 0v1.4"
-                  stroke="#EE4D2D"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Shopee
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const sample = "https://vt.tiktok.com/ZS8abcd/";
-                setLink(sample);
-                executeCalculation(sample);
-              }}
-            >
-              <svg viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M13.2 15.5V4.8c.7 1.9 2.4 3.5 4.6 3.8"
-                  stroke="#171717"
-                  strokeWidth="2.4"
-                  strokeLinecap="round"
-                />
-                <circle
-                  cx="9.7"
-                  cy="15.9"
-                  r="3.5"
-                  stroke="#171717"
-                  strokeWidth="2.4"
-                />
-              </svg>
-              TikTok Shop
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const sample = "https://lazada.vn/products/sony";
-                setLink(sample);
-                executeCalculation(sample);
-              }}
-            >
-              <LazadaLogo />
-              Lazada
-            </button>
+            <span className="sr-only" role="status">{busy ? "Đang kiểm tra thông tin sản phẩm." : result ? "Đã có kết quả hoàn tiền." : ""}</span>
           </div>
+        </div>
+      </section>
+      <section className={styles.socialProof} aria-label="Cộng đồng DealHoàn">
+        <div className="container">
           <div className="live" aria-label="Hoạt động hoàn tiền trực tiếp">
             <b>
               <i />
@@ -1155,11 +965,12 @@ export default function HomeClient({
               <h2>⚡ Deal chớp nhoáng</h2>
               <div className="flash-countdown-group">
                 <div className="timer">
-                  <span>{tm[0]}</span>
+                  {/* The live clock can tick between server render and hydration. */}
+                  <span suppressHydrationWarning>{tm[0]}</span>
                   <span className="timer-colon">:</span>
-                  <span>{tm[1]}</span>
+                  <span suppressHydrationWarning>{tm[1]}</span>
                   <span className="timer-colon">:</span>
-                  <span className="timer-sec">{tm[2]}</span>
+                  <span className="timer-sec" suppressHydrationWarning>{tm[2]}</span>
                 </div>
               </div>
             </div>
@@ -1292,6 +1103,12 @@ export default function HomeClient({
           ))}
         </div>
         <div className="deal-grid" key={`hot-deals-${tab}`}>
+          {visibleHotDeals.length === 0 && (
+            <div className={styles.searchEmpty} role="status">
+              <p>Chưa tìm thấy deal phù hợp. Bạn thử từ khóa khác nhé.</p>
+              <button type="button" onClick={() => setSearchQuery("")}>Xem lại tất cả deal</button>
+            </div>
+          )}
           {visibleHotDeals.map((deal, idx) => (
             <article
               className="deal deal-fade-in"
@@ -1523,7 +1340,7 @@ export default function HomeClient({
             {[
               [
                 "Dán link hoặc chọn deal",
-                "Dán link sản phẩm để DealHoàn tính tiền hoàn, hoặc chọn deal đã tính sẵn giá thực trả.",
+                "Trên trang sản phẩm của Shopee, TikTok Shop hoặc Lazada, chọn Chia sẻ → Sao chép liên kết. Dán link vào ô tính hoàn tiền bên trên, hoặc chọn một deal có sẵn.",
               ],
               [
                 "Mua qua liên kết",
@@ -1584,7 +1401,7 @@ export default function HomeClient({
           </div>
         </div>
       </section>
-      <footer className="site-footer">
+      <footer className="site-footer" id="contact">
         <div className="container">
           <div>
             <h3>

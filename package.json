@@ -14,6 +14,7 @@
     "shopee:schedule": "bash scripts/schedule-shopee-scrape.sh"
   },
   "dependencies": {
+    "@phosphor-icons/react": "^2.1.10",
     "@supabase/ssr": "^0.12.5",
     "@supabase/supabase-js": "^2.112.4",
     "canvas-confetti": "^1.9.4",
