@@ -884,9 +884,9 @@ export default function HomeClient({
             1.248 deal mới hôm nay
           </div>
           <h1>
-            Dán link,
+            Mua sắm ngay,
             <br />
-            biết ngay <span>tiền hoàn</span>
+            <span>Hòa tiền liền tay</span>
           </h1>
           <p>
             Tự áp mã, so giá và tính sẵn{" "}
