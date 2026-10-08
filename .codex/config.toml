@@ -1,0 +1,2 @@
+# Project-scoped gpt-instruct integration; paths resolve relative to this file.
+model_instructions_file = "./deal-hoan-instructions.md"

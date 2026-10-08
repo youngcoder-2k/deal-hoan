@@ -476,7 +476,6 @@ export default function HomeClient({
   const [copiedTracked, setCopiedTracked] = useState(false);
   const [calculatedProduct, setCalculatedProduct] = useState<CalculatedProduct | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
-  const [buyDontShow, setBuyDontShow] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [authPending, setAuthPending] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -985,16 +984,7 @@ export default function HomeClient({
                       setTimeout(() => setCopiedTracked(false), 1500);
                       notify("✓ Đã copy link hoàn tiền");
                     }}
-                    onBuy={() => {
-                      if (buyDontShow) {
-                        window.open(
-                          trackedLink || (link ? getAffiliateUrl(link) : "https://shopee.vn"),
-                          "_blank",
-                          "noopener",
-                        );
-                        notify(`Đang chuyển tới ${result}...`);
-                      } else setBuyOpen(true);
-                    }}
+                    onBuy={() => setBuyOpen(true)}
                     onClear={() => {
                       if (resultClosing) return;
                       setResultClosing(true);
@@ -1635,7 +1625,7 @@ export default function HomeClient({
             <button className="modal-close" onClick={() => setBuyOpen(false)}>
               ✕
             </button>
-            <span className="modal-badge">🛡 Lưu ý trước khi mua</span>
+            <span className="modal-badge">Lưu ý</span>
             <h3>Để không mất hoàn tiền</h3>
             <p>
               <span className="buy-sub-desktop">
@@ -1649,8 +1639,8 @@ export default function HomeClient({
             <div className="buy-rules">
               {[
                 [
-                  "Xoá sản phẩm khỏi giỏ hàng",
-                  "trước khi vào link đã chuyển đổi, sau đó thêm lại từ phiên mua mới.",
+                  "Không xoá sản phẩm khỏi giỏ hàng",
+                  "sau khi đã thêm từ link hoàn tiền.",
                 ],
                 [
                   "Không bấm link, banner hay video khác",
@@ -1669,8 +1659,8 @@ export default function HomeClient({
                   "hoặc tài khoản liên quan nếu sàn không cho phép.",
                 ],
                 [
-                  "Đơn huỷ, hoàn trả không được hoàn tiền",
-                  "theo quy định đối soát của sàn.",
+                  "Không hủy, hoàn trả hàng",
+                  "vì đơn hủy hoặc hoàn trả không được hoàn tiền theo quy định đối soát của sàn.",
                 ],
               ].map(([head, body]) => (
                 <div key={head}>
@@ -1690,19 +1680,10 @@ export default function HomeClient({
               </span>
             </div>
             <div className="buy-bottom">
-              <label className="buy-dont-show">
-                <input
-                  type="checkbox"
-                  checked={buyDontShow}
-                  onChange={(e) => setBuyDontShow(e.target.checked)}
-                />{" "}
-                Đã hiểu, không hiện lại lần sau
-              </label>
               <div className="buy-actions">
                 <button onClick={() => setBuyOpen(false)}>Đóng</button>
                 <button
                   className="primary"
-                  disabled={!buyDontShow}
                   onClick={() => {
                     setBuyOpen(false);
                     window.open(

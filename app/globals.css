@@ -1,4 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap");
 @import "tailwindcss";
 * {
   box-sizing: border-box;
@@ -36,7 +35,7 @@ body {
   max-width: 100%;
   background: #faf3ef;
   color: #171717;
-  font-family: "Be Vietnam Pro", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .auth-btn-desktop {
   display: inline;
@@ -60,7 +59,7 @@ body {
 }
 .legal-brand {
   color: #d73211;
-  font: 800 17px Archivo, sans-serif;
+  font: 800 17px var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .legal-kicker {
   margin: 32px 0 8px;
@@ -69,7 +68,7 @@ body {
 }
 .legal-card h1,
 .legal-card h2 {
-  font-family: Archivo, sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   letter-spacing: -0.5px;
 }
 .legal-card h1 {
@@ -90,7 +89,9 @@ body {
   margin-top: 0;
 }
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 button {
@@ -208,7 +209,7 @@ header {
 }
 .search input,
 .calculator input {
-  font-family: "Be Vietnam Pro", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 14px;
   color: #171717;
 }
@@ -336,7 +337,7 @@ header {
 .hero h1,
 h2,
 .total strong {
-  font-family: Archivo;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .hero h1 {
   margin: 0 0 14px;
@@ -470,7 +471,7 @@ h2,
   background: rgba(0, 0, 0, 0.2);
   padding: 2px 6px;
   border-radius: 6px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 12px;
   font-weight: 700;
   letter-spacing: -0.2px;
@@ -575,7 +576,7 @@ h2,
   border-radius: 11px;
   background: repeating-linear-gradient(45deg, #f5f5f5 0 8px, #efefef 8px 16px);
   color: #a3a3a3;
-  font: 10px monospace;
+  font: 10px var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 /* Real product photo fills the placeholder frame exactly, same as the mock's
    fixed-size boxes; badges stay pinned on top via .placeholder's relative
@@ -646,7 +647,7 @@ h2,
   color: #171717;
 }
 .total strong {
-  font-family: Archivo;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-weight: 900;
   font-size: 26px;
   letter-spacing: -0.8px;
@@ -685,7 +686,7 @@ h2,
 }
 .actual-cost strong {
   color: #15803d;
-  font: 900 17px Archivo;
+  font: 900 17px var(--font-app), "Be Vietnam Pro", sans-serif;
   letter-spacing: -0.4px;
 }
 .actual-cost em {
@@ -765,7 +766,7 @@ h2,
 .tracked-link b {
   overflow: hidden;
   color: #15803d;
-  font: 700 13px monospace;
+  font: 700 13px var(--font-app), "Be Vietnam Pro", sans-serif;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -847,18 +848,20 @@ h2,
   color: #525252;
 }
 .modal-badge {
-  display: inline-block;
-  padding: 6px 13px;
-  border: 1px solid #fde68a;
-  border-radius: 99px;
-  background: #fff7e6;
-  color: #b45309;
-  font-size: 12.5px;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 18px;
+  border: 1px solid #fdba74;
+  border-radius: 12px;
+  background: linear-gradient(120deg, #ffedd5, #fff7ed);
+  color: #9a3412;
+  box-shadow: 0 3px 12px rgba(234, 88, 12, 0.12);
+  font-size: 15px;
   font-weight: 800;
 }
 .buy-modal h3 {
   margin: 14px 0 8px;
-  font: 900 26px Archivo;
+  font: 900 26px var(--font-app), "Be Vietnam Pro", sans-serif;
   letter-spacing: -0.6px;
 }
 .buy-modal > p {
@@ -943,7 +946,7 @@ h2,
 }
 .buy-bottom {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: 14px;
   padding: 18px 0 24px;
@@ -965,51 +968,6 @@ h2,
   filter: none;
   opacity: 0.45;
   box-shadow: none;
-}
-.buy-dont-show {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #525252;
-  font-size: 13px;
-  cursor: pointer;
-  user-select: none;
-}
-.buy-dont-show input {
-  flex: none;
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  appearance: none;
-  display: grid;
-  place-content: center;
-  border: 1.5px solid #a3a3a3;
-  border-radius: 4px;
-  background: #fff;
-  color: #fff;
-  cursor: pointer;
-  transition: background-color 0.16s ease, border-color 0.16s ease;
-}
-.buy-dont-show input::after {
-  content: "✓";
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1;
-  opacity: 0;
-  transform: scale(0.7);
-  transition: opacity 0.14s ease, transform 0.14s ease;
-}
-.buy-dont-show input:checked {
-  border-color: #737373;
-  background: #737373;
-}
-.buy-dont-show input:checked::after {
-  opacity: 1;
-  transform: scale(1);
-}
-.buy-dont-show input:focus-visible {
-  outline: 2px solid #d4d4d4;
-  outline-offset: 2px;
 }
 .buy-actions > button:first-child {
   padding: 0 22px;
@@ -1166,7 +1124,7 @@ h2,
 .stats b {
   display: block;
   color: #171717;
-  font: 800 23px Archivo;
+  font: 800 23px var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .stats hr {
   height: 36px;
@@ -1354,7 +1312,7 @@ h2,
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
-  font: 800 15px Archivo, sans-serif;
+  font: 800 15px var(--font-app), "Be Vietnam Pro", sans-serif;
   min-width: 22px;
   text-align: center;
 }
@@ -1419,14 +1377,14 @@ h2,
   border-radius: 6px;
   background: #ee4d2d;
   color: #fff;
-  font: 800 11px "Be Vietnam Pro";
+  font: 800 11px var(--font-app), "Be Vietnam Pro", sans-serif;
   z-index: 2;
   pointer-events: none;
 }
 .flash-grid em,
 .deal em {
   color: #d73211;
-  font: 800 17px Archivo;
+  font: 800 17px var(--font-app), "Be Vietnam Pro", sans-serif;
   font-style: normal;
 }
 .flash-grid s,
@@ -1563,7 +1521,7 @@ h2,
   border-radius: 7px;
   background: #171717dc;
   color: #fff;
-  font: 700 11px "Be Vietnam Pro";
+  font: 700 11px var(--font-app), "Be Vietnam Pro", sans-serif;
   z-index: 2;
   pointer-events: none;
 }
@@ -1712,7 +1670,7 @@ h2,
   text-align: center;
 }
 .coupon > div b {
-  font: 900 21px Archivo;
+  font: 900 21px var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .coupon > div small {
   font-size: 10px;
@@ -1786,7 +1744,7 @@ h2,
 .coupon-brand-icon.fb {
   background: #fff;
   color: #1877f2;
-  font-family: sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .coupon-brand-icon.ig {
   background: #fff;
@@ -2446,7 +2404,7 @@ h2,
   border-radius: 10px;
   background: #fff1ed;
   color: #d73211;
-  font: 800 15px Archivo;
+  font: 800 15px var(--font-app), "Be Vietnam Pro", sans-serif;
   font-style: normal;
 }
 .step span b,
@@ -2540,7 +2498,7 @@ h2,
   border-radius: 5px;
   background: #f5f5f5;
   color: #171717;
-  font: 700 12px monospace;
+  font: 700 12px var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .demo-price-lines hr {
   width: 100%;
@@ -2555,7 +2513,7 @@ h2,
   font-weight: 700;
 }
 .demo-total strong {
-  font: 900 27px Archivo;
+  font: 900 27px var(--font-app), "Be Vietnam Pro", sans-serif;
   letter-spacing: -0.8px;
 }
 .demo-price-lines > div:nth-of-type(5) span > b {
@@ -2582,7 +2540,7 @@ h2,
 }
 .demo-actual-cost strong {
   color: #15803d;
-  font: 900 17px Archivo;
+  font: 900 17px var(--font-app), "Be Vietnam Pro", sans-serif;
   letter-spacing: -0.4px;
 }
 .demo-actual-cost em {
@@ -2687,7 +2645,7 @@ h2,
 .site-footer h3 {
   margin: 0 0 8px;
   color: #171717;
-  font: 800 17px Archivo;
+  font: 800 17px var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .site-footer p {
   max-width: 280px;
@@ -3739,7 +3697,7 @@ select.account-input.select-bank-field:focus {
   border: 1px solid #bfdbfe;
 }
 .order-code-badge {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 11.5px;
   font-weight: 600;
   color: #4b5563;
@@ -4310,7 +4268,7 @@ select.account-input.select-bank-field:focus {
     display: block;
     font-size: 16px;
     font-weight: 800;
-    font-family: Archivo, sans-serif;
+    font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
     letter-spacing: -0.3px;
     color: #171717;
     line-height: 1.2;
@@ -4867,8 +4825,8 @@ select.account-input.select-bank-field:focus {
     justify-content: center;
   }
   .modal-badge {
-    font-size: 12px;
-    padding: 5px 11px;
+    font-size: 13px;
+    padding: 7px 14px;
   }
   .buy-modal h3 {
     font-size: 17.5px;
@@ -4918,10 +4876,6 @@ select.account-input.select-bank-field:focus {
   .buy-bottom {
     display: block;
     padding: 10px 0 12px;
-  }
-  .buy-dont-show {
-    margin-bottom: 8px;
-    font-size: 12px;
   }
   .buy-actions {
     display: flex;
@@ -5226,7 +5180,7 @@ select.account-input.select-bank-field:focus {
   min-height: 100vh;
   background-color: #fbf7f4;
   color: #1c1917;
-  font-family: "Be Vietnam Pro", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   padding-bottom: 60px;
 }
 
@@ -5238,7 +5192,7 @@ select.account-input.select-bank-field:focus {
   justify-content: center;
   padding: 24px;
   background: #fbf7f4;
-  font-family: "Be Vietnam Pro", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
 }
 .admin-forbidden-card {
   background: #ffffff;
@@ -5255,7 +5209,7 @@ select.account-input.select-bank-field:focus {
   margin-bottom: 16px;
 }
 .admin-forbidden-card h2 {
-  font-family: "Archivo", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 22px;
   font-weight: 800;
   color: #18181b;
@@ -5364,7 +5318,7 @@ select.account-input.select-bank-field:focus {
 }
 
 .admin-heading {
-  font-family: "Archivo", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 22px;
   font-weight: 800;
   color: #18181b;
@@ -5526,7 +5480,7 @@ select.account-input.select-bank-field:focus {
   background: #fef3c7;
   padding: 2px 6px;
   border-radius: 5px;
-  font-family: monospace;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: #c2410c;
@@ -5607,7 +5561,7 @@ select.account-input.select-bank-field:focus {
 }
 
 .kpi-value {
-  font-family: "Archivo", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 20px;
   font-weight: 800;
   color: #18181b;
@@ -5857,7 +5811,7 @@ select.account-input.select-bank-field:focus {
   background: #f4f4f5;
   color: #52525b;
   border: 1px solid #e4e4e7;
-  font-family: monospace;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 11px;
   padding: 1px 6px;
   border-radius: 4px;
@@ -5920,7 +5874,7 @@ select.account-input.select-bank-field:focus {
 }
 
 .pill-val {
-  font-family: "Archivo", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 13.5px;
   font-weight: 700;
 }
@@ -5971,7 +5925,7 @@ select.account-input.select-bank-field:focus {
 }
 
 .bank-no-mono {
-  font-family: monospace;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 14px;
   font-weight: 700;
   color: #18181b;
@@ -6292,7 +6246,7 @@ select.account-input.select-bank-field:focus {
 .modal-user-id {
   background: #f4f4f5;
   color: #71717a;
-  font-family: monospace;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 11.5px;
   padding: 2px 6px;
   border-radius: 4px;
@@ -6367,7 +6321,7 @@ select.account-input.select-bank-field:focus {
 }
 
 .box-val {
-  font-family: "Archivo", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 17px;
   font-weight: 800;
 }
@@ -6453,7 +6407,7 @@ select.account-input.select-bank-field:focus {
 }
 
 .field-stk {
-  font-family: monospace;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 16px;
   font-weight: 800;
   color: #18181b;
@@ -6572,7 +6526,7 @@ select.account-input.select-bank-field:focus {
 }
 
 .w-item-amount {
-  font-family: "Archivo", sans-serif;
+  font-family: var(--font-app), "Be Vietnam Pro", sans-serif;
   font-size: 15px;
   font-weight: 800;
   color: #dc2626;
@@ -6778,4 +6732,3 @@ select.account-input.select-bank-field:focus {
     transition: none;
   }
 }
-
