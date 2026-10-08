@@ -206,9 +206,12 @@ function Receipt({
   const originalPrice = product?.originalPrice ?? 1990000;
   const cashback = product?.cashback ?? 77000;
   const actualCost = price - cashback;
+  const cashbackRate = product?.cashbackRate;
   const savingsPercent =
     product?.savingsPercent ??
-    (price > 0 ? Math.round((cashback / price) * 100) : 5);
+    (cashbackRate != null
+      ? cashbackRate
+      : (price > 0 ? Math.round((cashback / price) * 100) : 5));
   const productName = product?.name || "Tai nghe Bluetooth chống ồn Sony WF-C710N";
   const productImg = product?.imageUrl || "/demo/sony-wf-c710n.jpg";
   const displayPlatform = product?.platform || platform;
@@ -238,7 +241,7 @@ function Receipt({
           <p>
             {displayPlatform} {product?.seller ? `· ${product.seller}` : ""} ·{" "}
             <em className="green">
-              Hoàn đến {price > 0 ? ((cashback / price) * 100).toFixed(0) : "5"}%
+              Hoàn {cashbackRate != null ? `${cashbackRate}%` : `đến ${savingsPercent}%`}
             </em>
           </p>
         </div>
@@ -510,10 +513,10 @@ export default function HomeClient({
 
   useEffect(() => {
     if (!busy) {
-      setCalcPercent(1);
-      return;
+      const t = setTimeout(() => setCalcPercent(1), 0);
+      return () => clearTimeout(t);
     }
-    setCalcPercent(1);
+    const t = setTimeout(() => setCalcPercent(1), 0);
     const interval = setInterval(() => {
       setCalcPercent((prev) => {
         if (prev >= 95) return prev;
@@ -524,6 +527,7 @@ export default function HomeClient({
       });
     }, 45);
     return () => {
+      clearTimeout(t);
       clearInterval(interval);
     };
   }, [busy]);

@@ -14,7 +14,7 @@ import { cashbackFor } from "@/lib/deals/score";
 import type { Platform } from "@/lib/deals/types";
 import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resolve";
 import { lookupAccessTradeProduct } from "@/lib/deals/providers/accesstrade";
-import { lookupFastShopeeProduct } from "@/lib/deals/providers/fast-shopee";
+import { lookupHoanNgayProduct as lookupFastShopeeProduct } from "@/lib/deals/providers/hoanngay";
 
 export const dynamic = "force-dynamic";
 
@@ -202,7 +202,10 @@ export async function POST(request: NextRequest) {
         ? baseProduct.originalPrice
         : Math.round((finalPrice * 1.28) / 1000) * 1000);
 
-    const hasRealCommission = Boolean(fastShopeeProduct?.commission && fastShopeeProduct.commission > 0);
+    const hasRealCommission = Boolean(
+      (fastShopeeProduct?.commission && fastShopeeProduct.commission > 0) ||
+      (fastShopeeProduct?.cashbackRate && fastShopeeProduct.cashbackRate > 0)
+    );
     const finalCashback = hasRealCommission
       ? Math.round(fastShopeeProduct!.commission!)
       : cashbackFor(finalPrice, finalPlatform);
@@ -211,10 +214,13 @@ export async function POST(request: NextRequest) {
       finalOriginalPrice > finalPrice
         ? Math.round(((finalOriginalPrice - finalPrice) / finalOriginalPrice) * 100)
         : 0;
-    const savingsPercent =
-      finalPrice > 0
-        ? Math.max(1, Math.round((finalCashback / finalPrice) * 100))
-        : 5;
+
+    const cashbackRate =
+      fastShopeeProduct?.cashbackRate != null
+        ? fastShopeeProduct.cashbackRate
+        : (finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 5);
+
+    const savingsPercent = cashbackRate;
 
     // NOTE ON COMMISSION ATTRIBUTION:
     // We intentionally route outbound clicks through our DIRECT Shopee Affiliate link:
@@ -254,7 +260,7 @@ export async function POST(request: NextRequest) {
       originalPrice: finalOriginalPrice,
       cashback: finalCashback,
       platform: finalPlatform,
-      seller: atProduct?.seller || baseProduct.seller,
+      seller: atProduct?.seller || fastShopeeProduct?.seller || baseProduct.seller,
       trackedLink,
       discountPercent,
       savingsPercent,
@@ -262,6 +268,7 @@ export async function POST(request: NextRequest) {
       priceType,
       cap: fastShopeeProduct?.cap,
       isExactCashback: hasRealCommission,
+      cashbackRate,
     };
 
     return NextResponse.json({
