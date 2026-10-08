@@ -350,6 +350,7 @@ h2,
   position: relative;
   z-index: 0;
   display: inline-block;
+  margin-top: 8px;
   color: #16a34a;
 }
 .hero h1 span::after {
@@ -4140,6 +4141,9 @@ select.account-input.select-bank-field:focus {
     line-height: 1.14;
     letter-spacing: -1.2px;
     margin: 14px 0 12px;
+  }
+  .hero h1 span {
+    margin-top: 5px;
   }
   .hero h1 span::after {
     height: 9px;

@@ -886,7 +886,7 @@ export default function HomeClient({
           <h1>
             Mua sắm ngay,
             <br />
-            <span>Hòa tiền liền tay</span>
+            <span>Hoàn tiền liền tay</span>
           </h1>
           <p>
             Tự áp mã, so giá và tính sẵn{" "}
