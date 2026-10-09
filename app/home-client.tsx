@@ -570,7 +570,7 @@ export default function HomeClient({
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
     const subId = user ? formatSubIdForUser(user.id) : "dealhoan";
     if (isShopeeUrl(url)) {
-      return buildShopeeAffiliateUrl(url, { subId });
+      return buildShopeeAffiliateUrl(url, { affiliateId: "17351320644", subId });
     }
     return buildCustomShortUrl(url, { baseUrl, subId });
   };
@@ -607,7 +607,7 @@ export default function HomeClient({
       const chipProduct = SAMPLE_CHIP_PRODUCTS[trimmed];
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
       const localTracked = isShopeeUrl(trimmed)
-        ? buildShopeeAffiliateUrl(trimmed, { subId })
+        ? buildShopeeAffiliateUrl(trimmed, { affiliateId: "17351320644", subId })
         : buildCustomShortUrl(trimmed, { baseUrl, subId });
       setCalcPercent(100);
       await new Promise((r) => setTimeout(r, 180));
@@ -655,7 +655,7 @@ export default function HomeClient({
       resolvedProduct = resolveProductLocally(trimmed, allAvailableDeals);
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
       resolvedTracked = isShopeeUrl(trimmed)
-        ? buildShopeeAffiliateUrl(trimmed, { subId })
+        ? buildShopeeAffiliateUrl(trimmed, { affiliateId: "17351320644", subId })
         : buildCustomShortUrl(trimmed, { baseUrl, subId });
     } finally {
       if (calculationId !== calculationIdRef.current) return;

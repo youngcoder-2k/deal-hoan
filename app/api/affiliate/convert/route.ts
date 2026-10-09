@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
     // 1. SHOPEE
     if (isShopeeUrl(rawUrl)) {
       const cleanUrl = cleanShopeeUrl(rawUrl);
-      const affiliateUrl = buildShopeeAffiliateUrl(cleanUrl, { subId });
+      const affiliateUrl = buildShopeeAffiliateUrl(cleanUrl, {
+        affiliateId: "17351320644",
+        subId,
+      });
       const customShortLink = buildCustomShortUrl(cleanUrl, {
         baseUrl: origin,
         subId,

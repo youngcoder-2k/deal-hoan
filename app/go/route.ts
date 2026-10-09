@@ -45,7 +45,10 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    const affiliateUrl = buildShopeeAffiliateUrl(cleanTarget, { subId });
+    const affiliateUrl = buildShopeeAffiliateUrl(cleanTarget, {
+      affiliateId: "17351320644",
+      subId,
+    });
     return NextResponse.redirect(affiliateUrl, {
       status: 307,
       headers: {

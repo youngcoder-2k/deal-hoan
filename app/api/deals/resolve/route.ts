@@ -238,7 +238,10 @@ export async function POST(request: NextRequest) {
         fastShopeeProduct?.shopId && fastShopeeProduct?.itemId
           ? `https://shopee.vn/product/${fastShopeeProduct.shopId}/${fastShopeeProduct.itemId}`
           : cleanShopeeUrl(canonicalUrl);
-      trackedLink = buildShopeeAffiliateUrl(cleanShopeeLink, { subId });
+      trackedLink = buildShopeeAffiliateUrl(cleanShopeeLink, {
+        affiliateId: "17351320644",
+        subId,
+      });
     } else if (isTikTokUrl(canonicalUrl)) {
       const atResult = await generateAccessTradeTikTokLink(canonicalUrl, { subId });
       trackedLink = atResult.success && atResult.affiliateUrl
