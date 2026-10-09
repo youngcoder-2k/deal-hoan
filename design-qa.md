@@ -28,3 +28,6 @@ Observed real product calculation, Enter submission, empty-input validation, loa
 
 ## Engineering checks
 Production build passed (exit 0). ESLint: 0 errors, 9 existing home-client warnings. Browser error/warning logs returned an empty list. git diff --check passed. Browser measurement evidence: /Users/wei/.codex/artifacts/deal-hoan-compact-card/browser-metrics.json.
+
+## Follow-up: vertical centering
+Passed: removed 70px desktop offset and equalized hero vertical padding. Native DOM measurements show top/bottom gaps 160.164/160.172px at 1558px and 79.102/79.109px at 1024px (subpixel rounding only). Empty and result remain 570×610; 390px stacked card remains 362×650 without horizontal overflow. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/centered-card-desktop.png. Production build passed.

@@ -20,7 +20,7 @@
 .header :global(.account-wallet-btn) { border-color: #ffdac9; background: #fff9f5; color: #172131; }
 .header :global(.account-avatar), .header :global(.account-balance-tag) { background: #ffeadb; color: #ba3e16; }
 .hero { position: relative; overflow: clip; background: #fff1e4 url('/hero/cashback-background.webp') center top / cover no-repeat; color: var(--cashback-ink); }
-.heroGrid { max-width: 1320px; margin: 0 auto; padding: 40px 0 36px 32px; display: grid; grid-template-columns: minmax(0, .66fr) minmax(0, 1fr); align-items: start; gap: 44px; }
+.heroGrid { max-width: 1320px; margin: 0 auto; padding: 40px 0 40px 32px; display: grid; grid-template-columns: minmax(0, .66fr) minmax(0, 1fr); align-items: start; gap: 44px; }
 .story { position: relative; min-width: 0; padding-top: 26px; }
 .slogan { margin: 0; font-size: clamp(42px, 3.85vw, 59px); font-weight: 900; letter-spacing: -2.8px; line-height: 1.14; color: #720c05; }
 .slogan > span { display: block; margin-top: 8px; color: #f14815; font-size: clamp(65px, 6.1vw, 94px); font-weight: 900; line-height: .91; letter-spacing: -4px; }
@@ -133,7 +133,7 @@
   .header :global(.nav) { gap: 15px; }
   .header :global(.nav nav) { gap: 0; }
   .header :global(.nav nav a) { padding: 10px 8px; font-size: 12px; }
-  .heroGrid { grid-template-columns: minmax(0,.62fr) minmax(0,1fr); gap: 24px; padding: 30px 24px 36px; }
+  .heroGrid { grid-template-columns: minmax(0,.62fr) minmax(0,1fr); gap: 24px; padding: 30px 24px; }
   .slogan { font-size: 41px; letter-spacing: -2px; }
   .slogan > span { font-size: 67px; letter-spacing: -3px; }
   .storyDescription { font-size: 16px; }
@@ -293,8 +293,4 @@
   .buyButton { min-height: 44px; font-size: 13px; }
   .receiptFooter > span { font-size: 10px; }
   .receiptFooter button { min-height: 40px; font-size: 11px; }
-}
-
-@media (min-width: 1201px) {
-  .calculatorPanel { align-self: start; margin-top: 70px; }
 }
