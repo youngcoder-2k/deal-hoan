@@ -1444,10 +1444,24 @@ h2,
   margin: 0 0 18px;
 }
 .heading > a,
+.heading > button,
+.heading-more-btn,
 .deal a {
   color: #d73211;
   font-size: 14px;
   font-weight: 700;
+  text-decoration: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: opacity 0.15s ease;
+}
+.heading-more-btn:hover,
+.heading > button:hover {
+  text-decoration: underline;
+  opacity: 0.9;
 }
 .tabs {
   display: flex;
@@ -4476,11 +4490,34 @@ select.account-input.select-bank-field:focus {
     border-radius: 9px;
   }
   .deal-grid {
-    grid-template-columns: 1fr;
-    gap: 10px;
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scroll-padding: 0 16px;
+    -webkit-overflow-scrolling: touch;
+    gap: 12px;
+    margin-left: -16px;
+    margin-right: -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 4px;
+    padding-bottom: 12px;
+    scrollbar-width: none;
   }
+  .deal-grid::-webkit-scrollbar {
+    display: none;
+  }
+  .deal-grid > .deal,
   .deal {
+    flex: 0 0 205px;
+    width: 205px;
+    scroll-snap-align: start;
     border-radius: 13px;
+  }
+  .deal-grid > [role="status"] {
+    flex: 0 0 100%;
+    width: 100%;
   }
   .deal .placeholder {
     height: 140px;
@@ -4495,12 +4532,17 @@ select.account-input.select-bank-field:focus {
   }
   .deal-body footer {
     margin-top: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
   }
   .deal-body footer b {
-    font-size: 13px;
+    font-size: 11.5px;
   }
   .deal-body footer a {
-    padding: 6px 12px;
+    padding: 5px 10px;
     font-size: 12px;
     border-radius: 8px;
   }
@@ -5122,6 +5164,11 @@ select.account-input.select-bank-field:focus {
   }
   .flash-grid .placeholder {
     height: 135px;
+  }
+  .deal-grid > .deal,
+  .deal {
+    flex: 0 0 190px;
+    width: 190px;
   }
   .deal .placeholder {
     height: 125px;

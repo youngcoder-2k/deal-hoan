@@ -321,6 +321,7 @@ export default function HomeClient({
     return [];
   });
   const [tab, setTab] = useState(0);
+  const [showAllHotDeals, setShowAllHotDeals] = useState(false);
   const [couponTab, setCouponTab] = useState<CouponCategory>("all");
   const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -720,9 +721,10 @@ export default function HomeClient({
     if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
   }, []);
-  const visibleHotDeals = hotDeals
+  const filteredHotDeals = hotDeals
     .filter((deal) => deal.name.toLocaleLowerCase("vi").includes(searchQuery.toLocaleLowerCase("vi")))
     .sort(HOT_SORTERS[tab]);
+  const visibleHotDeals = showAllHotDeals ? filteredHotDeals : filteredHotDeals.slice(0, 12);
   const tm = [
     Math.floor(seconds / 3600),
     Math.floor((seconds % 3600) / 60),
@@ -802,14 +804,7 @@ export default function HomeClient({
               </>
             ) : (
               <button disabled={authPending} onClick={signInWithGoogle} className="account-login-btn">
-                {authPending ? (
-                  "Đang mở…"
-                ) : (
-                  <>
-                    <span className="auth-btn-desktop">Đăng nhập Google</span>
-                    <span className="auth-btn-mobile">Đăng nhập</span>
-                  </>
-                )}
+                {authPending ? "Đang mở…" : "Đăng nhập"}
               </button>
             )}
           </div>
@@ -1089,14 +1084,25 @@ export default function HomeClient({
           <div>
             <h2>Deal hot hôm nay</h2>
           </div>
-          <a>Xem tất cả →</a>
+          {filteredHotDeals.length > 12 && (
+            <button
+              type="button"
+              className="heading-more-btn"
+              onClick={() => setShowAllHotDeals((prev) => !prev)}
+            >
+              {showAllHotDeals ? "Thu gọn bớt ↑" : "Xem tất cả →"}
+            </button>
+          )}
         </div>
         <div className="preview-tabs">
           {HOT_TABS.map((x, i) => (
             <button
               key={x}
               className={`preview-tab ${tab === i ? "active" : ""}`}
-              onClick={() => setTab(i)}
+              onClick={() => {
+                setTab(i);
+                setShowAllHotDeals(false);
+              }}
             >
               {x}
             </button>

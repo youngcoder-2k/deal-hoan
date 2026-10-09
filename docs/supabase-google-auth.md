@@ -24,6 +24,6 @@ Code đã có sẵn callback tại `/auth/callback`. Để kích hoạt đăng n
    https://<domain-san-xuat>/auth/callback
    ```
 
-6. Khởi động lại `npm run dev` sau khi thay đổi `.env.local`, sau đó bấm **Đăng nhập Google** trên header.
+6. Khởi động lại `npm run dev` sau khi thay đổi `.env.local`, sau đó bấm **Đăng nhập** trên header.
 
 Không commit `.env.local` hoặc bất kỳ secret nào. Publishable/anon key được dùng ở trình duyệt; không dùng service-role key cho luồng đăng nhập này.
