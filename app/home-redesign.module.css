@@ -37,83 +37,83 @@
 .coinOne { width: 92px; top: 4px; left: 7%; rotate: -16deg; }
 .coinTwo { width: 138px; top: -7px; right: 0; rotate: 12deg; animation-delay: -1.7s; }
 .coinThree { width: 77px; top: 142px; left: -2%; rotate: -18deg; animation-delay: -3s; }
-.calculatorPanel { min-width: 0; padding: 22px; border: 1px solid #fff; border-radius: 28px; background: #ffffffde; box-shadow: 0 16px 48px #b54c1010; }
-.calculator { display: flex; align-items: stretch; gap: 10px; margin: 0 0 18px; }
-.inputWrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 9px; height: 54px; padding: 5px 9px; border: 1px solid #e5e7eb; border-radius: 12px; background: #fff; transition: border-color .18s, box-shadow .18s; }
+.calculatorPanel { width: 570px; max-width: 100%; height: var(--calculator-height, 610px); min-width: 0; justify-self: center; align-self: center; display: flex; flex-direction: column; padding: 20px; border: 0; border-radius: 22px; background: #fff; box-shadow: 0 14px 40px #b54c100a; }
+.calculator { display: flex; align-items: stretch; flex-shrink: 0; gap: 8px; margin: 0 0 18px; }
+.inputWrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; height: 42px; padding: 4px 7px; border: 1px solid #e5e7eb; border-radius: 9px; background: #fff; transition: border-color .18s, box-shadow .18s; }
 .inputWrap:focus-within { border-color: #fa754f; box-shadow: 0 0 0 3px #ffede5; }
-.inputIcon { box-sizing: content-box; flex-shrink: 0; padding: 9px; border-radius: 50%; color: #657584; background: #fff5f0; }
-.inputWrap input { min-width: 0; flex: 1; width: 100%; border: 0; padding: 0; outline: 0; background: transparent; color: #27303d; font-size: 15px; height: 100%; text-overflow: ellipsis; }
+.inputIcon { box-sizing: content-box; flex-shrink: 0; width: 18px; height: 18px; padding: 6px; border-radius: 50%; color: #657584; background: #fff5f0; }
+.inputWrap input { min-width: 0; flex: 1; width: 100%; border: 0; padding: 0; outline: 0; background: transparent; color: #27303d; font-size: 13px; height: 100%; text-overflow: ellipsis; }
 .inputWrap input::placeholder { color: #87909d; opacity: 1; }
-.clearInput { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 32px; border: 0; border-radius: 50%; background: #f5f6f7; color: #67717d; }
+.clearInput { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 28px; border: 0; border-radius: 50%; background: #f5f6f7; color: #67717d; }
 .clearInput:hover { background: #ffede4; color: #db421c; }
-.calculateButton, .buyButton { display: inline-flex; justify-content: center; align-items: center; gap: 7px; border: 1px solid #f24017; border-radius: 11px; background: var(--cashback-orange); color: #fff; font-size: 16px; font-weight: 700; box-shadow: 0 5px 12px #f4562414; transition: background-color .18s, box-shadow .18s; }
-.calculateButton { flex: 0 0 auto; padding: 0 15px; min-width: 173px; height: 54px; white-space: nowrap; }
+.calculateButton, .buyButton { display: inline-flex; justify-content: center; align-items: center; gap: 7px; border: 1px solid #f24017; border-radius: 10px; background: var(--cashback-orange); color: #fff; font-weight: 700; box-shadow: 0 5px 12px #f4562414; transition: background-color .18s, box-shadow .18s; }
+.calculateButton { flex: 0 0 auto; padding: 0 12px; min-width: 138px; height: 42px; white-space: nowrap; font-size: 13px; border-radius: 9px; }
 .calculateButton > svg { color: #ffdf69; }
 .calculateButton:hover:not(:disabled), .buyButton:hover { background: #ed421c; box-shadow: 0 5px 14px #f4562430; }
 .calculateButton:disabled { cursor: wait; opacity: .85; }
 .calculateButton small { font-size: 11px; font-variant-numeric: tabular-nums; }
 .inputError { border-color: #dc2626; animation: inputShake .3s ease; }
-.calculatorState { min-height: 706px; }
-.emptyCard, .receipt { min-height: 706px; border: 1px solid #ffe3d1; border-radius: 22px; background: #ffffffed; box-shadow: 0 6px 20px #a04e0903; }
-.emptyCard { display: flex; flex-direction: column; align-items: center; padding: 29px 20px 30px; text-align: center; animation: stateIn .3s ease both; }
-.emptyEyebrow { margin: 0; padding-bottom: 13px; color: #ec421d; font-size: 17px; font-weight: 700; position: relative; }
-.emptyEyebrow::after { content: ''; position: absolute; bottom: 0; left: calc(50% - 16px); width: 32px; height: 2px; background: #f34a20; }
-.emptyIllustration { width: 310px; height: 205px; object-fit: contain; margin: 14px 0 7px; scale: 1.14; }
-.emptyCard h2 { font-size: 30px; font-weight: 800; letter-spacing: -1px; line-height: 1.35; margin: 0 0 10px; color: var(--cashback-ink); }
-.emptyDescription { max-width: 490px; margin: 0; color: #687386; font-size: 18px; line-height: 1.65; letter-spacing: -.3px; }
-.steps { list-style: none; width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); padding: 0; margin: 28px 0 25px; }
-.steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 9px; color: #243446; font-size: 16px; font-weight: 500; }
-.stepIcon { position: relative; display: grid; place-items: center; width: 67px; height: 67px; border-radius: 50%; background: #fff5ee; color: #f54b23; }
-.stepIcon > span { position: absolute; top: -5px; left: -30px; display: grid; place-items: center; width: 31px; height: 31px; border-radius: 50%; background: #ffead8; color: #e8461b; font-size: 20px; font-weight: 700; }
-.stepArrow { position: absolute; right: -10px; top: 24px; color: #f24f28; }
-.guideLink { display: inline-flex; align-items: center; gap: 6px; margin: 2px 0 26px; color: #e74620; font-size: 15px; text-decoration: underline; text-underline-offset: 4px; }
+.calculatorState { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
+.emptyCard, .receipt { height: 100%; min-height: 0; min-width: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+.emptyCard { display: flex; flex-direction: column; align-items: center; padding: 20px 2px 0; text-align: center; animation: stateIn .3s ease both; }
+.emptyEyebrow { margin: 0; padding: 0; color: #ec421d; font-size: 14px; font-weight: 700; }
+.emptyEyebrow::after { content: none; }
+.emptyIllustration { width: 180px; height: 154px; object-fit: contain; margin: 18px 0 12px; }
+.emptyCard h2 { font-size: 23px; font-weight: 700; letter-spacing: -.7px; line-height: 1.35; margin: 0 0 10px; color: var(--cashback-ink); }
+.emptyDescription { max-width: 460px; margin: 0; color: #687386; font-size: 14px; line-height: 1.6; }
+.steps { list-style: none; width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); padding: 0; margin: 28px 0 18px; }
+.steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #243446; font-size: 13px; font-weight: 500; }
+.stepIcon { position: relative; display: grid; place-items: center; width: 55px; height: 55px; border: 1px solid #ffddca; border-radius: 18px; background: #fff5ee; color: #f54b23; }
+.stepIcon > span { position: absolute; top: -19px; left: calc(50% - 12px); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #fa4b23; color: #fff; font-size: 13px; font-weight: 600; }
+.stepArrow { position: absolute; right: -9px; top: 20px; color: #f24f28; }
+.guideLink { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: 0 0 10px; color: #e74620; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
 .guideLink:hover { color: #b92f0f; }
-.emptyNote { align-self: stretch; display: flex; align-items: center; gap: 12px; border-top: 1px solid #e8e9ec; padding-top: 23px; margin: auto 0 0; color: #7b8492; text-align: left; font-size: 13px; line-height: 1.6; }
+.emptyNote { align-self: stretch; display: flex; align-items: center; gap: 8px; padding: 0; margin: auto 0 0; color: #7b8492; text-align: left; font-size: 12px; line-height: 1.6; }
 .emptyNote svg { flex-shrink: 0; }
 .emptyBusy .emptyIllustration { animation: coinFloat 2.6s ease-in-out infinite; }
-.resultState { animation: stateIn .35s ease both; }
+.resultState { height: 100%; min-height: 0; animation: stateIn .35s ease both; }
 .resultClosing { animation: stateOut .32s ease both; pointer-events: none; }
-.receipt { display: flex; flex-direction: column; padding: 20px; }
-.receiptHeading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.receiptHeading h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.7px; }
-.platformBadge { display: inline-flex; align-items: center; padding: 6px 9px; border-radius: 11px; background: #fff0e9; }
-.platformBadge .marketplaceBrand { color: #192332; font-size: 12px; font-weight: 600; }
-.platformBadge .marketplaceBrand img { width: 22px; height: auto; }
-.platformBadge .lazadaBrand { width: 80px; }
-.product { display: flex; align-items: center; gap: 17px; margin-bottom: 20px; min-width: 0; }
-.productImage { flex-shrink: 0; width: 104px; height: 104px; object-fit: cover; border-radius: 15px; background: #fff7e9; }
-.product > div { min-width: 0; }
-.product h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; margin: 0; font-size: 16px; font-weight: 600; line-height: 1.6; }
-.product p { margin: 5px 0 0; color: #727b89; font-size: 13px; line-height: 1.5; }
-.reward { display: flex; align-items: center; position: relative; margin: 0 -20px 14px; padding: 14px 20px; min-height: 182px; border: 1px solid #ef461b; border-radius: 14px; background: #fa532c; color: #fff; container-type: inline-size; overflow: hidden; }
+.receipt { display: flex; flex-direction: column; padding: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+.receiptHeading { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; }
+.receiptHeading h2 { margin: 0; font-size: 13px; font-weight: 600; line-height: 20px; letter-spacing: -.2px; }
+.platformBadge { display: inline-flex; align-items: center; flex-shrink: 0; padding: 5px 8px; border-radius: 9px; background: #fff0e9; }
+.platformBadge .marketplaceBrand { color: #192332; font-size: 11px; font-weight: 600; }
+.platformBadge .marketplaceBrand img { width: 20px; height: auto; }
+.platformBadge .lazadaBrand { width: 68px; }
+.product { display: flex; align-items: center; gap: 12px; height: 64px; flex-shrink: 0; margin-bottom: 12px; min-width: 0; }
+.productImage { flex-shrink: 0; width: 52px; height: 64px; object-fit: cover; border-radius: 8px; background: #fff7e9; }
+.product > div { min-width: 0; flex: 1; }
+.product h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 0; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.product p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 5px 0 0; color: #727b89; font-size: 12px; line-height: 1.5; }
+.reward { display: flex; align-items: center; position: relative; flex-shrink: 0; margin: 0 0 10px; padding: 14px 18px; height: 138px; border: 0; border-radius: 12px; background: #fff3ed; color: #ef431a; container-type: inline-size; }
 .rewardContent { position: relative; z-index: 1; width: 100%; }
-.rewardContent > p { margin: 0 0 5px; font-size: 16px; font-weight: 700; }
-.rewardAmountRow { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 15px; padding-right: 102px; }
-.rewardAmountRow > strong { font-size: clamp(54px, 15.5cqw, 100px); font-weight: 900; line-height: 1.04; letter-spacing: -4px; white-space: nowrap; }
-.rewardAmountRow > strong.longAmount { font-size: clamp(38px, 9.5cqw, 72px); letter-spacing: -2.5px; }
-.ratePill { display: inline-block; padding: 7px 14px; border-radius: 99px; border: 1px solid #fff; color: #e84a1f; background: #fff4e4; font-size: 16px; font-weight: 700; white-space: nowrap; }
-.rewardTiming { display: block; margin-top: 4px; font-size: 17px; font-weight: 600; }
-.rewardCoin { position: absolute; width: 112px; height: auto; top: 50%; right: 8px; transform: translateY(-42%); }
+.rewardContent > p { margin: 0 0 5px; font-size: 14px; font-weight: 600; }
+.rewardAmountRow { display: flex; align-items: center; flex-wrap: nowrap; gap: 12px; padding: 0; }
+.rewardAmountRow > strong { min-width: 0; font-size: clamp(32px, 12cqw, 60px); font-weight: 800; line-height: 1.15; letter-spacing: -2.5px; white-space: nowrap; }
+.rewardAmountRow > strong.longAmount { font-size: clamp(24px, 8.5cqw, 44px); letter-spacing: -1.5px; }
+.ratePill { display: inline-block; flex-shrink: 0; padding: 6px 12px; border-radius: 99px; border: 1px solid #ffd0bb; color: #e84a1f; background: #ffebe0; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.rewardTiming { display: block; margin-top: 3px; color: #727b89; font-size: 12px; font-weight: 400; }
+
 .priceSummary { margin: 0; }
-.priceSummary > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 11px 0; border-top: 1px solid #e8eaed; }
+.priceSummary > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid #e8eaed; }
 .priceSummary > div:last-child { border-bottom: 1px solid #e8eaed; }
-.priceSummary dt { font-size: 17px; font-weight: 500; }
-.priceSummary dd { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 5px 15px; margin: 0; font-size: 20px; font-weight: 500; white-space: nowrap; }
-.priceSummary s { color: #a0a5af; font-size: 16px; font-weight: 400; }
-.priceSummary dd.netCost { font-size: 27px; line-height: 1.2; font-weight: 800; letter-spacing: -.6px; }
-.linkSection { margin-top: 13px; }
-.linkSection > p { margin: 0 0 7px; font-size: 13px; color: #79808b; }
-.linkRow { display: flex; align-items: stretch; gap: 12px; }
-.linkRow > a { flex: 1; display: block; min-width: 0; overflow: hidden; border: 1px solid #e5e7eb; border-radius: 9px; padding: 11px 12px; color: #505a68; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.priceSummary dt { font-size: 14px; font-weight: 400; }
+.priceSummary dd { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 4px 12px; margin: 0; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.priceSummary s { color: #a0a5af; font-size: 12px; font-weight: 400; }
+.priceSummary dd.netCost { font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -.5px; }
+.linkSection { margin-top: 10px; }
+.linkSection > p { margin: 0 0 5px; font-size: 11px; color: #79808b; }
+.linkRow { display: flex; align-items: stretch; gap: 8px; }
+.linkRow > a { flex: 1; display: block; min-width: 0; overflow: hidden; border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 10px; color: #505a68; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .linkRow > a:hover { color: #e34820; }
-.linkRow button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; flex: 0 0 113px; border: 1px solid #e2e5e9; border-radius: 9px; background: #f6f6f7; color: #17202e; font-size: 13px; font-weight: 600; transition: background-color .15s; }
+.linkRow button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 0 0 92px; min-height: 38px; border: 1px solid #e2e5e9; border-radius: 8px; background: #f6f6f7; color: #17202e; font-size: 11px; font-weight: 600; transition: background-color .15s; }
 .linkRow button:hover { background: #ffede2; border-color: #ffd3ba; color: #c33c16; }
 .linkRow button.copied { background: #19212c; color: #fff; border-color: #19212c; }
-.buyButton { width: 100%; min-height: 52px; padding: 10px 12px; margin: 15px 0 8px; font-size: 18px; }
-.receiptFooter { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px 28px; margin-top: auto; padding-top: 6px; }
-.receiptFooter > span { color: #7a828e; font-size: 13px; line-height: 1.6; }
+.buyButton { width: 100%; min-height: 46px; flex-shrink: 0; padding: 9px 12px; margin: 12px 0 8px; font-size: 15px; }
+.receiptFooter { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 18px; margin-top: auto; padding-top: 0; }
+.receiptFooter > span { color: #7a828e; font-size: 11px; line-height: 1.6; }
 .receiptFooter a { text-decoration: underline; white-space: nowrap; text-underline-offset: 2px; }
-.receiptFooter button { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; min-height: 34px; padding: 0; border: 0; background: none; color: #e9461d; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.receiptFooter button { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; min-height: 32px; padding: 0; border: 0; background: none; color: #e9461d; font-size: 12px; font-weight: 500; white-space: nowrap; }
 .receiptFooter button svg { transition: rotate .35s; }
 .receiptFooter button:hover { color: #b92f0e; }
 .receiptFooter button:hover svg { rotate: 60deg; }
@@ -144,18 +144,8 @@
   .lazadaBrand { width: 88px; }
   .heroIllustration { height: 340px; margin-top: 40px; }
   .coinTwo { width: 110px; }
-  .calculatorPanel { padding: 16px; border-radius: 24px; }
-  .calculateButton { font-size: 14px; padding: 0 12px; min-width: 154px; }
-  .inputIcon { padding: 6px; }
-  .inputWrap { gap: 5px; }
-  .inputWrap input { font-size: 13px; }
-  .emptyCard h2 { font-size: 24px; }
-  .emptyDescription { font-size: 15px; }
-  .steps li { font-size: 14px; }
-  .stepIcon > span { left: -18px; }
   .rewardAmountRow { padding-right: 70px; gap: 6px 12px; }
   .rewardCoin { width: 92px; right: 1px; }
-  .ratePill { font-size: 12px; padding: 5px 9px; }
 }
 @media (max-width: 1050px) {
   .header :global(.nav nav) { display: none; }
@@ -165,11 +155,7 @@
   .heroGrid { gap: 20px; }
   .marketplaces { gap: 12px; }
   .productImage { width: 76px; height: 76px; }
-  .product h3 { font-size: 13px; }
   .receiptHeading h2 { font-size: 19px; }
-  .priceSummary dt { font-size: 13px; }
-  .priceSummary dd { font-size: 17px; }
-  .priceSummary s { font-size: 13px; }
 }
 @media (max-width: 900px) {
   .heroGrid { grid-template-columns: 1fr; gap: 26px; max-width: 760px; padding: 32px 24px; }
@@ -183,20 +169,12 @@
   .coinOne { width: 48px; top: 15px; left: 2px; }
   .coinTwo { width: 70px; right: 5px; top: -12px; }
   .coinThree { width: 42px; top: 110px; left: -10px; }
-  .calculatorPanel { padding: 18px; }
-  .calculatorState, .emptyCard, .receipt { min-height: 650px; }
-  .emptyCard { padding-top: 24px; }
-  .emptyIllustration { width: 285px; height: 206px; }
-  .calculateButton { font-size: 15px; min-width: 177px; }
-  .inputWrap input { font-size: 16px; }
   .rewardAmountRow { padding-right: 100px; }
   .rewardCoin { width: 115px; }
   .rewardAmountRow > strong { font-size: clamp(54px, 13cqw, 85px); }
   .rewardAmountRow > strong.longAmount { font-size: clamp(38px, 10cqw, 64px); }
-  .ratePill { font-size: 15px; padding: 6px 12px; }
   .receiptHeading h2 { font-size: 22px; }
   .productImage { width: 94px; height: 94px; }
-  .product h3 { font-size: 14px; }
 }
 @media (max-width: 600px) {
   .page :global(.utility) { display: flex; height: 29px; font-size: 9px; }
@@ -230,61 +208,17 @@
   .coinOne { width: 33px; top: 13px; left: 12px; }
   .coinTwo { width: 47px; top: -3px; right: 4px; }
   .coinThree { width: 30px; top: 84px; left: -1px; }
-  .calculatorPanel { padding: 10px; border-radius: 21px; box-shadow: 0 10px 26px #b54c1010; }
-  .calculator { flex-direction: column; gap: 8px; margin-bottom: 12px; }
-  .inputWrap { flex: 0 0 52px; height: 52px; padding: 5px 7px; border-radius: 11px; }
-  .inputWrap input { font-size: 16px; }
-  .inputWrap input::placeholder { font-size: 13px; }
-  .inputIcon { padding: 8px; width: 19px; height: 19px; }
-  .clearInput { min-width: 34px; height: 36px; }
-  .calculateButton { flex: auto; width: 100%; height: 47px; min-height: 47px; border-radius: 10px; font-size: 14px; }
-  .calculatorState { min-height: 0; }
-  .emptyCard { min-height: 495px; padding: 21px 14px 20px; border-radius: 15px; }
-  .emptyEyebrow { font-size: 13px; padding-bottom: 11px; }
-  .emptyIllustration { width: 214px; height: 155px; margin: 8px 0 4px; }
-  .emptyCard h2 { font-size: 19px; letter-spacing: -.7px; margin-bottom: 8px; }
-  .emptyDescription { font-size: 12px; line-height: 1.7; max-width: 300px; }
   .desktopBreak { display: none; }
   .slogan .desktopBreak { display: initial; }
-  .steps { margin: 23px 0 22px; gap: 7px; }
-  .steps li { font-size: 10px; gap: 8px; white-space: nowrap; }
-  .stepIcon { width: 48px; height: 48px; }
-  .stepIcon > svg { width: 27px; height: 27px; }
-  .stepIcon > span { width: 23px; height: 23px; top: -3px; left: -15px; font-size: 14px; }
-  .stepArrow { width: 14px; right: -11px; top: 17px; }
-  .guideLink { min-height: 35px; font-size: 12px; margin: 0 0 16px; }
-  .emptyNote { gap: 8px; font-size: 10px; padding-top: 15px; }
-  .emptyNote svg { width: 20px; height: 20px; }
-  .receipt { min-height: 0; padding: 14px; border-radius: 15px; }
   .receiptHeading { gap: 6px; margin-bottom: 14px; }
   .receiptHeading h2 { font-size: 16px; letter-spacing: -.5px; }
-  .platformBadge { padding: 5px 7px; border-radius: 8px; }
-  .platformBadge .marketplaceBrand { font-size: 10px; }
-  .platformBadge .marketplaceBrand img { width: 17px; height: 21px; }
-  .platformBadge .lazadaBrand { width: 65px; }
-  .product { gap: 10px; margin-bottom: 16px; }
   .productImage { width: 67px; height: 67px; border-radius: 10px; }
-  .product h3 { font-size: 11px; line-height: 1.6; }
-  .product p { font-size: 10px; margin-top: 3px; }
-  .reward { margin: 0 -14px 12px; min-height: 160px; padding: 17px 14px; border-radius: 12px; }
   .rewardContent > p { font-size: 12px; margin-bottom: 6px; }
   .rewardAmountRow { padding-right: 46px; gap: 7px; }
   .rewardAmountRow > strong { font-size: clamp(36px, 16cqw, 58px); letter-spacing: -2px; }
   .rewardAmountRow > strong.longAmount { font-size: clamp(30px, 12cqw, 46px); letter-spacing: -1.5px; }
-  .ratePill { padding: 4px 9px; font-size: 11px; }
   .rewardTiming { font-size: 12px; margin-top: 8px; }
   .rewardCoin { width: 69px; right: 1px; transform: translateY(-35%); }
-  .priceSummary > div { gap: 10px; padding: 11px 0; }
-  .priceSummary dt { font-size: 11px; }
-  .priceSummary dd { font-size: 14px; gap: 3px 8px; }
-  .priceSummary s { font-size: 11px; }
-  .priceSummary dd.netCost { font-size: 21px; }
-  .linkSection > p { font-size: 11px; }
-  .linkRow { gap: 7px; }
-  .linkRow > a { padding: 12px 8px; font-size: 10px; }
-  .linkRow button { flex-basis: 99px; min-height: 42px; font-size: 11px; gap: 4px; }
-  .buyButton { min-height: 47px; margin-top: 13px; font-size: 12px; gap: 5px; }
-  .buyButton svg { width: 17px; }
   .receiptFooter { column-gap: 10px; padding-top: 0; }
   .receiptFooter > span { font-size: 9px; }
   .receiptFooter button { min-height: 40px; font-size: 10px; gap: 4px; }
@@ -297,9 +231,70 @@
   .marketplaceBrand { font-size: 10px; }
   .lazadaBrand { width: 64px; }
   .header :global(.brand-wordmark) { width: 106px; }
-  .emptyCard h2 { font-size: 17px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .floatingCoin, .emptyBusy .emptyIllustration, .resultState, .resultClosing, .emptyCard, .inputError { animation: none; }
   .page *, .page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+/* Every state occupies the same reserved panel at a given viewport. */
+@media (max-width: 1200px) {
+  .calculatorPanel { width: 570px; padding: 18px; }
+  .calculateButton { min-width: 130px; padding: 0 9px; font-size: 12px; }
+  .inputWrap { gap: 4px; }
+  .inputWrap input { font-size: 12px; }
+  .product .platformBadge { display: none; }
+  .emptyCard h2 { font-size: 21px; }
+  .emptyDescription { font-size: 13px; }
+}
+@media (max-width: 900px) {
+  .calculatorPanel { width: 570px; padding: 20px; }
+  .product .platformBadge { display: inline-flex; }
+}
+@media (max-width: 600px) {
+  .calculatorPanel { --calculator-height: 650px; width: 100%; padding: 14px; border-radius: 20px; }
+  .calculator { flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .inputWrap { flex: 0 0 46px; height: 46px; padding: 5px 7px; }
+  .inputWrap input { font-size: 16px; }
+  .inputWrap input::placeholder { font-size: 13px; }
+  .clearInput { width: 32px; min-width: 32px; height: 34px; }
+  .calculateButton { width: 100%; min-height: 44px; height: 44px; font-size: 14px; }
+  .emptyCard { padding-top: 18px; }
+  .emptyEyebrow { font-size: 12px; }
+  .emptyIllustration { width: 160px; height: 145px; margin: 14px 0 12px; }
+  .emptyCard h2 { font-size: 19px; }
+  .emptyDescription { font-size: 12px; line-height: 1.7; }
+  .steps { margin: 30px 0 18px; }
+  .steps li { font-size: 11px; }
+  .stepIcon { width: 48px; height: 48px; border-radius: 15px; }
+  .stepIcon > svg { width: 27px; height: 27px; }
+  .stepArrow { width: 14px; right: -7px; top: 17px; }
+  .guideLink { min-height: 40px; font-size: 12px; }
+  .emptyNote { font-size: 10px; gap: 6px; }
+  .emptyNote svg { width: 18px; height: 18px; }
+  .receiptHeading { margin-bottom: 8px; }
+  .product { gap: 10px; height: 64px; }
+  .productImage { width: 52px; height: 64px; }
+  .product h3 { font-size: 12px; }
+  .product p { font-size: 11px; }
+  .product .platformBadge { display: none; }
+  .reward { height: 132px; padding: 14px 12px; }
+  .rewardContent > p { font-size: 13px; }
+  .rewardAmountRow { gap: 8px; }
+  .rewardAmountRow > strong { font-size: clamp(30px, 14cqw, 48px); letter-spacing: -1.5px; }
+  .rewardAmountRow > strong.longAmount { font-size: clamp(21px, 10cqw, 34px); letter-spacing: -1px; }
+  .ratePill { padding: 5px 8px; font-size: 11px; }
+  .priceSummary dt { font-size: 12px; }
+  .priceSummary dd { font-size: 14px; gap: 3px 6px; }
+  .priceSummary s { font-size: 11px; }
+  .priceSummary dd.netCost { font-size: 20px; }
+  .linkRow button { min-height: 44px; flex-basis: 88px; }
+  .linkRow > a { font-size: 10px; padding: 12px 8px; }
+  .buyButton { min-height: 44px; font-size: 13px; }
+  .receiptFooter > span { font-size: 10px; }
+  .receiptFooter button { min-height: 40px; font-size: 11px; }
+}
+
+@media (min-width: 1201px) {
+  .calculatorPanel { align-self: start; margin-top: 70px; }
 }

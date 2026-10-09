@@ -62,10 +62,10 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
   return (
     <div className={`${styles.emptyCard} ${busy ? styles.emptyBusy : ""}`}>
       <p className={styles.emptyEyebrow}>{busy ? "ĐANG KIỂM TRA LINK CỦA BẠN" : "BẮT ĐẦU NHẬN HOÀN TIỀN"}</p>
-      <Image className={styles.emptyIllustration} src="/hero/link-cashback-halo.webp" width={360} height={260} alt="" preload sizes="(max-width: 600px) 220px, 310px" />
+      <Image className={styles.emptyIllustration} src="/hero/link-cashback-halo.webp" width={360} height={260} alt="" preload sizes="(max-width: 600px) 160px, 180px" />
       <h2>{busy ? "Đang tìm tiền hoàn cho bạn…" : "Dán link, xem ngay tiền hoàn"}</h2>
       <p className={styles.emptyDescription}>
-        {busy ? "Đang kiểm tra thông tin sản phẩm và mức hoàn tiền. Bạn chờ một chút nhé." : <>Sao chép link sản phẩm từ Shopee, TikTok Shop<br className={styles.desktopBreak} /> hoặc Lazada rồi dán vào ô bên trên.</>}
+        {busy ? "Đang kiểm tra thông tin sản phẩm và mức hoàn tiền. Bạn chờ một chút nhé." : <>Sao chép link từ Shopee, TikTok Shop hoặc Lazada<br className={styles.desktopBreak} /> rồi dán vào ô bên trên để xem tiền hoàn.</>}
       </p>
       <ol className={styles.steps}>
         {steps.map(({ label, Icon }, index) => (
@@ -98,26 +98,25 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>
         <h2 id="cashback-result-title">Kết quả hoàn tiền</h2>
-        <span className={styles.platformBadge}><MarketplaceBrand platform={product.platform} /></span>
       </div>
       <div className={styles.product}>
         {product.imageUrl && (
           // Marketplace images stay direct: some CDNs reject image-optimizer requests.
           // eslint-disable-next-line @next/next/no-img-element
-          <img className={styles.productImage} src={product.imageUrl} alt={product.name} width={104} height={104} />
+          <img className={styles.productImage} src={product.imageUrl} alt={product.name} width={64} height={64} />
         )}
-        <div><h3>{product.name}</h3><p>{product.platform}{product.seller ? ` · ${product.seller}` : ""}</p></div>
+        <div><h3 title={product.name}>{product.name}</h3><p title={product.seller}>{product.platform}{product.seller ? ` · ${product.seller}` : ""}</p></div>
+        <span className={styles.platformBadge}><MarketplaceBrand platform={product.platform} /></span>
       </div>
       <div className={styles.reward}>
         <div className={styles.rewardContent}>
-          <p>BẠN ĐƯỢC HOÀN DỰ KIẾN</p>
+          <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
             <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}</strong>
-            <span className={styles.ratePill}>Hoàn {cashbackRate}%</span>
+            <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}%</span>
           </div>
           <span className={styles.rewardTiming}>Nhận sau 14–15 ngày</span>
         </div>
-        <Image className={styles.rewardCoin} src="/hero/cashback-coin.png" width={256} height={256} alt="" sizes="120px" />
       </div>
       <dl className={styles.priceSummary}>
         <div><dt>Thanh toán hôm nay</dt><dd>{formatPrice(price)} {originalPrice > price && <s>{formatPrice(originalPrice)}</s>}</dd></div>
