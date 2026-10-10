@@ -3,11 +3,11 @@
 import Image from "next/image";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
-import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
+import { ArrowArcRightIcon } from "@phosphor-icons/react/dist/csr/ArrowArcRight";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { CopyIcon } from "@phosphor-icons/react/dist/csr/Copy";
 import { CurrencyCircleDollarIcon } from "@phosphor-icons/react/dist/csr/CurrencyCircleDollar";
-import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
+import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { formatPrice } from "@/lib/deals/format";
@@ -56,29 +56,44 @@ export function CashbackStory() {
 
 export function CashbackEmpty({ busy }: { busy: boolean }) {
   const steps = [
-    { label: "Sao chép link", Icon: CopyIcon },
-    { label: "Dán vào ô trên", Icon: LinkIcon },
-    { label: "Xem tiền hoàn", Icon: CurrencyCircleDollarIcon },
+    { title: "Sao chép", detail: "link sản phẩm", Icon: CopyIcon },
+    { title: "Dán link", detail: "vào ô trên", Icon: LinkIcon },
+    { title: "Xem tiền", detail: "hoàn dự kiến", Icon: CurrencyCircleDollarIcon },
   ];
   return (
-    <div className={`${styles.emptyCard} ${busy ? styles.emptyBusy : ""}`}>
-      <p className={styles.emptyEyebrow}>{busy ? "ĐANG KIỂM TRA LINK CỦA BẠN" : "BẮT ĐẦU NHẬN HOÀN TIỀN"}</p>
-      <Image className={styles.emptyIllustration} src="/hero/link-cashback-halo.webp" width={360} height={260} alt="" preload sizes="(max-width: 600px) 108px, 180px" />
-      <h2>{busy ? "Đang tìm tiền hoàn cho bạn…" : "Dán link, xem ngay tiền hoàn"}</h2>
-      <p className={styles.emptyDescription}>
-        {busy ? "Đang kiểm tra thông tin sản phẩm và mức hoàn tiền. Bạn chờ một chút nhé." : <>Sao chép link từ Shopee, TikTok Shop hoặc Lazada<br className={styles.desktopBreak} /> rồi dán vào ô bên trên để xem tiền hoàn.</>}
-      </p>
-      <ol className={styles.steps}>
-        {steps.map(({ label, Icon }, index) => (
-          <li key={label}>
-            <div className={styles.stepIcon}><span>{index + 1}</span><Icon size={34} weight="regular" aria-hidden="true" /></div>
-            <span>{label}</span>
-            {index < 2 && <CaretRightIcon className={styles.stepArrow} size={20} aria-hidden="true" />}
+    <div className={`${styles.emptyCard} ${busy ? styles.emptyBusy : ""}`} aria-labelledby="cashback-empty-title">
+      <div className={styles.emptyIntro}>
+        <p className={styles.emptyEyebrow}>
+          {busy ? "ĐANG KIỂM TRA LINK" : "CHỈ 3 BƯỚC"}
+          <SparkleIcon size={20} weight="fill" aria-hidden="true" />
+        </p>
+        <div className={styles.emptyCoin} aria-hidden="true">
+          <Image src="/hero/cashback-coin.png" width={256} height={256} alt="" sizes="(max-width: 600px) 54px, 72px" />
+          <SparkleIcon className={styles.coinSparkle} size={19} weight="fill" />
+          <SparkleIcon className={styles.coinSparkleSmall} size={12} weight="fill" />
+        </div>
+        <h2 id="cashback-empty-title">{busy ? <>Đang tìm tiền hoàn<br />cho bạn…</> : <>Dán link,<br />xem ngay tiền hoàn</>}</h2>
+        <p className={styles.emptyDescription}>
+          {busy ? "Đang kiểm tra sản phẩm. Bạn chờ một chút nhé." : "Xem khoản hoàn trước khi mua."}
+        </p>
+      </div>
+      <ol className={styles.steps} aria-label="Ba bước xem tiền hoàn">
+        {steps.map(({ title, detail, Icon }, index) => (
+          <li key={title}>
+            <div className={styles.stepIcon}>
+              <span aria-hidden="true">{index + 1}</span>
+              <Icon size={42} weight="bold" aria-hidden="true" />
+            </div>
+            <span className={styles.stepLabel}>{title}<br />{detail}</span>
+            {index < 2 && <ArrowArcRightIcon className={styles.stepArrow} size={36} weight="light" aria-hidden="true" />}
+            {index === 2 && <SparkleIcon className={styles.stepSparkle} size={13} weight="fill" aria-hidden="true" />}
           </li>
         ))}
       </ol>
-      <a href="#how" className={styles.guideLink}>Xem hướng dẫn lấy link <ArrowRightIcon size={18} aria-hidden="true" /></a>
-      <p className={styles.emptyNote}><InfoIcon size={25} aria-hidden="true" /> Giá sản phẩm và tiền hoàn sẽ hiển thị tại đây.</p>
+      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee, TikTok Shop và Lazada.</p>
+      <div className={styles.guideFooter}>
+        <a href="#how" className={styles.guideLink}>Cách lấy link sản phẩm <ArrowRightIcon size={22} aria-hidden="true" /></a>
+      </div>
     </div>
   );
 }

@@ -55,22 +55,36 @@
 .inputError { border-color: #dc2626; animation: inputShake .3s ease; }
 .calculatorState { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .emptyCard, .receipt { height: 100%; min-height: 0; min-width: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
-.emptyCard { display: flex; flex-direction: column; align-items: center; padding: 20px 2px 0; text-align: center; animation: stateIn .3s ease both; }
-.emptyEyebrow { margin: 0; padding: 0; color: #ec421d; font-size: 14px; font-weight: 700; }
-.emptyEyebrow::after { content: none; }
-.emptyIllustration { width: 180px; height: 154px; object-fit: contain; margin: 18px 0 12px; }
-.emptyCard h2 { font-size: 23px; font-weight: 700; letter-spacing: -.7px; line-height: 1.35; margin: 0 0 10px; color: var(--cashback-ink); }
-.emptyDescription { max-width: 460px; margin: 0; color: #687386; font-size: 14px; line-height: 1.6; }
-.steps { list-style: none; width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); padding: 0; margin: 28px 0 18px; }
-.steps li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 8px; color: #243446; font-size: 13px; font-weight: 500; }
-.stepIcon { position: relative; display: grid; place-items: center; width: 55px; height: 55px; border: 1px solid #ffddca; border-radius: 18px; background: #fff5ee; color: #f54b23; }
-.stepIcon > span { position: absolute; top: -19px; left: calc(50% - 12px); display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #fa4b23; color: #fff; font-size: 13px; font-weight: 600; }
-.stepArrow { position: absolute; right: -9px; top: 20px; color: #f24f28; }
-.guideLink { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; margin: 0 0 10px; color: #e74620; font-size: 13px; text-decoration: underline; text-underline-offset: 4px; }
+/* The empty guide sits on the hero, while the form remains a white surface. */
+.calculatorIntro { padding: 0; background: transparent; box-shadow: none; border-radius: 0; }
+.calculatorIntro .calculator { margin: 0; padding: 16px; border-radius: 22px; background: #fff; box-shadow: 0 8px 24px #b54c1006; }
+.emptyCard { display: flex; flex-direction: column; align-items: center; padding: 26px 16px 0; text-align: center; color: #092d4b; animation: stateIn .3s ease both; }
+.emptyIntro { position: relative; width: 100%; }
+.emptyEyebrow { display: inline-flex; align-items: center; gap: 8px; margin: 0; padding: 8px 15px; border-radius: 99px; background: #ffe8da; color: #b8320e; font-size: 13px; line-height: 1.4; font-weight: 700; }
+.emptyEyebrow svg { flex-shrink: 0; color: #ffad24; }
+.emptyCoin { position: absolute; top: 21px; right: 14px; width: 72px; height: 72px; pointer-events: none; animation: guideCoinFloat 5s ease-in-out infinite; }
+.emptyCoin img { width: 100%; height: 100%; object-fit: contain; }
+.coinSparkle, .coinSparkleSmall { position: absolute; color: #ffa915; }
+.coinSparkle { top: 6px; right: -8px; }
+.coinSparkleSmall { top: -4px; right: 7px; }
+.emptyCard h2 { margin: 15px 0 9px; color: #092d4b; font-size: 32px; font-weight: 800; line-height: 1.18; letter-spacing: -1.2px; }
+.emptyDescription { max-width: 100%; min-height: 25px; margin: 0; color: #405d78; font-size: 16px; line-height: 1.55; text-wrap: balance; }
+.steps { list-style: none; width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; padding: 0; margin: 32px 0 0; }
+.steps li { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.stepIcon { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 74px; height: 74px; border: 1px solid #ffd6c0; border-radius: 20px; background: #fff5eccc; color: #fa4b23; }
+.stepIcon > svg { width: 42px; height: 42px; }
+.stepIcon > span { position: absolute; top: -8px; right: -6px; display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #ffcaa9; border-radius: 50%; background: #fff8ee; color: #c53b14; font-size: 13px; font-weight: 600; line-height: 1; }
+.stepLabel { color: #092d4b; font-size: 15px; font-weight: 650; line-height: 1.45; }
+.stepArrow { position: absolute; right: -27px; top: 26px; width: 36px; height: 27px; color: #ffb48e; transform: scaleY(-1); pointer-events: none; }
+.stepSparkle { position: absolute; top: 22px; left: calc(50% + 41px); color: #ffae1b; }
+.emptySupport { margin: 25px 0 0; color: #405d78; font-size: 14px; line-height: 1.6; text-wrap: balance; }
+.guideFooter { width: 100%; margin-top: 20px; padding-top: 13px; border-top: 1px solid #ffd5bd; }
+.guideLink { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; color: #b8320e; font-size: 15px; text-decoration: underline; text-underline-offset: 5px; transition: color .18s; }
+.guideLink svg { flex-shrink: 0; transition: translate .18s; }
 .guideLink:hover { color: #b92f0f; }
-.emptyNote { align-self: stretch; display: flex; align-items: center; gap: 8px; padding: 0; margin: auto 0 0; color: #7b8492; text-align: left; font-size: 12px; line-height: 1.6; }
-.emptyNote svg { flex-shrink: 0; }
-.emptyBusy .emptyIllustration { animation: coinFloat 2.6s ease-in-out infinite; }
+.guideLink:hover svg { translate: 3px 0; }
+.emptyBusy .emptyCoin { animation-duration: 2s; }
+@keyframes guideCoinFloat { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-5px) rotate(4deg); } }
 .resultState { height: 100%; min-height: 0; animation: stateIn .35s ease both; }
 .resultClosing { animation: stateOut .32s ease both; pointer-events: none; }
 .receipt { display: flex; flex-direction: column; padding: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
@@ -181,7 +195,7 @@
   .page :global(.utility .container) { padding: 0 10px; justify-content: center; }
   .page :global(.utility-left) { display: flex; }
   .page :global(.utility-right) { display: none; }
-  .header :global(.nav) { min-height: 64px; padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
+  .header :global(.nav) { min-height: 60px; padding: 10px 16px; flex-wrap: wrap; gap: 8px; }
   .header :global(.search) { display: none; }
   .header :global(.brand) { gap: 4px; }
   .header :global(.brand-mark) { width: 34px; height: 34px; }
@@ -193,13 +207,13 @@
   .header :global(.account .header-admin-btn) { padding: 6px; font-size: 10px; }
   .header :global(.account-balance-tag) { display: none; }
   .header :global(.account-name) { max-width: 52px; }
-  .hero { background-position: 30% top; }
+  .hero { background-position: 75% top; }
   .heroGrid { padding: 26px 14px 28px; gap: 20px; }
   .story { padding: 0; }
   .slogan { font-size: 28px; letter-spacing: -1.2px; }
   .slogan > span { max-width: 280px; margin-top: 7px; font-size: 43px; letter-spacing: -2px; line-height: 1.04; }
   .storyDescription { max-width: 255px; font-size: 12px; margin-top: 13px; line-height: 1.6; }
-  .marketplaces { position: relative; z-index: 1; margin-top: 18px; flex-wrap: nowrap; gap: 10px; }
+  .marketplaces { position: relative; z-index: 1; min-height: 28px; margin-top: 12px; flex-wrap: nowrap; gap: 10px; }
   .marketplaces > span:first-child { font-size: 10px; }
   .marketplaceBrand { font-size: 11px; gap: 4px; }
   .marketplaceBrand img { width: 19px; height: auto; }
@@ -233,7 +247,7 @@
   .header :global(.brand-wordmark) { width: 106px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .floatingCoin, .emptyBusy .emptyIllustration, .resultState, .resultClosing, .emptyCard, .inputError { animation: none; }
+  .floatingCoin, .emptyCoin, .emptyBusy .emptyCoin, .resultState, .resultClosing, .emptyCard, .inputError { animation: none; }
   .page *, .page *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
 }
 
@@ -244,8 +258,6 @@
   .inputWrap { gap: 4px; }
   .inputWrap input { font-size: 13px; }
   .product .platformBadge { display: none; }
-  .emptyCard h2 { font-size: 21px; }
-  .emptyDescription { font-size: 13px; }
 }
 @media (max-width: 900px) {
   .calculatorPanel { width: 570px; padding: 20px; }
@@ -259,19 +271,6 @@
   .inputWrap input::placeholder { font-size: 13px; }
   .clearInput { width: 32px; min-width: 32px; height: 34px; }
   .calculateButton { width: 82px; min-width: 82px; min-height: 50px; height: 50px; padding: 0 8px; gap: 4px; font-size: 14px; }
-  .emptyCard { padding-top: 16px; justify-content: center; }
-  .emptyEyebrow { font-size: 12px; }
-  .emptyIllustration { width: 108px; height: 82px; margin: 14px 0; }
-  .emptyCard h2 { font-size: 18px; margin-bottom: 8px; }
-  .emptyDescription { font-size: 12px; line-height: 1.7; }
-  .steps { margin: 28px 0 14px; }
-  .steps li { font-size: 11px; }
-  .stepIcon { width: 42px; height: 42px; border-radius: 13px; }
-  .stepIcon > svg { width: 24px; height: 24px; }
-  .stepArrow { width: 14px; right: -7px; top: 17px; }
-  .guideLink { min-height: 40px; font-size: 12px; }
-  .emptyNote { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid #f0ece8; font-size: 10px; gap: 6px; }
-  .emptyNote svg { width: 18px; height: 18px; }
   .receiptHeading { margin-bottom: 8px; }
   .product { gap: 10px; height: 64px; }
   .productImage { width: 52px; height: 64px; }
@@ -293,4 +292,48 @@
   .buyButton { min-height: 44px; font-size: 13px; }
   .receiptFooter > span { font-size: 10px; }
   .receiptFooter button { min-height: 40px; font-size: 11px; }
+}
+
+/* Keep state geometry stable; only the empty/loading surface is transparent. */
+.calculatorPanel.calculatorIntro { padding: 0; }
+@media (max-width: 1200px) and (min-width: 901px) {
+  .emptyCard { padding: 24px 8px 0; }
+  .emptyCoin { width: 58px; height: 58px; right: 5px; }
+  .emptyCard h2 { font-size: 29px; }
+  .emptyDescription { font-size: 14px; }
+  .stepLabel { font-size: 13px; }
+  .steps { gap: 14px; }
+  .stepIcon { width: 66px; height: 66px; }
+  .stepArrow { width: 28px; right: -21px; }
+}
+@media (max-width: 600px) {
+  .calculatorIntro .calculator { padding: 14px; border-radius: 19px; }
+  .emptyCard { padding: 16px 2px 0; }
+  .emptyEyebrow { padding: 4px 13px; font-size: 12px; gap: 7px; }
+  .emptyEyebrow svg { width: 18px; height: 18px; }
+  .emptyCoin { width: 46px; height: 46px; top: 29px; right: 10px; }
+  .coinSparkle { width: 14px; right: -5px; }
+  .coinSparkleSmall { width: 9px; }
+  .emptyCard h2 { font-size: clamp(22px, 6.4vw, 28px); line-height: 1.2; letter-spacing: -.85px; margin: 10px 0 8px; }
+  .emptyDescription { font-size: 14px; min-height: 22px; }
+  .steps { gap: 13px; margin-top: 22px; }
+  .steps li { gap: 9px; }
+  .stepIcon { width: 62px; height: 62px; border-radius: 17px; }
+  .stepIcon > svg { width: 36px; height: 36px; }
+  .stepIcon > span { width: 20px; height: 20px; font-size: 12px; top: -7px; right: -4px; }
+  .stepLabel { font-size: 12px; line-height: 1.3; }
+  .stepArrow { width: 30px; height: 24px; top: 23px; right: -22px; }
+  .stepSparkle { width: 10px; left: calc(50% + 34px); }
+  .emptySupport { margin-top: 18px; font-size: 12px; line-height: 1.7; }
+  .guideFooter { margin-top: 15px; padding-top: 8px; }
+  .guideLink { font-size: 14px; gap: 10px; }
+}
+@media (max-width: 374px) {
+  .calculatorIntro .calculator { padding: 12px; gap: 6px; }
+  .emptyCoin { width: 46px; height: 46px; right: 3px; }
+  .stepIcon { width: 56px; height: 56px; }
+  .stepIcon > svg { width: 33px; height: 33px; }
+  .stepLabel { font-size: 11px; }
+  .stepArrow { width: 25px; right: -18px; top: 20px; }
+  .stepSparkle { left: calc(50% + 30px); }
 }

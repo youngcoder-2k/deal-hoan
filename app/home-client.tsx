@@ -833,7 +833,7 @@ export default function HomeClient({
       <section className={styles.hero} aria-label="Tính tiền hoàn sản phẩm">
         <div className={styles.heroGrid}>
           <CashbackStory />
-          <div className={styles.calculatorPanel} aria-busy={busy}>
+          <div className={`${styles.calculatorPanel} ${result && calculatedProduct ? "" : styles.calculatorIntro}`} aria-busy={busy}>
             <form className={styles.calculator} onSubmit={calc}>
               <div className={`${styles.inputWrap} ${inputError ? styles.inputError : ""}`}>
                 <LinkIcon className={styles.inputIcon} size={23} aria-hidden="true" />
@@ -860,7 +860,7 @@ export default function HomeClient({
                       if (linkInputRef.current) linkInputRef.current.scrollLeft = 0;
                     });
                   }}
-                  placeholder="Dán link sản phẩm tại đây…"
+                  placeholder="Dán link sản phẩm…"
                 />
                 {link && <button type="button" className={styles.clearInput} aria-label="Xoá link" onClick={() => resetCalculation()}><XIcon size={17} weight="bold" aria-hidden="true" /></button>}
               </div>

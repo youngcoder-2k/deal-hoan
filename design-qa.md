@@ -37,3 +37,30 @@ Passed: desktop input/submit increased from 42px to 48px, mobile input 50px and 
 
 ## Mobile compact layout follow-up
 Passed visual review against the supplied mobile screenshot: illustration reduced from160×145 to108×82; input and submit now share one50px row. Card reduced650→600px with fixed empty/result geometry. Native browser: empty390px has no overflow; results360/390px have no internal/horizontal overflow; desktop remains570×610 with48px controls. Step icons and whitespace reduced. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/mobile-compact-empty.png. Build and component lint passed. Existing hover, focus and reduced-motion rules retained.
+
+## 2026-10-10 — Icon-led horizontal guide (latest selected design)
+
+final result: passed
+
+### Scope and visual comparison
+- Exact selected reference: `/var/folders/sj/jwhymxt53b11fm81tn5k24rw0000gn/T/codex-clipboard-564ca4f7-d828-4197-82a7-be98f5518ed1.png`.
+- Replaced the old large empty illustration/card with a transparent three-step guide. The input remains on its own white surface. Icons dominate small light numbered corner badges; the coin animates gently. Receipt/data-fetch behavior is unchanged.
+- Viewed the reference beside the empty implementation at logical 390×844: `/Users/wei/Code/me/deal-hoan/design-evidence/horizontal-steps-comparison.png`.
+- IAB captures include a device-scale blank right/bottom margin at DPR1.1. The comparison removes only that margin and normalizes the content to390×844; raw capture is retained as `horizontal-steps-mobile.png`.
+- Also opened and inspected `horizontal-steps-tablet.png` (768×1100) and `horizontal-steps-desktop.png` (1440×1100), under `/Users/wei/Code/me/deal-hoan/design-evidence/`.
+- P3 differences: reused existing brand/bag/coin/background assets; solid curved Phosphor arrows instead of dotted arrows; mobile guide is approximately40px lower than the mock. No pixel-perfect claim. Existing fixed600px mobile/610px desktop state frame is retained to avoid a layout jump on submit.
+
+### Responsive and interaction evidence
+- Measured actual viewport widths320,375,390,600,601,768,900,901,1023,1440,1920. No horizontal document overflow, all three steps share one row, guide fits the panel and is not clipped by the hero.
+- Empty/result at390px:362×600. Empty/result at768/1440px:570×610. Tested normal receipt has no internal vertical overflow at768/1440px.
+- Empty submission: aria-invalid=true observed. Enter submission of built-in Sony fixture: busy=true, button100%, width82px unchanged, loading heading visible; then receipt appears. This fixture does not verify real Shopee cashback data.
+- Copy link: success label appears; later returns to Copy link. Reset: closing animation, empty input, input focus and original guide restored. Clearing while calculation is pending prevents a stale result.
+- Long clipboard paste: selectionStart0 and scrollLeft0 observed. Keyboard Tab reaches Tính with visible outline. Guide link navigates to#how. Hover rules retained; reduced-motion CSS statically reviewed, not OS-emulated.
+- Contrast fix: eyebrow5.09:1, badges4.97:1; guide5.41:1 and supporting text6.20:1 against the peach fallback. Bright decorative icons remain orange.
+- Browser logs after final reload (since09:15:36UTC): no errors/warnings. Older transient FAQ Fast Refresh error predates the final reload; concurrent FAQ fix is preserved.
+- Existing generic resolver fallback can return a receipt for invalid text; backend validation/cashback sourcing is unchanged and is not certified by this visual QA.
+
+### Checks and preservation
+- Baseline and modified production builds passed. Targeted ESLint:0 errors,12 existing warnings. git diff --check passed.
+- Unrelated concurrent FAQ, API route, and cashback-booster changes were not edited or reverted.
+- Machine-readable measurements and exact test/rollback commands: `/Users/wei/.codex/artifacts/deal-hoan-horizontal-steps/VERIFICATION.txt`.
