@@ -1171,24 +1171,12 @@ h2,
   height: 44px;
   border-radius: 12px;
   font-style: normal;
+  flex: none;
 }
+.platform i img,
 .platform i svg {
-  width: 23px;
-  height: 23px;
-}
-.platform-0::after {
-  width: 23px;
-  height: 23px;
-  background: center/contain no-repeat;
-  content: "";
-}
-.platform-0::after {
-  background-image: url("https://cdn.simpleicons.org/shopee/EE4D2D");
-}
-.platform .platform-1 svg,
-.platform .platform-2 svg {
-  width: 21px;
-  height: 21px;
+  display: block;
+  object-fit: contain;
 }
 .orange {
   background: #fff1ed !important;

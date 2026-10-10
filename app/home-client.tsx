@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
 import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
@@ -165,16 +166,6 @@ function getCardLogoAndTheme(c: Coupon) {
   };
 }
 
-function LazadaLogo({ color = "#0F4C81" }: { color?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 20.2C6.8 16 4.4 13.2 4.4 10.2A4 4 0 0 1 12 8.4a4 4 0 0 1 7.6 1.8c0 3-2.4 5.8-7.6 10Z"
-        fill={color}
-      />
-    </svg>
-  );
-}
 
 function HeartIcon({ filled }: { filled: boolean }) {
   return (
@@ -909,37 +900,51 @@ export default function HomeClient({
         </div>
         <div className="container platforms">
           {[
-            ["Shopee", "8.240", "12%", "orange"],
-            ["TikTok Shop", "5.130", "10%", "dark"],
-            ["Lazada", "3.960", "9%", "blue"],
-          ].map((p, i) => (
-            <a className="platform" key={p[1]}>
-              <i className={`${p[3]} platform-${i}`}>
-                {i === 0 && <span className="sr-only">Shopee</span>}
-                {i === 1 && (
-                  <svg viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M13.2 15.5V4.8c.7 1.9 2.4 3.5 4.6 3.8"
-                      stroke="#fff"
-                      strokeWidth="2.3"
-                      strokeLinecap="round"
-                    />
-                    <circle
-                      cx="9.7"
-                      cy="15.9"
-                      r="3.5"
-                      stroke="#fff"
-                      strokeWidth="2.3"
-                    />
-                  </svg>
-                )}
-                {i === 2 && <LazadaLogo />}
+            {
+              name: "Shopee",
+              deals: "8.240",
+              maxRate: "12%",
+              bg: "orange",
+              icon: "/brand/shopee.svg",
+              width: 24,
+              height: 24,
+            },
+            {
+              name: "TikTok Shop",
+              deals: "5.130",
+              maxRate: "10%",
+              bg: "dark",
+              icon: "/brand/tiktok-white.svg",
+              width: 21,
+              height: 21,
+            },
+            {
+              name: "Lazada",
+              deals: "3.960",
+              maxRate: "9%",
+              bg: "blue",
+              icon: "/brand/lazada-icon.png",
+              width: 26,
+              height: 26,
+            },
+          ].map((p) => (
+            <a
+              className="platform"
+              key={p.name}
+              href="#deals"
+              onClick={() => {
+                setSearchQuery(p.name);
+                document.getElementById("deals")?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              <i className={p.bg}>
+                <Image src={p.icon} width={p.width} height={p.height} alt={p.name} />
               </i>
               <span>
-                <b>{p[0]}</b>
-                <small>{p[1]} deal đang mở</small>
+                <b>{p.name}</b>
+                <small>{p.deals} deal đang mở</small>
               </span>
-              <em>Hoàn đến {p[2]}</em>
+              <em>Hoàn đến {p.maxRate}</em>
             </a>
           ))}
         </div>
