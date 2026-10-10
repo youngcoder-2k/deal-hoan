@@ -307,6 +307,10 @@
   .stepArrow { width: 28px; right: -21px; }
 }
 @media (max-width: 600px) {
+  /* The mobile guide ends with its content instead of reserving receipt space. */
+  .calculatorPanel.calculatorIntro { height: auto; }
+  .calculatorIntro .calculatorState { flex: none; display: block; }
+  .calculatorIntro .emptyCard { height: auto; }
   .calculatorIntro .calculator { padding: 14px; border-radius: 19px; }
   .emptyCard { padding: 16px 2px 0; }
   .emptyEyebrow { padding: 4px 13px; font-size: 12px; gap: 7px; }
