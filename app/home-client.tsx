@@ -1156,6 +1156,7 @@ export default function HomeClient({
             </article>
           ))}
         </div>
+      </section>
       {/* Tạm thời ẩn phần Mã giảm giá nổi bật */}
       {false && (
         <section className="container block" id="coupons">
@@ -1304,6 +1305,7 @@ export default function HomeClient({
           </div>
         )}
       </section>
+      )}
       <section className="container block" id="how">
         <div className="how">
           <div>
