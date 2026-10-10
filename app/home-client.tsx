@@ -7,6 +7,7 @@ import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
+import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
 import styles from "./home-redesign.module.css";
@@ -258,6 +259,41 @@ function getNextShopeeSlotEndMs(): number {
   return Date.now() + diffMs;
 }
 
+const FAQ_ITEMS = [
+  {
+    q: "DealHoàn kiếm tiền từ đâu để hoàn cho tôi?",
+    a: (
+      <>
+        Khi bạn mua sắm, các đối tác lớn (như Shopee) sẽ <b>trả tiền hoa hồng</b> cho DealHoàn. Chúng tôi giữ lại một phần nhỏ để duy trì hệ thống và <b>hoàn lại phần lớn số tiền đó</b> vào túi bạn.
+      </>
+    ),
+  },
+  {
+    q: "Tôi có cần tài khoản không?",
+    a: (
+      <>
+        Có. Để tích lũy tiền hoàn và rút về số dư, bạn cần có tài khoản DealHoàn. Chỉ mất <b>10 giây đăng nhập</b> nhanh qua Google hoặc Email (xác thực OTP) – không cần mật khẩu. Đặc biệt, lần đầu đăng nhập bạn sẽ được <b>tặng ngay 20.000đ</b> vào số dư!
+      </>
+    ),
+  },
+  {
+    q: "Mức rút tối thiểu là bao nhiêu?",
+    a: (
+      <>
+        Bạn có thể rút từ <b>50.000đ</b> trở lên. Chúng tôi <b>không thu bất kỳ khoản phí nào</b> khi rút tiền về tài khoản ngân hàng.
+      </>
+    ),
+  },
+  {
+    q: "Nếu huỷ đơn hoặc hoàn trả thì sao?",
+    a: (
+      <>
+        Số tiền hoàn tương ứng sẽ bị huỷ khỏi số dư. Chỉ đơn hàng đã được sàn xác nhận chính thức mới được tính là có thể rút.
+      </>
+    ),
+  },
+];
+
 export default function HomeClient({
   flashDeals,
   hotDeals,
@@ -355,6 +391,13 @@ export default function HomeClient({
   const [authPending, setAuthPending] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [userBalance, setUserBalance] = useState<number | null>(null);
+  const [openFaqs, setOpenFaqs] = useState<number[]>([0, 1, 2, 3]);
+
+  const toggleFaq = (index: number) => {
+    setOpenFaqs((prev) =>
+      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
+    );
+  };
 
   const fetchUserBalance = () => {
     fetch("/api/wallet")
@@ -1335,6 +1378,48 @@ export default function HomeClient({
           </div>
         </div>
       </section>
+      <section className="container block faq-section" id="faq">
+        <div className="faq-container">
+          <div className="faq-header">
+            <span className="faq-badge">CÂU HỎI THƯỜNG GẶP</span>
+            <h2 className="faq-title">Bạn đang băn khoăn?</h2>
+          </div>
+          <div className="faq-list">
+            {FAQ_ITEMS.map((item, index) => {
+              const isOpen = openFaqs.includes(index);
+              return (
+                <div
+                  key={index}
+                  className={`faq-card ${isOpen ? "open" : ""}`}
+                >
+                  <button
+                    type="button"
+                    className="faq-question-btn"
+                    onClick={() => toggleFaq(index)}
+                    aria-expanded={isOpen}
+                  >
+                    <span className="faq-question-text">{item.q}</span>
+                    <span className="faq-toggle-icon" aria-hidden="true">
+                      {isOpen ? (
+                        <XIcon size={18} weight="bold" />
+                      ) : (
+                        <PlusIcon size={18} weight="bold" />
+                      )}
+                    </span>
+                  </button>
+                  <div className="faq-answer-wrapper">
+                    <div className="faq-answer-inner">
+                      <div className="faq-answer">
+                        <p>{item.a}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
       <section className="container block" id="referral">
         <div className="referral">
           <div>
@@ -1384,12 +1469,12 @@ export default function HomeClient({
               <a>Danh mục</a>
               <a>Thương hiệu</a>
             </div>
-            <div id="faq">
+            <div>
               <b>Cashback</b>
-              <a>Cách hoạt động</a>
+              <a href="#how">Cách hoạt động</a>
               <a>Chính sách hoàn tiền</a>
               <a>Rút tiền</a>
-              <a>FAQ</a>
+              <a href="#faq">FAQ</a>
             </div>
             <div>
               <b>DealHoàn</b>
