@@ -31,3 +31,6 @@ Production build passed (exit 0). ESLint: 0 errors, 9 existing home-client warni
 
 ## Follow-up: vertical centering
 Passed: removed 70px desktop offset and equalized hero vertical padding. Native DOM measurements show top/bottom gaps 160.164/160.172px at 1558px and 79.102/79.109px at 1024px (subpixel rounding only). Empty and result remain 570×610; 390px stacked card remains 362×650 without horizontal overflow. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/centered-card-desktop.png. Production build passed.
+
+## Follow-up: form emphasis
+Passed: desktop input/submit increased from 42px to 48px, mobile input 50px and submit 48px. Warm input surface, orange border and stronger button shadow; hover/focus/loading rules retained. Reduced surrounding spacing preserves the fixed panel dimensions and reserved state space. Native browser checks: desktop 570×610, mobile 362×650; no horizontal overflow. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/emphasized-input-desktop.png. Production build passed.

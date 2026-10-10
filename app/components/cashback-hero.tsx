@@ -8,6 +8,7 @@ import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { CopyIcon } from "@phosphor-icons/react/dist/csr/Copy";
 import { CurrencyCircleDollarIcon } from "@phosphor-icons/react/dist/csr/CurrencyCircleDollar";
 import { InfoIcon } from "@phosphor-icons/react/dist/csr/Info";
+import { ShoppingBagIcon } from "@phosphor-icons/react/dist/csr/ShoppingBag";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { formatPrice } from "@/lib/deals/format";
 import type { CalculatedProduct } from "@/lib/deals/resolve";
@@ -134,7 +135,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
           </div>
         </div>
       )}
-      <button type="button" className={styles.buyButton} onClick={onBuy}>Mua ngay &amp; Nhận hoàn tiền <ArrowRightIcon size={21} aria-hidden="true" /></button>
+      <button type="button" className={styles.buyButton} onClick={onBuy}><ShoppingBagIcon size={21} weight="bold" aria-hidden="true" /> Mua ngay</button>
       <div className={styles.receiptFooter}>
         <span>Ghi nhận trong 24 giờ · <a href="#how">điều kiện</a></span>
         <button type="button" onClick={onClear}>Tính link khác <ArrowClockwiseIcon size={21} aria-hidden="true" /></button>
