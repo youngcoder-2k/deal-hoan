@@ -2428,7 +2428,7 @@ h2,
 }
 .step {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   margin-top: 18px;
 }
@@ -2436,19 +2436,29 @@ h2,
   display: grid;
   flex: none;
   place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
   background: #fff1ed;
   color: #d73211;
-  font: 800 16px var(--font-app), "Be Vietnam Pro", sans-serif;
+  font: 800 15px var(--font-app), "Be Vietnam Pro", sans-serif;
   font-style: normal;
+  margin-top: 1px;
+}
+.step span b,
+.step span small {
+  display: block;
 }
 .step span b {
-  display: block;
-  font-size: 15.5px;
+  font-size: 15px;
   font-weight: 700;
   color: #171717;
+}
+.step span small {
+  margin-top: 3px;
+  color: #737373;
+  font-size: 13px;
+  line-height: 1.55;
 }
 .demo {
   position: relative;
@@ -4584,7 +4594,7 @@ select.account-input.select-bank-field:focus {
     font-size: 13.5px;
   }
   .step {
-    align-items: center;
+    align-items: flex-start;
     gap: 12px;
     margin-top: 14px;
   }
@@ -4592,9 +4602,16 @@ select.account-input.select-bank-field:focus {
     width: 32px;
     height: 32px;
     font-size: 14px;
+    margin-top: 1px;
   }
   .step span b {
     font-size: 14.5px;
+  }
+  .step span small {
+    margin-top: 2px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: #737373;
   }
   .demo {
     width: 100%;

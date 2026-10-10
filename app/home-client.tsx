@@ -1305,15 +1305,28 @@ export default function HomeClient({
               kết mơ hồ.
             </p>
             {[
-              "Dán link hoặc chọn deal",
-              "Mua qua liên kết",
-              "Cashback chờ duyệt",
-              "Rút tiền về tài khoản",
-            ].map((title, i) => (
-              <div className="step" key={title}>
+              [
+                "Dán link hoặc chọn deal",
+                "Trên trang sản phẩm của Shopee, TikTok Shop hoặc Lazada, chọn Chia sẻ → Sao chép liên kết. Dán link vào ô tính hoàn tiền bên trên, hoặc chọn một deal có sẵn.",
+              ],
+              [
+                "Mua qua liên kết",
+                "Bấm mua và nhận hoàn tiền — bạn mua trực tiếp trên sàn như bình thường.",
+              ],
+              [
+                "Cashback chờ duyệt",
+                "Đơn ghi nhận trong 24 giờ, trạng thái chờ duyệt đến khi hết hạn đổi trả.",
+              ],
+              [
+                "Rút tiền về tài khoản",
+                "Cashback được duyệt vào ví, rút về tài khoản ngân hàng từ 50.000đ.",
+              ],
+            ].map((s, i) => (
+              <div className="step" key={s[0]}>
                 <i>{i + 1}</i>
                 <span>
-                  <b>{title}</b>
+                  <b>{s[0]}</b>
+                  <small>{s[1]}</small>
                 </span>
               </div>
             ))}
