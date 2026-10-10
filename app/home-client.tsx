@@ -845,8 +845,8 @@ export default function HomeClient({
                 />
                 {link && <button type="button" className={styles.clearInput} aria-label="Xoá link" onClick={() => resetCalculation()}><XIcon size={17} weight="bold" aria-hidden="true" /></button>}
               </div>
-              <button type="submit" className={styles.calculateButton} disabled={busy}>
-                {busy ? <><span className="calc-spinner" aria-hidden="true" /> Đang tính… <small>{calcPercent}%</small></> : <><LightningIcon size={22} weight="fill" aria-hidden="true" /> Tính</>}
+              <button type="submit" className={styles.calculateButton} disabled={busy} aria-busy={busy} aria-label={busy ? `Đang tính ${calcPercent}%` : "Tính"}>
+                {busy ? <span aria-live="polite">{calcPercent}%</span> : <><LightningIcon size={22} weight="fill" aria-hidden="true" /> Tính</>}
               </button>
             </form>
             <div className={styles.calculatorState}>
@@ -1040,20 +1040,6 @@ export default function HomeClient({
                         "ảnh sản phẩm"
                       )}
                     </a>
-                    <b>−{deal.discountPercent}%</b>
-                    <button
-                      type="button"
-                      className={`deal-fav-btn ${savedDealIds.includes(String(deal.id)) ? "is-active" : ""}`}
-                      aria-label={
-                        savedDealIds.includes(String(deal.id)) ? "Bỏ lưu deal" : "Lưu deal yêu thích"
-                      }
-                      title={
-                        savedDealIds.includes(String(deal.id)) ? "Bỏ lưu deal" : "Lưu deal yêu thích"
-                      }
-                      onClick={(e) => toggleFavoriteDeal(deal, e)}
-                    >
-                      <HeartIcon filled={savedDealIds.includes(String(deal.id))} />
-                    </button>
                   </div>
                   <strong>
                     <a
@@ -1137,21 +1123,6 @@ export default function HomeClient({
                     "ảnh sản phẩm"
                   )}
                 </a>
-                <b>−{deal.discountPercent}%</b>
-                <span>🔥 {deal.dealScore}</span>
-                <button
-                  type="button"
-                  className={`deal-fav-btn ${savedDealIds.includes(String(deal.id)) ? "is-active" : ""}`}
-                  aria-label={
-                    savedDealIds.includes(String(deal.id)) ? "Bỏ lưu deal" : "Lưu deal yêu thích"
-                  }
-                  title={
-                    savedDealIds.includes(String(deal.id)) ? "Bỏ lưu deal" : "Lưu deal yêu thích"
-                  }
-                  onClick={(e) => toggleFavoriteDeal(deal, e)}
-                >
-                  <HeartIcon filled={savedDealIds.includes(String(deal.id))} />
-                </button>
               </div>
               <div className="deal-body">
                 <small>

@@ -47,11 +47,11 @@
 .clearInput { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 28px; border: 0; border-radius: 50%; background: #f5f6f7; color: #67717d; }
 .clearInput:hover { background: #ffede4; color: #db421c; }
 .calculateButton, .buyButton { display: inline-flex; justify-content: center; align-items: center; gap: 7px; border: 1px solid #f24017; border-radius: 10px; background: var(--cashback-orange); color: #fff; font-weight: 700; box-shadow: 0 5px 12px #f4562414; transition: background-color .18s, box-shadow .18s; }
-.calculateButton { flex: 0 0 auto; padding: 0 14px; min-width: 94px; height: 48px; white-space: nowrap; font-size: 14px; border-radius: 11px; box-shadow: 0 5px 14px #fa4b2330; }
+.calculateButton { flex: 0 0 auto; padding: 0 14px; width: 94px; min-width: 94px; height: 48px; white-space: nowrap; font-size: 14px; border-radius: 11px; box-shadow: 0 5px 14px #fa4b2330; }
 .calculateButton > svg { color: #ffdf69; }
 .calculateButton:hover:not(:disabled), .buyButton:hover { background: #ed421c; box-shadow: 0 5px 14px #f4562430; }
 .calculateButton:disabled { cursor: wait; opacity: .85; }
-.calculateButton small { font-size: 11px; font-variant-numeric: tabular-nums; }
+.calculateButton > span { font-variant-numeric: tabular-nums; }
 .inputError { border-color: #dc2626; animation: inputShake .3s ease; }
 .calculatorState { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .emptyCard, .receipt { height: 100%; min-height: 0; min-width: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
@@ -240,7 +240,7 @@
 /* Every state occupies the same reserved panel at a given viewport. */
 @media (max-width: 1200px) {
   .calculatorPanel { width: 570px; padding: 18px; }
-  .calculateButton { min-width: 88px; padding: 0 10px; font-size: 13px; }
+  .calculateButton { width: 88px; min-width: 88px; padding: 0 10px; font-size: 13px; }
   .inputWrap { gap: 4px; }
   .inputWrap input { font-size: 13px; }
   .product .platformBadge { display: none; }

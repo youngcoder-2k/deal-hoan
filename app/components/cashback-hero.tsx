@@ -120,7 +120,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
         </div>
       </div>
       <dl className={styles.priceSummary}>
-        <div><dt>Thanh toán hôm nay</dt><dd>{formatPrice(price)} {originalPrice > price && <s>{formatPrice(originalPrice)}</s>}</dd></div>
+        <div><dt>Thanh toán</dt><dd>{formatPrice(price)} {originalPrice > price && <s>{formatPrice(originalPrice)}</s>}</dd></div>
         <div><dt>Chi phí sau hoàn</dt><dd className={styles.netCost}>{formatPrice(price - cashback)}</dd></div>
       </dl>
       {trackedLink && (
