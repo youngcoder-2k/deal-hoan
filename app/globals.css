@@ -6703,6 +6703,11 @@ select.account-input.select-bank-field:focus {
   text-align: left;
   font-family: inherit;
   user-select: none;
+  transition: padding 0.2s ease;
+}
+
+.faq-card.open .faq-question-btn {
+  padding-bottom: 12px;
 }
 
 .faq-question-text {
@@ -6768,6 +6773,9 @@ select.account-input.select-bank-field:focus {
   .faq-question-btn {
     padding: 15px 18px;
     gap: 12px;
+  }
+  .faq-card.open .faq-question-btn {
+    padding-bottom: 10px;
   }
   .faq-question-text {
     font-size: 15px;

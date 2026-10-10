@@ -391,12 +391,10 @@ export default function HomeClient({
   const [authPending, setAuthPending] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [userBalance, setUserBalance] = useState<number | null>(null);
-  const [openFaqs, setOpenFaqs] = useState<number[]>([0, 1, 2, 3]);
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   const toggleFaq = (index: number) => {
-    setOpenFaqs((prev) =>
-      prev.includes(index) ? prev.filter((i) => i !== index) : [...prev, index]
-    );
+    setOpenFaq((prev) => (prev === index ? null : index));
   };
 
   const fetchUserBalance = () => {
@@ -1386,7 +1384,7 @@ export default function HomeClient({
           </div>
           <div className="faq-list">
             {FAQ_ITEMS.map((item, index) => {
-              const isOpen = openFaqs.includes(index);
+              const isOpen = openFaq === index;
               return (
                 <div
                   key={index}
