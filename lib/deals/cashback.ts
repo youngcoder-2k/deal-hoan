@@ -164,10 +164,14 @@ export async function recordCashbackOrder(params: RecordCashbackOrderParams): Pr
       ? commissionAmount
       : Math.round(orderValue * (cleanPlatform === "Shopee" ? 0.08 : 0.05));
 
+  // Chốt chặn an toàn (Zero Loss Guard):
+  // DealHoàn luôn giữ lại tối thiểu 12% hoa hồng thực nhận từ sàn, hoàn tối đa 88%
+  const maxSafeCashback = Math.round(calculatedCommission * 0.88);
+
   const calculatedCashback =
     typeof explicitCashback === "number" && explicitCashback >= 0
-      ? explicitCashback
-      : calculatedCommission; // DealHoàn mặc định hoàn 100% hoa hồng sàn trả
+      ? Math.min(explicitCashback, maxSafeCashback > 0 ? maxSafeCashback : explicitCashback)
+      : maxSafeCashback;
 
   const supabaseAdmin = getSupabaseAdminClient();
 

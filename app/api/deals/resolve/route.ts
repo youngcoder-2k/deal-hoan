@@ -15,6 +15,7 @@ import type { Platform } from "@/lib/deals/types";
 import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resolve";
 import { lookupAccessTradeProduct } from "@/lib/deals/providers/accesstrade";
 import { lookupHoanNgayProduct as lookupFastShopeeProduct } from "@/lib/deals/providers/hoanngay";
+import { boostCashbackRate } from "@/lib/deals/cashback-booster";
 
 export const dynamic = "force-dynamic";
 
@@ -206,19 +207,29 @@ export async function POST(request: NextRequest) {
       (fastShopeeProduct?.commission && fastShopeeProduct.commission > 0) ||
       (fastShopeeProduct?.cashbackRate && fastShopeeProduct.cashbackRate > 0)
     );
-    const finalCashback = hasRealCommission
-      ? Math.round(fastShopeeProduct!.commission!)
-      : cashbackFor(finalPrice, finalPlatform);
+
+    let finalCashback = cashbackFor(finalPrice, finalPlatform);
+    let cashbackRate = finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 5;
+
+    if (fastShopeeProduct?.cashbackRate && fastShopeeProduct.cashbackRate > 0) {
+      const boosted = boostCashbackRate(
+        fastShopeeProduct.cashbackRate,
+        finalPrice,
+        fastShopeeProduct.commission
+      );
+      finalCashback = boosted.cashbackAmount;
+      cashbackRate = boosted.finalRate;
+    } else if (fastShopeeProduct?.commission && fastShopeeProduct.commission > 0 && finalPrice > 0) {
+      const rawRate = Number(((fastShopeeProduct.commission / finalPrice) * 100).toFixed(2));
+      const boosted = boostCashbackRate(rawRate, finalPrice, fastShopeeProduct.commission);
+      finalCashback = boosted.cashbackAmount;
+      cashbackRate = boosted.finalRate;
+    }
 
     const discountPercent =
       finalOriginalPrice > finalPrice
         ? Math.round(((finalOriginalPrice - finalPrice) / finalOriginalPrice) * 100)
         : 0;
-
-    const cashbackRate =
-      fastShopeeProduct?.cashbackRate != null
-        ? fastShopeeProduct.cashbackRate
-        : (finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 5);
 
     const savingsPercent = cashbackRate;
 
