@@ -7,6 +7,12 @@ import {
   type CashbackBoosterSettings,
   DEFAULT_BOOSTER_SETTINGS,
 } from "@/lib/deals/cashback-booster-types";
+import {
+  parseShopeeConversionReport,
+  SAMPLE_SHOPEE_CSV,
+  type ParseReportResult,
+  type ParsedShopeeOrder,
+} from "@/lib/deals/shopee-import";
 
 function formatVnd(amount: number) {
   return (amount || 0).toLocaleString("vi-VN") + "đ";
@@ -166,11 +172,124 @@ export default function AdminUsersClient({
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Tab điều hướng: "users" (Quản lý User) hoặc "settings" (Cấu hình % Hoàn tiền)
-  const [activeTab, setActiveTab] = useState<"users" | "settings">("users");
+  // Tab điều hướng: "users" (Quản lý User), "settings" (Cấu hình % Hoàn tiền), "import" (Nhập Báo Cáo Shopee)
+  const [activeTab, setActiveTab] = useState<"users" | "settings" | "import">("users");
   const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // State quản lý Nhập báo cáo Shopee tự động
+  const [importCsvText, setImportCsvText] = useState<string>("");
+  const [importFileName, setImportFileName] = useState<string>("");
+  const [parsedReport, setParsedReport] = useState<ParseReportResult | null>(null);
+  const [isProcessingImport, setIsProcessingImport] = useState<boolean>(false);
+  const [importResultSummary, setImportResultSummary] = useState<{
+    success: boolean;
+    message: string;
+    details?: {
+      totalProcessed: number;
+      successCount: number;
+      failedCount: number;
+      matchedUsersCount: number;
+      totalCommission: number;
+      totalCashback: number;
+      netProfitMargin: number;
+    };
+  } | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+
+  const handleParseCsv = (content: string, filename?: string) => {
+    setImportCsvText(content);
+    if (filename) setImportFileName(filename);
+    setImportResultSummary(null);
+    try {
+      const result = parseShopeeConversionReport(content, {
+        safetyMarginPercent: boosterSettings.safetyMarginPercent,
+      });
+      setParsedReport(result);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Lỗi phân tích";
+      alert("Lỗi phân tích file CSV: " + msg);
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result;
+      if (typeof text === "string") {
+        handleParseCsv(text, file.name);
+      }
+    };
+    reader.readAsText(file, "UTF-8");
+  };
+
+  const handleDropFile = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    setImportFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result;
+      if (typeof text === "string") {
+        handleParseCsv(text, file.name);
+      }
+    };
+    reader.readAsText(file, "UTF-8");
+  };
+
+  const handleUseDemoCsv = () => {
+    handleParseCsv(SAMPLE_SHOPEE_CSV, "shopee_conversion_report_demo.csv");
+  };
+
+  const handleExecuteImport = async () => {
+    if (!parsedReport || parsedReport.validOrders.length === 0) {
+      alert("Không có đơn hàng hợp lệ nào khớp với thành viên để nạp tiền.");
+      return;
+    }
+
+    setIsProcessingImport(true);
+    setImportResultSummary(null);
+    try {
+      const res = await fetch("/api/admin/orders/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orders: parsedReport.validOrders,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setImportResultSummary({
+          success: true,
+          message: data.message,
+          details: data.summary,
+        });
+        setToastMsg("🎉 " + data.message);
+        setTimeout(() => setToastMsg(null), 4000);
+        await reloadUsers();
+      } else {
+        setImportResultSummary({
+          success: false,
+          message: data.error || "Có lỗi xảy ra khi nạp đơn vào ví.",
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Lỗi kết nối";
+      setImportResultSummary({
+        success: false,
+        message: msg,
+      });
+    } finally {
+      setIsProcessingImport(false);
+    }
+  };
 
   // Tải cấu hình tỷ lệ hoàn tiền
   const loadBoosterSettings = async () => {
@@ -213,6 +332,27 @@ export default function AdminUsersClient({
       setTimeout(() => setToastMsg(null), 3500);
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  const reloadUsers = async () => {
+    try {
+      const res = await fetch("/api/admin/users");
+      if (res.status === 403) {
+        window.location.href = "/admin";
+        return;
+      }
+      const data = await res.json();
+      if (res.ok && data.users) {
+        const merged = applyLocalBalanceOverrides(data.users);
+        setUsers(merged);
+        if (data.stats) setStats(data.stats);
+        if (typeof data.isRealData === "boolean") {
+          setIsRealData(data.isRealData);
+        }
+      }
+    } catch (err) {
+      console.warn("Reload users error:", err);
     }
   };
 
@@ -864,6 +1004,17 @@ export default function AdminUsersClient({
           <span>Cấu Hình Tỷ Lệ Hoàn Tiền (Smart Booster)</span>
           <span className="tab-pill tab-pill-boost">
             {boosterSettings.boostFactor > 0 ? `${boosterSettings.boostFactor.toFixed(2)}x Boost` : "Tắt thưởng"}
+          </span>
+        </button>
+        <button
+          type="button"
+          className={`admin-nav-tab-btn ${activeTab === "import" ? "active" : ""}`}
+          onClick={() => setActiveTab("import")}
+        >
+          <span className="tab-icon">📥</span>
+          <span>Nhập Báo Cáo Shopee (Tự Động Nạp Tiền)</span>
+          <span className="tab-pill">
+            {parsedReport ? `${parsedReport.validOrders.length} đơn` : "Auto"}
           </span>
         </button>
       </div>
@@ -1632,6 +1783,277 @@ export default function AdminUsersClient({
                 </table>
               </div>
             </div>
+          </section>
+        )}
+
+        {activeTab === "import" && (
+          <section className="admin-import-container">
+            {/* Header Card */}
+            <div className="admin-settings-card">
+              <div className="admin-settings-header">
+                <div>
+                  <h3>
+                    <span>📥</span> Nhập Báo Cáo Chuyển Đổi Shopee (Tự Động Nạp Tiền Vào Ví)
+                  </h3>
+                  <p>
+                    Giải pháp cho tài khoản chưa có Open API: Bạn chỉ cần tải file Excel/CSV từ Shopee về và nạp vào đây.
+                    Hệ thống tự động nhận diện mã <code>Sub_ID</code> (khách hàng DealHoàn), áp dụng tỷ lệ hoàn Parabol và cộng thẳng tiền vào ví.
+                  </p>
+                </div>
+                <span className="admin-security-badge">
+                  <span>⚡</span> Khớp Tự Động 100%
+                </span>
+              </div>
+
+              {/* 3 Steps Guide */}
+              <div className="admin-instruction-steps">
+                <div className="admin-step-box">
+                  <div className="admin-step-num">1</div>
+                  <div className="admin-step-title">Xuất file từ Shopee</div>
+                  <p className="admin-step-desc">
+                    Vào <b>Shopee Affiliate Portal</b> &rarr; mục <b>Báo cáo chuyển đổi (Conversion Report)</b> &rarr; chọn khoảng thời gian &rarr; bấm <b>Xuất file Excel / CSV</b>.
+                  </p>
+                </div>
+                <div className="admin-step-box">
+                  <div className="admin-step-num">2</div>
+                  <div className="admin-step-title">Tải file vào DealHoàn</div>
+                  <p className="admin-step-desc">
+                    Kéo thả file CSV vừa tải về vào ô bên dưới, hoặc bấm nút <b>&quot;Thử file mẫu Shopee&quot;</b> để trải nghiệm thử.
+                  </p>
+                </div>
+                <div className="admin-step-box">
+                  <div className="admin-step-num">3</div>
+                  <div className="admin-step-title">1 Click Nạp tiền</div>
+                  <p className="admin-step-desc">
+                    Hệ thống tự động lọc các đơn có gắn mã <code>u_User</code>, tính toán số tiền hoàn và cộng vào ví người dùng ngay tức thì!
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Dropzone & File Input Card */}
+            <div className="admin-settings-card">
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+                <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
+                  <span>📊</span> Tải lên file Báo cáo đơn hàng (.csv, .xlsx, .txt)
+                </h4>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUseDemoCsv}
+                    className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold px-3 py-1.5 rounded-lg transition-colors border border-orange-300"
+                  >
+                    🧪 Dùng file mẫu Shopee (Demo 5 đơn)
+                  </button>
+                  {parsedReport && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setParsedReport(null);
+                        setImportCsvText("");
+                        setImportFileName("");
+                        setImportResultSummary(null);
+                      }}
+                      className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Xóa dữ liệu đang xem
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Dropzone */}
+              <div
+                className={`admin-dropzone ${isDragging ? "dragging" : ""}`}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={handleDropFile}
+                onClick={() => document.getElementById("shopee-file-input")?.click()}
+              >
+                <input
+                  id="shopee-file-input"
+                  type="file"
+                  accept=".csv,.tsv,.txt"
+                  className="hidden"
+                  onChange={handleFileUpload}
+                />
+                <div className="admin-dropzone-icon">📁</div>
+                <div>
+                  <p className="admin-dropzone-title">
+                    {importFileName ? (
+                      <span className="text-orange-600 font-bold">📄 {importFileName}</span>
+                    ) : (
+                      "Kéo thả file CSV của Shopee vào đây hoặc Bấm để chọn file"
+                    )}
+                  </p>
+                  <p className="admin-dropzone-subtitle">
+                    Hỗ trợ file báo cáo Shopee tiếng Việt (&quot;Mã đơn hàng&quot;, &quot;Sub_ID&quot;) và tiếng Anh (&quot;Order ID&quot;, &quot;Sub ID 1&quot;)
+                  </p>
+                </div>
+              </div>
+
+              {/* Success Result Banner */}
+              {importResultSummary && (
+                <div
+                  className={`mt-4 p-4 rounded-xl border ${
+                    importResultSummary.success
+                      ? "bg-emerald-50 border-emerald-200 text-emerald-900"
+                      : "bg-red-50 border-red-200 text-red-900"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{importResultSummary.success ? "🎉" : "⚠️"}</span>
+                    <div>
+                      <p className="font-bold text-sm m-0">{importResultSummary.message}</p>
+                      {importResultSummary.details && (
+                        <p className="text-xs text-emerald-700 mt-1 m-0">
+                          Đã nạp {importResultSummary.details.successCount} đơn &bull; Khớp {importResultSummary.details.matchedUsersCount} thành viên &bull; Tổng tiền hoàn ví: {formatVnd(importResultSummary.details.totalCashback)} &bull; DealHoàn giữ lãi: {importResultSummary.details.netProfitMargin}%
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Parsed Report Preview */}
+            {parsedReport && (
+              <div className="admin-settings-card">
+                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                  <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
+                    <span>🔍</span> Kết Quả Phân Tích Dữ Liệu File
+                  </h4>
+                  <span className="text-xs bg-stone-100 text-stone-700 font-bold px-2.5 py-1 rounded-full">
+                    {parsedReport.totalRows} dòng đơn hàng
+                  </span>
+                </div>
+
+                {/* Stat badges */}
+                <div className="admin-import-stats-grid">
+                  <div className="admin-import-stat-card">
+                    <span className="admin-import-stat-title">Tổng đơn trong file</span>
+                    <span className="admin-import-stat-value">{parsedReport.totalRows}</span>
+                    <span className="admin-import-stat-note">Bao gồm cả đơn không có SubID</span>
+                  </div>
+
+                  <div className="admin-import-stat-card highlight">
+                    <span className="admin-import-stat-title">Đơn khớp khách DealHoàn</span>
+                    <span className="admin-import-stat-value">{parsedReport.validOrders.length}</span>
+                    <span className="admin-import-stat-note">Có mã Sub_ID dạng u_User</span>
+                  </div>
+
+                  <div className="admin-import-stat-card">
+                    <span className="admin-import-stat-title">Hoa hồng Shopee trả</span>
+                    <span className="admin-import-stat-value">{formatVnd(parsedReport.totalCommission)}</span>
+                    <span className="admin-import-stat-note">Doanh thu sàn ghi nhận</span>
+                  </div>
+
+                  <div className="admin-import-stat-card highlight">
+                    <span className="admin-import-stat-title">Cộng vào ví thành viên</span>
+                    <span className="admin-import-stat-value">{formatVnd(parsedReport.totalCashback)}</span>
+                    <span className="admin-import-stat-note">Đã áp dụng công thức thưởng</span>
+                  </div>
+                </div>
+
+                {/* Table preview */}
+                <div className="table-responsive mt-4">
+                  <table className="admin-data-table">
+                    <thead>
+                      <tr>
+                        <th>Mã đơn Shopee</th>
+                        <th>Thành viên DealHoàn (SubID)</th>
+                        <th>Sản phẩm</th>
+                        <th className="text-right">Giá trị đơn</th>
+                        <th className="text-right">Hoa hồng sàn</th>
+                        <th className="text-right">Tiền hoàn về ví</th>
+                        <th className="text-center">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {parsedReport.validOrders.map((ord, idx) => {
+                        // Find matching user from existing users list for friendly display
+                        const matchedUser = users.find((u) => ord.userId && u.id.startsWith(ord.userId));
+                        return (
+                          <tr key={idx} className="admin-table-row">
+                            <td className="font-mono text-xs font-bold text-stone-900">{ord.orderId}</td>
+                            <td>
+                              {matchedUser ? (
+                                <div>
+                                  <div className="font-bold text-emerald-800 text-xs">
+                                    {matchedUser.fullName || matchedUser.email}
+                                  </div>
+                                  <div className="text-[11px] text-stone-400 font-mono">{ord.subId}</div>
+                                </div>
+                              ) : (
+                                <div>
+                                  <span className="text-xs font-mono font-bold text-orange-700">{ord.subId}</span>
+                                  <span className="block text-[10px] text-stone-400">ID: {ord.userId}</span>
+                                </div>
+                              )}
+                            </td>
+                            <td className="max-w-[220px] truncate text-xs text-stone-700" title={ord.productName}>
+                              {ord.productName}
+                            </td>
+                            <td className="text-right text-xs font-medium">{formatVnd(ord.orderValue)}</td>
+                            <td className="text-right text-xs font-semibold text-stone-800">
+                              {formatVnd(ord.commissionAmount)}
+                            </td>
+                            <td className="text-right text-xs font-black text-emerald-700 bg-emerald-50/50">
+                              {formatVnd(ord.cashbackAmount)}
+                            </td>
+                            <td className="text-center">
+                              <span
+                                className={`status-badge text-[11px] ${
+                                  ord.status === "completed"
+                                    ? "badge-active"
+                                    : ord.status === "rejected"
+                                    ? "badge-suspended"
+                                    : "badge-pending"
+                                }`}
+                              >
+                                {ord.status === "completed"
+                                  ? "Đã duyệt"
+                                  : ord.status === "rejected"
+                                  ? "Đã hủy"
+                                  : "Chờ duyệt"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Action button */}
+                <div className="admin-import-actions">
+                  <span className="text-xs text-stone-500">
+                    Sẽ cộng tiền cho <b>{parsedReport.validOrders.length}</b> đơn hàng hợp lệ
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleExecuteImport}
+                    disabled={isProcessingImport || parsedReport.validOrders.length === 0}
+                    className="admin-import-submit-btn"
+                  >
+                    {isProcessingImport ? (
+                      <>
+                        <span className="animate-spin inline-block mr-1">⏳</span>
+                        <span>Đang xử lý nạp tiền...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🚀</span>
+                        <span>Xác Nhận Nạp {parsedReport.validOrders.length} Đơn Vào Ví Thành Viên</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </section>
         )}
       </main>

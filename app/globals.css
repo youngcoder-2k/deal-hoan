@@ -7049,3 +7049,183 @@ select.account-input.select-bank-field:focus {
   transform: none;
 }
 
+/* ==========================================================================
+   Admin Shopee Report Auto-Importer Styles
+   ========================================================================== */
+.admin-import-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.admin-instruction-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (max-width: 768px) {
+  .admin-instruction-steps {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-step-box {
+  background: #fdfbf7;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-step-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: #ea580c;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.admin-step-title {
+  font-weight: 800;
+  font-size: 14px;
+  color: #1c1917;
+}
+
+.admin-step-desc {
+  font-size: 13px;
+  color: #78716c;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.admin-dropzone {
+  border: 2px dashed #fdba74;
+  border-radius: 16px;
+  padding: 36px 20px;
+  text-align: center;
+  background: #fffaf5;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.admin-dropzone:hover,
+.admin-dropzone.dragging {
+  border-color: #ea580c;
+  background: #fff7ed;
+  transform: scale(1.005);
+}
+
+.admin-dropzone-icon {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.admin-dropzone-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #1c1917;
+  margin: 0;
+}
+
+.admin-dropzone-subtitle {
+  font-size: 13px;
+  color: #78716c;
+  margin: 0;
+}
+
+.admin-import-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.admin-import-stat-card {
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.admin-import-stat-card.highlight {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+.admin-import-stat-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #78716c;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.admin-import-stat-value {
+  font-size: 22px;
+  font-weight: 900;
+  color: #1c1917;
+}
+
+.admin-import-stat-card.highlight .admin-import-stat-value {
+  color: #166534;
+}
+
+.admin-import-stat-note {
+  font-size: 11.5px;
+  color: #a8a29e;
+}
+
+.admin-import-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.admin-import-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  background: #16a34a;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 800;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.25);
+}
+
+.admin-import-submit-btn:hover {
+  background: #15803d;
+  transform: translateY(-1px);
+}
+
+.admin-import-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
