@@ -198,6 +198,56 @@ export default function AdminUsersClient({
   } | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
 
+  // State tự động đồng bộ qua Cookie Shopee
+  const [shopeeCookie, setShopeeCookie] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dealhoan_shopee_cookie") || "";
+    }
+    return "";
+  });
+  const [isSyncingShopee, setIsSyncingShopee] = useState(false);
+  const [shopeeSyncResult, setShopeeSyncResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const handleSyncShopee = async () => {
+    if (!shopeeCookie.trim()) {
+      alert("Vui lòng dán chuỗi Cookie Shopee Affiliate để hệ thống tự động đồng bộ.");
+      return;
+    }
+
+    setIsSyncingShopee(true);
+    setShopeeSyncResult(null);
+    try {
+      if (typeof window !== "undefined") {
+        localStorage.setItem("dealhoan_shopee_cookie", shopeeCookie.trim());
+      }
+      const res = await fetch("/api/admin/shopee/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cookie: shopeeCookie.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setShopeeSyncResult({ success: true, message: data.message });
+        setToastMsg("🎉 " + data.message);
+        setTimeout(() => setToastMsg(null), 4000);
+        await reloadUsers();
+      } else {
+        setShopeeSyncResult({
+          success: false,
+          message: data.error || "Không thể đồng bộ tự động từ Shopee.",
+        });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Lỗi kết nối";
+      setShopeeSyncResult({ success: false, message: msg });
+    } finally {
+      setIsSyncingShopee(false);
+    }
+  };
+
   const handleParseCsv = (content: string, filename?: string) => {
     setImportCsvText(content);
     if (filename) setImportFileName(filename);
@@ -1827,6 +1877,60 @@ export default function AdminUsersClient({
                   <p className="admin-step-desc">
                     Hệ thống tự động lọc các đơn có gắn mã <code>u_User</code>, tính toán số tiền hoàn và cộng vào ví người dùng ngay tức thì!
                   </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Auto-Sync with Cookie Card (No file needed) */}
+            <div className="admin-settings-card border-orange-200 bg-orange-50/20">
+              <div className="admin-settings-header mb-3">
+                <div>
+                  <h3 className="text-orange-950">
+                    <span>⚡</span> Tự Động Đồng Bộ Trực Tiếp (Không Cần Tải File)
+                  </h3>
+                  <p>
+                    Dành cho Admin muốn hệ thống tự vào Shopee kéo đơn về: Chỉ cần dán chuỗi <b>Cookie Shopee</b> một lần, hệ thống sẽ tự động gọi API Shopee và cộng tiền vào ví trong 1 cú nhấp.
+                  </p>
+                </div>
+                <span className="text-xs bg-orange-100 text-orange-800 font-bold px-3 py-1 rounded-full border border-orange-200">
+                  Direct API Bot
+                </span>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                  <input
+                    type="password"
+                    placeholder="Dán Shopee Cookie (SPC_EC=... hoặc SPC_AFF_SESSION=...)"
+                    value={shopeeCookie}
+                    onChange={(e) => setShopeeCookie(e.target.value)}
+                    className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSyncShopee}
+                    disabled={isSyncingShopee || !shopeeCookie.trim()}
+                    className="admin-btn-primary bg-orange-600 hover:bg-orange-700 whitespace-nowrap text-xs py-2.5 px-4 font-bold"
+                  >
+                    {isSyncingShopee ? "Đang đồng bộ..." : "🔄 Đồng Bộ Ngay Từ Shopee"}
+                  </button>
+                </div>
+
+                {shopeeSyncResult && (
+                  <div
+                    className={`p-3 rounded-lg text-xs font-medium ${
+                      shopeeSyncResult.success
+                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                        : "bg-red-100 text-red-900 border border-red-300"
+                    }`}
+                  >
+                    {shopeeSyncResult.message}
+                  </div>
+                )}
+
+                <div className="text-[11.5px] text-stone-500 flex items-center gap-1">
+                  <span>💡</span>
+                  <span>Cách lấy Cookie: Đăng nhập <b>affiliate.shopee.vn</b> &rarr; nhấn <code>F12</code> &rarr; tab <code>Application</code> &rarr; <code>Cookies</code> &rarr; copy giá trị cookie.</span>
                 </div>
               </div>
             </div>
