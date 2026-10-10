@@ -6797,6 +6797,10 @@ select.account-input.select-bank-field:focus {
   align-items: center;
   gap: 12px;
   border-bottom: 2px solid #fed7aa;
+  overflow-x: auto;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
 }
 
 .admin-nav-tab-btn {
@@ -6815,6 +6819,8 @@ select.account-input.select-bank-field:focus {
   cursor: pointer;
   transition: all 0.18s ease;
   user-select: none;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .admin-nav-tab-btn:hover {

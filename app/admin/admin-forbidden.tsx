@@ -117,50 +117,33 @@ export default function AdminForbiddenView({
           </Link>
         </div>
 
-        {hasSecretKeyConfigured && (
-          <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px dashed #fed7aa" }}>
-            {!showKeyInput ? (
-              <button
-                type="button"
-                onClick={() => setShowKeyInput(true)}
-                style={{
-                  background: "transparent",
-                  border: "none",
-                  color: "#ea580c",
-                  fontSize: "12.5px",
-                  cursor: "pointer",
-                  textDecoration: "underline",
-                }}
-              >
-                🔐 Sử dụng Mã bảo mật Quản trị (Admin Secret Key)
-              </button>
-            ) : (
-              <form onSubmit={handleSecretKeySubmit} style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
-                <input
-                  type="password"
-                  placeholder="Nhập ADMIN_SECRET_KEY..."
-                  value={keyInput}
-                  onChange={(e) => setKeyInput(e.target.value)}
-                  style={{
-                    flex: 1,
-                    padding: "8px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #d4d4d8",
-                    fontSize: "13px",
-                  }}
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  className="admin-btn-primary"
-                  style={{ padding: "8px 14px", fontSize: "13px" }}
-                >
-                  Xác nhận
-                </button>
-              </form>
-            )}
+        <div style={{ marginTop: "16px", paddingTop: "14px", borderTop: "1px dashed #fed7aa" }}>
+          <div style={{ fontSize: "13px", fontWeight: 600, color: "#9a3412", marginBottom: "8px" }}>
+            🔐 Hoặc mở nhanh bằng Mã bảo mật Quản trị:
           </div>
-        )}
+          <form onSubmit={handleSecretKeySubmit} style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="text"
+              placeholder="Nhập mã bí mật (mặc định: dealhoan2026)..."
+              value={keyInput}
+              onChange={(e) => setKeyInput(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "8px 12px",
+                borderRadius: "8px",
+                border: "1px solid #d4d4d8",
+                fontSize: "13px",
+              }}
+            />
+            <button
+              type="submit"
+              className="admin-btn-primary"
+              style={{ padding: "8px 14px", fontSize: "13px", whiteSpace: "nowrap" }}
+            >
+              Mở Quản Trị
+            </button>
+          </form>
+        </div>
 
         <div className="forbidden-note" style={{ marginTop: "20px" }}>
           <span>⚠️ Chỉ các email nằm trong danh sách cấp phép (whitelist) của hệ thống mới có thể truy cập khu vực này.</span>

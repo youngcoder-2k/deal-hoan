@@ -161,10 +161,12 @@ export default function AdminUsersClient({
   initialUsers,
   initialStats,
   isInitialRealData,
+  initialTab = "users",
 }: {
   initialUsers: AdminUserItem[];
   initialStats: AdminKPIStats;
   isInitialRealData: boolean;
+  initialTab?: "users" | "settings" | "import";
 }) {
   const [users, setUsers] = useState<AdminUserItem[]>(() => applyLocalBalanceOverrides(initialUsers));
   const [stats, setStats] = useState<AdminKPIStats>(initialStats);
@@ -173,7 +175,15 @@ export default function AdminUsersClient({
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Tab điều hướng: "users" (Quản lý User), "settings" (Cấu hình % Hoàn tiền), "import" (Nhập Báo Cáo Shopee)
-  const [activeTab, setActiveTab] = useState<"users" | "settings" | "import">("users");
+  const [activeTab, setActiveTab] = useState<"users" | "settings" | "import">(() => {
+    if (typeof window !== "undefined") {
+      const p = new URLSearchParams(window.location.search);
+      const t = p.get("tab");
+      if (t === "import" || t === "shopee") return "import";
+      if (t === "settings") return "settings";
+    }
+    return initialTab;
+  });
   const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
