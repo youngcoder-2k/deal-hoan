@@ -4,11 +4,40 @@ import { recordCashbackOrder } from "@/lib/deals/cashback";
 import { parseShopeeMoney } from "@/lib/deals/shopee-import";
 import { parseUserIdFromSubId } from "@/lib/deals/affiliate";
 import { getBoosterSettingsSync } from "@/lib/deals/cashback-booster";
+import { getShopeeSyncConfig, saveShopeeSyncConfig } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
 
 /**
- * API Tự động đồng bộ báo cáo đơn hàng trực tiếp từ Shopee Affiliate Portal bằng Cookie
+ * Lấy cấu hình và trạng thái tự động chạy ngầm của Shopee
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await checkAdminApiAuth(request);
+    if (!auth.isAuthorized) {
+      return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 403 });
+    }
+
+    const config = getShopeeSyncConfig();
+    return NextResponse.json({
+      success: true,
+      config: {
+        ...config,
+        // Che một phần cookie để bảo mật khi trả về
+        shopeeCookieMasked: config.shopeeCookie
+          ? config.shopeeCookie.slice(0, 15) + "..." + config.shopeeCookie.slice(-10)
+          : "",
+        hasCookie: Boolean(config.shopeeCookie),
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+/**
+ * API Kích hoạt đồng bộ hoặc lưu cấu hình tự động chạy ngầm
  */
 export async function POST(request: NextRequest) {
   try {
@@ -18,8 +47,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
+
+    // Cập nhật bật/tắt chế độ tự động chạy ngầm
+    if (typeof body.autoSyncEnabled === "boolean") {
+      const updated = saveShopeeSyncConfig({ autoSyncEnabled: body.autoSyncEnabled });
+      return NextResponse.json({
+        success: true,
+        message: `Đã ${body.autoSyncEnabled ? "BẬT" : "TẮT"} chế độ tự động đồng bộ ngầm 24/7!`,
+        config: updated,
+      });
+    }
+
+    const currentConfig = getShopeeSyncConfig();
     const cookie =
       (body.cookie as string)?.trim() ||
+      currentConfig.shopeeCookie?.trim() ||
       process.env.SHOPEE_AFFILIATE_COOKIE?.trim() ||
       "";
 
@@ -33,11 +75,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Tính toán khoảng thời gian (mặc định lấy 30 ngày gần nhất)
+    // Lưu cookie vào cấu hình bền vững
+    saveShopeeSyncConfig({ shopeeCookie: cookie });
+
+    // Tính toán khoảng thời gian (30 ngày gần nhất)
     const now = Math.floor(Date.now() / 1000);
     const thirtyDaysAgo = now - 30 * 86400;
 
-    // Shopee Affiliate API endpoint for conversion report
     const shopeeApiUrl = `https://affiliate.shopee.vn/api/v3/conversion_report?start_time=${thirtyDaysAgo}&end_time=${now}&page=1&limit=50`;
 
     let shopeeData: any = null;
@@ -52,7 +96,7 @@ export async function POST(request: NextRequest) {
           Accept: "application/json, text/plain, */*",
           Referer: "https://affiliate.shopee.vn/report/conversion",
         },
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(9000),
       });
 
       if (res.ok) {
@@ -64,16 +108,23 @@ export async function POST(request: NextRequest) {
       fetchError = err instanceof Error ? err.message : "Lỗi kết nối tới máy chủ Shopee";
     }
 
-    // Nếu không lấy được do cookie hết hạn hoặc chưa đúng định dạng
-    if (!shopeeData || shopeeData.code !== 0 && !Array.isArray(shopeeData?.data?.list)) {
-      return NextResponse.json({
-        success: false,
-        error:
-          fetchError ||
-          shopeeData?.msg ||
-          "Cookie Shopee không hợp lệ hoặc đã hết hạn phiên đăng nhập. Vui lòng đăng nhập lại Shopee và lấy cookie mới.",
-        needsRefresh: true,
-      }, { status: 400 });
+    if (!shopeeData || (shopeeData.code !== 0 && !Array.isArray(shopeeData?.data?.list))) {
+      const errMsg =
+        fetchError ||
+        shopeeData?.msg ||
+        "Cookie Shopee không hợp lệ hoặc đã hết hạn phiên đăng nhập. Vui lòng đăng nhập lại Shopee và lấy cookie mới.";
+      saveShopeeSyncConfig({
+        lastSyncAt: new Date().toISOString(),
+        lastSyncResult: `Lỗi: ${errMsg}`,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: errMsg,
+          needsRefresh: true,
+        },
+        { status: 400 }
+      );
     }
 
     const rawList = shopeeData?.data?.list || [];
@@ -81,7 +132,6 @@ export async function POST(request: NextRequest) {
     const safeMultiplier = Math.max(0.6, (100 - boosterSettings.safetyMarginPercent) / 100);
 
     let successCount = 0;
-    let matchedUsersCount = 0;
     let totalCashback = 0;
     const userSet = new Set<string>();
 
@@ -123,9 +173,16 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const summaryMsg = `Đã đồng bộ thành công ${successCount} đơn hàng cho ${userSet.size} thành viên!`;
+    saveShopeeSyncConfig({
+      lastSyncAt: new Date().toISOString(),
+      lastSyncResult: summaryMsg,
+      lastOrdersCount: successCount,
+    });
+
     return NextResponse.json({
       success: true,
-      message: `Đã tự động đồng bộ thành công ${successCount} đơn hàng cho ${userSet.size} thành viên!`,
+      message: summaryMsg,
       summary: {
         totalOrdersFound: rawList.length,
         successCount,
