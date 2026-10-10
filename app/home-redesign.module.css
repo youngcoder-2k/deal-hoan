@@ -252,25 +252,25 @@
   .product .platformBadge { display: inline-flex; }
 }
 @media (max-width: 600px) {
-  .calculatorPanel { --calculator-height: 650px; width: 100%; padding: 14px; border-radius: 20px; }
-  .calculator { flex-direction: column; gap: 8px; margin-bottom: 8px; }
-  .inputWrap { flex: 0 0 50px; height: 50px; padding: 5px 7px; }
+  .calculatorPanel { --calculator-height: 600px; width: 100%; padding: 14px; border-radius: 20px; }
+  .calculator { flex-direction: row; gap: 8px; margin-bottom: 12px; }
+  .inputWrap { flex: 1 1 0; height: 50px; padding: 5px 7px; }
   .inputWrap input { font-size: 16px; }
   .inputWrap input::placeholder { font-size: 13px; }
   .clearInput { width: 32px; min-width: 32px; height: 34px; }
-  .calculateButton { width: 100%; min-height: 48px; height: 48px; font-size: 15px; }
-  .emptyCard { padding-top: 18px; }
+  .calculateButton { width: 82px; min-width: 82px; min-height: 50px; height: 50px; padding: 0 8px; gap: 4px; font-size: 14px; }
+  .emptyCard { padding-top: 16px; justify-content: center; }
   .emptyEyebrow { font-size: 12px; }
-  .emptyIllustration { width: 160px; height: 145px; margin: 14px 0 12px; }
-  .emptyCard h2 { font-size: 19px; }
+  .emptyIllustration { width: 108px; height: 82px; margin: 14px 0; }
+  .emptyCard h2 { font-size: 18px; margin-bottom: 8px; }
   .emptyDescription { font-size: 12px; line-height: 1.7; }
-  .steps { margin: 30px 0 18px; }
+  .steps { margin: 28px 0 14px; }
   .steps li { font-size: 11px; }
-  .stepIcon { width: 48px; height: 48px; border-radius: 15px; }
-  .stepIcon > svg { width: 27px; height: 27px; }
+  .stepIcon { width: 42px; height: 42px; border-radius: 13px; }
+  .stepIcon > svg { width: 24px; height: 24px; }
   .stepArrow { width: 14px; right: -7px; top: 17px; }
   .guideLink { min-height: 40px; font-size: 12px; }
-  .emptyNote { font-size: 10px; gap: 6px; }
+  .emptyNote { margin: 18px 0 0; padding-top: 12px; border-top: 1px solid #f0ece8; font-size: 10px; gap: 6px; }
   .emptyNote svg { width: 18px; height: 18px; }
   .receiptHeading { margin-bottom: 8px; }
   .product { gap: 10px; height: 64px; }

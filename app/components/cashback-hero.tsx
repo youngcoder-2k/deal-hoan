@@ -63,7 +63,7 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
   return (
     <div className={`${styles.emptyCard} ${busy ? styles.emptyBusy : ""}`}>
       <p className={styles.emptyEyebrow}>{busy ? "ĐANG KIỂM TRA LINK CỦA BẠN" : "BẮT ĐẦU NHẬN HOÀN TIỀN"}</p>
-      <Image className={styles.emptyIllustration} src="/hero/link-cashback-halo.webp" width={360} height={260} alt="" preload sizes="(max-width: 600px) 160px, 180px" />
+      <Image className={styles.emptyIllustration} src="/hero/link-cashback-halo.webp" width={360} height={260} alt="" preload sizes="(max-width: 600px) 108px, 180px" />
       <h2>{busy ? "Đang tìm tiền hoàn cho bạn…" : "Dán link, xem ngay tiền hoàn"}</h2>
       <p className={styles.emptyDescription}>
         {busy ? "Đang kiểm tra thông tin sản phẩm và mức hoàn tiền. Bạn chờ một chút nhé." : <>Sao chép link từ Shopee, TikTok Shop hoặc Lazada<br className={styles.desktopBreak} /> rồi dán vào ô bên trên để xem tiền hoàn.</>}

@@ -930,10 +930,10 @@ export default function HomeClient({
             <a
               className="platform"
               key={p.name}
-              href="#deals"
+              href="#flash"
               onClick={() => {
                 setSearchQuery(p.name);
-                document.getElementById("deals")?.scrollIntoView({ behavior: "smooth" });
+                document.getElementById("flash")?.scrollIntoView({ behavior: "smooth" });
               }}
             >
               <i className={p.bg}>
@@ -948,7 +948,7 @@ export default function HomeClient({
           ))}
         </div>
       </section>
-      <section className="container flash-section">
+      <section className="container flash-section" id="flash">
         <div className="flash">
           <div className="flash-top">
             <div className="flash-top-left">
@@ -1060,6 +1060,8 @@ export default function HomeClient({
           </div>
         </div>
       </section>
+      {/* Tạm thời ẩn phần Deal hot hôm nay */}
+      {false && (
       <section className="container block" id="deals">
         <div className="heading">
           <div>
@@ -1155,6 +1157,7 @@ export default function HomeClient({
           ))}
         </div>
       </section>
+      )}
       {/* Tạm thời ẩn phần Mã giảm giá nổi bật */}
       {false && (
         <section className="container block" id="coupons">

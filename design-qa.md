@@ -34,3 +34,6 @@ Passed: removed 70px desktop offset and equalized hero vertical padding. Native 
 
 ## Follow-up: form emphasis
 Passed: desktop input/submit increased from 42px to 48px, mobile input 50px and submit 48px. Warm input surface, orange border and stronger button shadow; hover/focus/loading rules retained. Reduced surrounding spacing preserves the fixed panel dimensions and reserved state space. Native browser checks: desktop 570×610, mobile 362×650; no horizontal overflow. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/emphasized-input-desktop.png. Production build passed.
+
+## Mobile compact layout follow-up
+Passed visual review against the supplied mobile screenshot: illustration reduced from160×145 to108×82; input and submit now share one50px row. Card reduced650→600px with fixed empty/result geometry. Native browser: empty390px has no overflow; results360/390px have no internal/horizontal overflow; desktop remains570×610 with48px controls. Step icons and whitespace reduced. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/mobile-compact-empty.png. Build and component lint passed. Existing hover, focus and reduced-motion rules retained.
