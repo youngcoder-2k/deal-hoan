@@ -46,10 +46,10 @@
 .inputWrap input::placeholder { color: #87909d; opacity: 1; }
 .clearInput { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 28px; border: 0; border-radius: 50%; background: #f5f6f7; color: #67717d; }
 .clearInput:hover { background: #ffede4; color: #db421c; }
-.calculateButton, .buyButton { display: inline-flex; justify-content: center; align-items: center; gap: 7px; border: 1px solid #f24017; border-radius: 10px; background: var(--cashback-orange); color: #fff; font-weight: 700; box-shadow: 0 5px 12px #f4562414; transition: background-color .18s, box-shadow .18s; }
+.calculateButton, .buyButton { display: inline-flex; justify-content: center; align-items: center; gap: 7px; border: 1px solid #f24017; border-radius: 10px; background: var(--cashback-orange); color: #fff; font-weight: 700; box-shadow: 0 5px 12px #f4562414; transition: background-color .18s, box-shadow .18s; cursor: pointer; text-decoration: none; }
 .calculateButton { flex: 0 0 auto; padding: 0 14px; width: 94px; min-width: 94px; height: 48px; white-space: nowrap; font-size: 14px; border-radius: 11px; box-shadow: 0 5px 14px #fa4b2330; }
 .calculateButton > svg { color: #ffdf69; }
-.calculateButton:hover:not(:disabled), .buyButton:hover { background: #ed421c; box-shadow: 0 5px 14px #f4562430; }
+.calculateButton:hover:not(:disabled), .buyButton:hover { background: #ed421c; box-shadow: 0 5px 14px #f4562430; color: #fff; text-decoration: none; }
 .calculateButton:disabled { cursor: wait; opacity: .85; }
 .calculateButton > span { font-variant-numeric: tabular-nums; }
 .inputError { border-color: #dc2626; animation: inputShake .3s ease; }
@@ -109,7 +109,7 @@
 .linkRow button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 0 0 92px; min-height: 38px; border: 1px solid #e2e5e9; border-radius: 8px; background: #f6f6f7; color: #17202e; font-size: 11px; font-weight: 600; transition: background-color .15s; }
 .linkRow button:hover { background: #ffede2; border-color: #ffd3ba; color: #c33c16; }
 .linkRow button.copied { background: #19212c; color: #fff; border-color: #19212c; }
-.buyButton { width: 100%; min-height: 46px; flex-shrink: 0; padding: 9px 12px; margin: 12px 0 8px; font-size: 15px; }
+.buyButton { width: 100%; min-height: 46px; flex-shrink: 0; padding: 9px 12px; margin: 12px 0 8px; font-size: 15px; cursor: pointer; text-decoration: none; }
 .receiptFooter { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 18px; margin-top: auto; padding-top: 0; }
 .receiptFooter > span { color: #7a828e; font-size: 11px; line-height: 1.6; }
 .receiptFooter a { text-decoration: underline; white-space: nowrap; text-underline-offset: 2px; }

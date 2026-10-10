@@ -204,6 +204,8 @@ const DEMO_RECEIPT_PRODUCT: CalculatedProduct = {
   discountPercent: 23,
   savingsPercent: 26,
   cashbackRate: 5,
+  trackedLink:
+    "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn%2Fsearch%3Fkeyword%3DSony%2520WF-C710N&affiliate_id=17351320644&sub_id=dealhoan",
 };
 
 function DemoReceipt({
@@ -216,7 +218,8 @@ function DemoReceipt({
   onResetCalc?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const demoTrackedLink = "https://s.shopee.vn/demo-cashback";
+  const demoTrackedLink =
+    "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn%2Fsearch%3Fkeyword%3DSony%2520WF-C710N&affiliate_id=17351320644&sub_id=dealhoan";
 
   const handleCopy = () => {
     navigator.clipboard?.writeText(demoTrackedLink);
@@ -233,10 +236,9 @@ function DemoReceipt({
         copied={copied}
         onCopy={handleCopy}
         onBuy={() => {
+          notify?.("Đang chuyển tới Shopee Mall để nhận hoàn tiền…");
           if (onBuy) {
             onBuy(DEMO_RECEIPT_PRODUCT);
-          } else {
-            window.open("https://shopee.vn", "_blank");
           }
         }}
         onClear={() => {
@@ -843,7 +845,9 @@ export default function HomeClient({
                     trackedLink={trackedLink}
                     copied={copiedTracked}
                     onCopy={copyTrackedLink}
-                    onBuy={() => setBuyOpen(true)}
+                    onBuy={() => {
+                      notify(`Đang chuyển tới ${result || "Shopee"} để nhận hoàn tiền!`);
+                    }}
                     onClear={() => resetCalculation()}
                   />
                 </div>
@@ -1334,10 +1338,7 @@ export default function HomeClient({
           <div className="demo">
             <DemoReceipt
               onBuy={(product) => {
-                setCalculatedProduct(product);
-                setTrackedLink("https://s.shopee.vn/demo-cashback");
-                setResult(product.platform);
-                setBuyOpen(true);
+                notify("Đang chuyển tới Shopee Mall để nhận hoàn tiền!");
               }}
               notify={notify}
               onResetCalc={() => {

@@ -88,13 +88,14 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   trackedLink: string;
   copied: boolean;
   onCopy: () => void;
-  onBuy: () => void;
+  onBuy?: () => void;
   onClear: () => void;
 }) {
   const { price, originalPrice, cashback } = product;
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
   const reward = formatPrice(cashback);
+  const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>
@@ -135,7 +136,17 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
           </div>
         </div>
       )}
-      <button type="button" className={styles.buyButton} onClick={onBuy}><ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" /> Mua ngay</button>
+      <a
+        href={targetUrl}
+        target="_blank"
+        rel="noopener noreferrer nofollow"
+        className={styles.buyButton}
+        onClick={() => {
+          if (onBuy) onBuy();
+        }}
+      >
+        <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" /> Mua ngay
+      </a>
       <div className={styles.receiptFooter}>
         <span>Ghi nhận trong 24 giờ · <a href="#how">điều kiện</a></span>
         <button type="button" onClick={onClear}>Tính link khác <ArrowClockwiseIcon size={21} aria-hidden="true" /></button>
