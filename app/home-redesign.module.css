@@ -39,15 +39,15 @@
 .coinThree { width: 77px; top: 142px; left: -2%; rotate: -18deg; animation-delay: -3s; }
 .calculatorPanel { width: 570px; max-width: 100%; height: var(--calculator-height, 610px); min-width: 0; justify-self: center; align-self: center; display: flex; flex-direction: column; padding: 20px; border: 0; border-radius: 22px; background: #fff; box-shadow: 0 14px 40px #b54c100a; }
 .calculator { display: flex; align-items: stretch; flex-shrink: 0; gap: 10px; margin: 0 0 12px; }
-.inputWrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; height: 48px; padding: 5px 9px; border: 1px solid #ffc7b3; border-radius: 11px; background: #fffaf7; transition: border-color .18s, box-shadow .18s; }
-.inputWrap:focus-within { border-color: #fa754f; box-shadow: 0 0 0 3px #ffede5; }
+.inputWrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; height: 48px; padding: 5px 9px; border: 2px solid #f46a3d; border-radius: 11px; background: #fffaf7; transition: border-color .18s, box-shadow .18s; }
+.inputWrap:focus-within { border-color: #e84016; box-shadow: 0 0 0 4px #fa4b2329; }
 .inputIcon { box-sizing: content-box; flex-shrink: 0; width: 18px; height: 18px; padding: 6px; border-radius: 50%; color: #657584; background: #fff5f0; }
 .inputWrap input { min-width: 0; flex: 1; width: 100%; border: 0; padding: 0; outline: 0; background: transparent; color: #27303d; font-size: 14px; height: 100%; text-overflow: ellipsis; }
 .inputWrap input::placeholder { color: #87909d; opacity: 1; }
 .clearInput { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 28px; border: 0; border-radius: 50%; background: #f5f6f7; color: #67717d; }
 .clearInput:hover { background: #ffede4; color: #db421c; }
 .calculateButton, .buyButton { display: inline-flex; justify-content: center; align-items: center; gap: 7px; border: 1px solid #f24017; border-radius: 10px; background: var(--cashback-orange); color: #fff; font-weight: 700; box-shadow: 0 5px 12px #f4562414; transition: background-color .18s, box-shadow .18s; }
-.calculateButton { flex: 0 0 auto; padding: 0 14px; min-width: 148px; height: 48px; white-space: nowrap; font-size: 14px; border-radius: 11px; box-shadow: 0 5px 14px #fa4b2330; }
+.calculateButton { flex: 0 0 auto; padding: 0 14px; min-width: 94px; height: 48px; white-space: nowrap; font-size: 14px; border-radius: 11px; box-shadow: 0 5px 14px #fa4b2330; }
 .calculateButton > svg { color: #ffdf69; }
 .calculateButton:hover:not(:disabled), .buyButton:hover { background: #ed421c; box-shadow: 0 5px 14px #f4562430; }
 .calculateButton:disabled { cursor: wait; opacity: .85; }
@@ -240,7 +240,7 @@
 /* Every state occupies the same reserved panel at a given viewport. */
 @media (max-width: 1200px) {
   .calculatorPanel { width: 570px; padding: 18px; }
-  .calculateButton { min-width: 140px; padding: 0 10px; font-size: 13px; }
+  .calculateButton { min-width: 88px; padding: 0 10px; font-size: 13px; }
   .inputWrap { gap: 4px; }
   .inputWrap input { font-size: 13px; }
   .product .platformBadge { display: none; }

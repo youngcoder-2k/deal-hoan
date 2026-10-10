@@ -5,6 +5,7 @@ import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
 import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
+import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
 import styles from "./home-redesign.module.css";
@@ -845,7 +846,7 @@ export default function HomeClient({
                 {link && <button type="button" className={styles.clearInput} aria-label="Xoá link" onClick={() => resetCalculation()}><XIcon size={17} weight="bold" aria-hidden="true" /></button>}
               </div>
               <button type="submit" className={styles.calculateButton} disabled={busy}>
-                {busy ? <><span className="calc-spinner" aria-hidden="true" /> Đang tính… <small>{calcPercent}%</small></> : <><LightningIcon size={22} weight="fill" aria-hidden="true" /> Tính hoàn tiền</>}
+                {busy ? <><span className="calc-spinner" aria-hidden="true" /> Đang tính… <small>{calcPercent}%</small></> : <><LightningIcon size={22} weight="fill" aria-hidden="true" /> Tính</>}
               </button>
             </form>
             <div className={styles.calculatorState}>
@@ -1467,7 +1468,7 @@ export default function HomeClient({
               {[
                 [
                   "Không xoá sản phẩm khỏi giỏ hàng",
-                  "sau khi đã thêm từ link hoàn tiền.",
+                  "",
                 ],
                 [
                   "Không bấm link, banner hay video khác",
@@ -1493,8 +1494,8 @@ export default function HomeClient({
                 <div key={head}>
                   <b>✓</b>
                   <span>
-                    <strong>{head}</strong>{" "}
-                    <span className="buy-rule-body">{body}</span>
+                    <strong>{head}</strong>
+                    {body && <> <span className="buy-rule-body">{body}</span></>}
                   </span>
                 </div>
               ))}
@@ -1521,8 +1522,7 @@ export default function HomeClient({
                     notify(`Đang chuyển tới ${result}...`);
                   }}
                 >
-                  <span className="buy-btn-desktop">Tôi đã đọc, tiếp tục mua hàng →</span>
-                  <span className="buy-btn-mobile">Tiếp tục mua hàng →</span>
+                  <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" /> Mua ngay
                 </button>
               </div>
             </div>
