@@ -874,28 +874,6 @@ export default function HomeClient({
               </div>
             </div>
           </div>
-          <div className="stats">
-            <div>
-              <b>2,1 tỷ đ</b>
-              <span className="stats-desc">
-                đã hoàn cho<br className="stats-br" /> người dùng
-              </span>
-            </div>
-            <hr />
-            <div>
-              <b>380k+</b>
-              <span className="stats-desc">
-                thành viên<br className="stats-br" /> săn deal
-              </span>
-            </div>
-            <hr />
-            <div>
-              <b>3 sàn</b>
-              <span className="stats-desc">
-                Shopee · TikTok ·<br className="stats-br" /> Lazada
-              </span>
-            </div>
-          </div>
         </div>
         <div className="container platforms">
           {[
