@@ -95,7 +95,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
   const reward = formatPrice(cashback);
-  const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
+  const targetUrl = product.trackedLink || trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>
@@ -128,7 +128,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
         <div className={styles.linkSection}>
           <p>Link nhận hoàn</p>
           <div className={styles.linkRow}>
-            <a href={trackedLink} target="_blank" rel="noopener noreferrer" title={trackedLink}>{trackedLink}</a>
+            <a href={targetUrl} target="_blank" rel="noopener noreferrer" title={targetUrl}>{trackedLink}</a>
             <button type="button" className={copied ? styles.copied : ""} onClick={onCopy}>
               {copied ? <CheckIcon size={19} weight="bold" aria-hidden="true" /> : <CopyIcon size={19} aria-hidden="true" />}
               <span aria-live="polite">{copied ? "Đã copy" : "Copy link"}</span>

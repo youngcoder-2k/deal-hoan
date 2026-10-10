@@ -209,11 +209,10 @@ function DemoReceipt({
   onResetCalc?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
-  const demoTrackedLink =
-    "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn%2Fsearch%3Fkeyword%3DSony%2520WF-C710N&affiliate_id=17351320644&sub_id=dealhoan";
+  const demoTrackedLink = "https://s.shopee.vn/demo-cashback";
 
   const handleCopy = () => {
-    navigator.clipboard?.writeText(demoTrackedLink);
+    navigator.clipboard?.writeText(DEMO_RECEIPT_PRODUCT.trackedLink || demoTrackedLink);
     setCopied(true);
     notify?.("✓ Đã copy link nhận hoàn tiền!");
     setTimeout(() => setCopied(false), 2500);

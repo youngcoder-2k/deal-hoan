@@ -2406,13 +2406,17 @@ h2,
 }
 .how {
   display: grid;
-  grid-template-columns: 1fr 0.95fr;
-  align-items: center;
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  align-items: start;
+  gap: 44px;
   padding: 40px;
   border: 1px solid #ececec;
   border-radius: 20px;
   background: #fff;
+}
+.how > div {
+  min-width: 0;
+  width: 100%;
 }
 .step {
   display: flex;
@@ -2451,6 +2455,7 @@ h2,
 .demo {
   position: relative;
   width: 100%;
+  min-width: 0;
 }
 .demo-receipt {
   padding: 24px;
@@ -2458,6 +2463,10 @@ h2,
   border-radius: 22px;
   background: #fff;
   box-shadow: 0 16px 45px rgba(238, 77, 45, 0.08);
+  width: 100%;
+  max-width: 470px;
+  margin-left: auto;
+  box-sizing: border-box;
 }
 .demo-receipt > div {
   height: auto;
