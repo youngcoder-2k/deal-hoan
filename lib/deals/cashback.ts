@@ -1,5 +1,6 @@
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { parseUserIdFromSubId } from "@/lib/deals/affiliate";
+import { getBoosterSettingsSync } from "@/lib/deals/cashback-booster";
 
 export interface CashbackOrderRecord {
   id: string;
@@ -165,8 +166,10 @@ export async function recordCashbackOrder(params: RecordCashbackOrderParams): Pr
       : Math.round(orderValue * (cleanPlatform === "Shopee" ? 0.08 : 0.05));
 
   // Chốt chặn an toàn (Zero Loss Guard):
-  // DealHoàn luôn giữ lại tối thiểu 12% hoa hồng thực nhận từ sàn, hoàn tối đa 88%
-  const maxSafeCashback = Math.round(calculatedCommission * 0.88);
+  // Lấy tỷ lệ lợi nhuận tối thiểu DealHoàn giữ lại từ cấu hình Admin (mặc định 12%)
+  const boosterSettings = getBoosterSettingsSync();
+  const safeMultiplier = Math.max(0.6, (100 - boosterSettings.safetyMarginPercent) / 100);
+  const maxSafeCashback = Math.round(calculatedCommission * safeMultiplier);
 
   const calculatedCashback =
     typeof explicitCashback === "number" && explicitCashback >= 0

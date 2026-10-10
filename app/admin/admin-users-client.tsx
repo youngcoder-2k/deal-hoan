@@ -3,6 +3,10 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import type { AdminUserItem, AdminKPIStats } from "@/lib/auth/admin";
+import {
+  type CashbackBoosterSettings,
+  DEFAULT_BOOSTER_SETTINGS,
+} from "@/lib/deals/cashback-booster-types";
 
 function formatVnd(amount: number) {
   return (amount || 0).toLocaleString("vi-VN") + "đ";
@@ -98,6 +102,55 @@ function applyLocalBalanceOverrides(usersList: AdminUserItem[]): AdminUserItem[]
   }
 }
 
+const SIMULATION_ITEMS = [
+  { name: "📱 iPhone 16 Pro Max 256GB", category: "Điện thoại Flagship", price: 34990000, hnRate: 1.8 },
+  { name: "💻 Laptop ASUS ROG Gaming", category: "Laptop / Công nghệ", price: 22500000, hnRate: 2.5 },
+  { name: "🫖 Bình đun siêu tốc Lock&Lock", category: "Gia dụng đời sống", price: 420000, hnRate: 3.8 },
+  { name: "🎧 Tai nghe Sony WF-C710N", category: "Âm thanh Mall", price: 1540000, hnRate: 5.0 },
+  { name: "🍼 Sữa bột Meiji cho bé", category: "Mẹ & Bé / Tiêu dùng", price: 520000, hnRate: 6.2 },
+  { name: "👕 Áo thun nam nữ PTLuxury", category: "Thời trang", price: 120000, hnRate: 8.0 },
+  { name: "💄 Son môi lì Black Rouge", category: "Mỹ phẩm làm đẹp", price: 180000, hnRate: 9.5 },
+];
+
+function calcSimResult(hnRate: number, price: number, settings: CashbackBoosterSettings) {
+  if (settings.boostFactor <= 0) {
+    const cash = Math.round(price * (hnRate / 100));
+    const shopeeEst = hnRate * 1.333;
+    const margin = ((shopeeEst - hnRate) / shopeeEst) * 100;
+    return {
+      bonus: 0,
+      finalRate: hnRate,
+      cashbackAmount: cash,
+      shopeeEst,
+      margin: Math.max(0, margin),
+    };
+  }
+
+  const maxB = settings.maxBonusRate * settings.boostFactor;
+  const minB = settings.minBonusRate * settings.boostFactor;
+  const scale = (maxB - minB) / 0.7;
+  const rawNorm = 1.0 - 0.0165 * Math.pow(Math.max(0, 8.0 - hnRate), 2);
+  const targetBonus = Math.max(minB, Math.min(maxB, minB + (rawNorm - 0.3) * scale));
+
+  const maxSafeBonus = Number((hnRate * 0.20 * Math.min(1.0, settings.boostFactor)).toFixed(2));
+  const floorBonus = Math.min(targetBonus, minB);
+  const effectiveBonus = Math.min(targetBonus, Math.max(floorBonus, maxSafeBonus));
+
+  const finalRate = Number((hnRate + effectiveBonus).toFixed(1));
+  const actualBonus = Number((finalRate - hnRate).toFixed(1));
+  const cash = Math.round(price * (finalRate / 100));
+  const shopeeEst = hnRate * 1.333;
+  const margin = ((shopeeEst - finalRate) / shopeeEst) * 100;
+
+  return {
+    bonus: actualBonus,
+    finalRate,
+    cashbackAmount: cash,
+    shopeeEst,
+    margin: Math.max(0, margin),
+  };
+}
+
 export default function AdminUsersClient({
   initialUsers,
   initialStats,
@@ -112,6 +165,56 @@ export default function AdminUsersClient({
   const [isRealData, setIsRealData] = useState<boolean>(isInitialRealData);
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  // Tab điều hướng: "users" (Quản lý User) hoặc "settings" (Cấu hình % Hoàn tiền)
+  const [activeTab, setActiveTab] = useState<"users" | "settings">("users");
+  const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  // Tải cấu hình tỷ lệ hoàn tiền
+  const loadBoosterSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch("/api/admin/settings");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.settings) {
+          setBoosterSettings(data.settings);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load booster settings:", err);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // Lưu cấu hình tỷ lệ hoàn tiền
+  const handleSaveSettings = async () => {
+    setSavingSettings(true);
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(boosterSettings),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setBoosterSettings(data.settings);
+        setToastMsg("✓ Đã lưu cấu hình tỷ lệ hoàn tiền thành công!");
+        setTimeout(() => setToastMsg(null), 3500);
+      } else {
+        setToastMsg("⚠️ " + (data.error || "Không thể lưu cấu hình."));
+        setTimeout(() => setToastMsg(null), 3500);
+      }
+    } catch {
+      setToastMsg("⚠️ Lỗi kết nối khi lưu cấu hình.");
+      setTimeout(() => setToastMsg(null), 3500);
+    } finally {
+      setSavingSettings(false);
+    }
+  };
 
   // Tự động tải dữ liệu thực tế mới nhất từ CSDL khi trang mount
   useEffect(() => {
@@ -147,6 +250,7 @@ export default function AdminUsersClient({
       }
     }
     syncRealData();
+    loadBoosterSettings();
     return () => {
       isMounted = false;
     };
@@ -737,9 +841,38 @@ export default function AdminUsersClient({
         </div>
       </header>
 
+      {/* Navigation Tabs Bar */}
+      <div className="admin-nav-tabs-bar">
+        <button
+          type="button"
+          className={`admin-nav-tab-btn ${activeTab === "users" ? "active" : ""}`}
+          onClick={() => setActiveTab("users")}
+        >
+          <span className="tab-icon">👥</span>
+          <span>Quản Lý Người Dùng & Số Dư</span>
+          <span className="tab-pill">{users.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-nav-tab-btn ${activeTab === "settings" ? "active" : ""}`}
+          onClick={() => {
+            setActiveTab("settings");
+            loadBoosterSettings();
+          }}
+        >
+          <span className="tab-icon">⚙️</span>
+          <span>Cấu Hình Tỷ Lệ Hoàn Tiền (Smart Booster)</span>
+          <span className="tab-pill tab-pill-boost">
+            {boosterSettings.boostFactor > 0 ? `${boosterSettings.boostFactor.toFixed(2)}x Boost` : "Tắt thưởng"}
+          </span>
+        </button>
+      </div>
+
       <main className="admin-main">
-        {/* Banner thông báo khi chưa có cấu hình Supabase */}
-        {!isRealData && (
+        {activeTab === "users" && (
+          <>
+            {/* Banner thông báo khi chưa có cấu hình Supabase */}
+            {!isRealData && (
           <div className="admin-demo-alert">
             <span className="demo-alert-icon">⚠️</span>
             <div className="demo-alert-text">
@@ -1197,6 +1330,310 @@ export default function AdminUsersClient({
           </>
         )}
         </section>
+        </>
+        )}
+
+        {activeTab === "settings" && (
+          <section className="admin-settings-container">
+            {/* Card 1: Bảng Điều Khiển Cấu Hình */}
+            <div className="admin-settings-card">
+              <div className="admin-settings-header">
+                <div>
+                  <h3>⚙️ Cấu Hình Tỷ Lệ Hoàn Tiền (Smart Cashback Booster)</h3>
+                  <p>
+                    Điều chỉnh mức hoàn tiền ưu đãi cạnh tranh của DealHoàn so với thị trường (Hoàn Ngay).
+                    Thuật toán Parabol đảm bảo luôn cao hơn đối thủ nhưng kiểm soát an toàn để DealHoàn luôn có lãi ròng.
+                  </p>
+                </div>
+                <div className="admin-security-badge">
+                  🔒 Quyền Quản trị viên
+                </div>
+              </div>
+
+              {/* Box 1: Hệ số Boost Factor Slider */}
+              <div className="settings-section-box">
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                  <label className="text-sm font-bold text-stone-800">
+                    Hệ số Kích cầu (Boost Factor):
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl font-black text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-xl">
+                      {boosterSettings.boostFactor.toFixed(2)}x
+                    </span>
+                    <span className="text-xs text-stone-500 font-medium">
+                      ({boosterSettings.boostFactor === 0 ? "Đang tắt thưởng thêm" : boosterSettings.boostFactor >= 1.0 ? "Thưởng tối đa" : `Thưởng ${Math.round(boosterSettings.boostFactor * 100)}%`})
+                    </span>
+                  </div>
+                </div>
+
+                <input
+                  type="range"
+                  min="0"
+                  max="1.2"
+                  step="0.05"
+                  value={boosterSettings.boostFactor}
+                  onChange={(e) =>
+                    setBoosterSettings((prev) => ({
+                      ...prev,
+                      boostFactor: parseFloat(e.target.value),
+                    }))
+                  }
+                  className="w-full accent-orange-600 cursor-pointer h-2 bg-stone-200 rounded-lg"
+                />
+
+                <div className="flex justify-between text-xs text-stone-500 mt-2 mb-4">
+                  <span>0.0x (Tắt thưởng - Tối đa lợi nhuận)</span>
+                  <span>0.6x (Giảm dần - Cân bằng)</span>
+                  <span>1.0x (Kích cầu tối đa)</span>
+                  <span>1.2x (Siêu ưu đãi)</span>
+                </div>
+
+                {/* 3 Preset Gợi Ý Theo Giai Đoạn Kinh Doanh */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-stone-200/80">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBoosterSettings((prev) => ({
+                        ...prev,
+                        boostFactor: 1.0,
+                        maxBonusRate: 1.0,
+                        minBonusRate: 0.3,
+                        safetyMarginPercent: 12.0,
+                      }))
+                    }
+                    className={`preset-stage-btn ${boosterSettings.boostFactor === 1.0 ? "active" : ""}`}
+                  >
+                    <div className="preset-title">🚀 Giai đoạn 1: Kích cầu tối đa (1.0x)</div>
+                    <div className="preset-desc">
+                      DealHoàn hoàn cao hơn (+0.4% → +1.0%). Lãi giữ lại 12% – 15%. Dùng khi cần hút user từ Hoàn Ngay.
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBoosterSettings((prev) => ({
+                        ...prev,
+                        boostFactor: 0.6,
+                        maxBonusRate: 0.6,
+                        minBonusRate: 0.2,
+                        safetyMarginPercent: 18.0,
+                      }))
+                    }
+                    className={`preset-stage-btn ${boosterSettings.boostFactor === 0.6 ? "active" : ""}`}
+                  >
+                    <div className="preset-title">⚖️ Giai đoạn 2: Giảm dần tối ưu (0.6x)</div>
+                    <div className="preset-desc">
+                      Thưởng nhẹ (+0.2% → +0.6%). Lãi giữ lại tăng lên 18% – 22%. Dùng khi đã có lượng user ổn định.
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setBoosterSettings((prev) => ({
+                        ...prev,
+                        boostFactor: 0.0,
+                        maxBonusRate: 0.0,
+                        minBonusRate: 0.0,
+                        safetyMarginPercent: 25.0,
+                      }))
+                    }
+                    className={`preset-stage-btn ${boosterSettings.boostFactor === 0.0 ? "active" : ""}`}
+                  >
+                    <div className="preset-title">💰 Giai đoạn 3: Bão hòa tối đa lãi (0.0x)</div>
+                    <div className="preset-desc">
+                      Tắt thưởng thêm, hoàn theo mức thị trường. DealHoàn giữ lại 25% – 30% hoa hồng sàn.
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Box 2: Thông số Nâng Cao */}
+              <div className="settings-advanced-grid">
+                <div className="setting-field-card">
+                  <div className="field-label">
+                    <span>Mức thưởng tối đa (Max Bonus):</span>
+                    <small>Áp dụng cho ngành hoa hồng cao (thời trang, mỹ phẩm)</small>
+                  </div>
+                  <div className="input-unit-wrap">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0.1"
+                      max="3.0"
+                      value={boosterSettings.maxBonusRate}
+                      onChange={(e) =>
+                        setBoosterSettings((prev) => ({
+                          ...prev,
+                          maxBonusRate: Math.max(0.1, parseFloat(e.target.value) || 0.1),
+                        }))
+                      }
+                      className="admin-field-input"
+                    />
+                    <span className="unit">%</span>
+                  </div>
+                </div>
+
+                <div className="setting-field-card">
+                  <div className="field-label">
+                    <span>Mức thưởng tối thiểu (Min Bonus):</span>
+                    <small>Áp dụng cho ngành đồ điện tử / iPhone / laptop</small>
+                  </div>
+                  <div className="input-unit-wrap">
+                    <input
+                      type="number"
+                      step="0.05"
+                      min="0.0"
+                      max="1.0"
+                      value={boosterSettings.minBonusRate}
+                      onChange={(e) =>
+                        setBoosterSettings((prev) => ({
+                          ...prev,
+                          minBonusRate: Math.max(0, parseFloat(e.target.value) || 0),
+                        }))
+                      }
+                      className="admin-field-input"
+                    />
+                    <span className="unit">%</span>
+                  </div>
+                </div>
+
+                <div className="setting-field-card">
+                  <div className="field-label">
+                    <span>Biên lợi nhuận giữ lại tối thiểu:</span>
+                    <small>DealHoàn luôn giữ lại % hoa hồng sàn để đảm bảo không bù lỗ</small>
+                  </div>
+                  <div className="input-unit-wrap">
+                    <input
+                      type="number"
+                      step="1"
+                      min="5"
+                      max="40"
+                      value={boosterSettings.safetyMarginPercent}
+                      onChange={(e) =>
+                        setBoosterSettings((prev) => ({
+                          ...prev,
+                          safetyMarginPercent: Math.max(5, parseFloat(e.target.value) || 5),
+                        }))
+                      }
+                      className="admin-field-input"
+                    />
+                    <span className="unit">%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Box 3: Tự động hạ dần theo User */}
+              <div className="settings-toggle-box">
+                <label className="flex items-center gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={boosterSettings.autoScaleWithUsers}
+                    onChange={(e) =>
+                      setBoosterSettings((prev) => ({
+                        ...prev,
+                        autoScaleWithUsers: e.target.checked,
+                      }))
+                    }
+                    className="w-5 h-5 accent-orange-600 rounded cursor-pointer"
+                  />
+                  <div>
+                    <span className="font-bold text-stone-800 text-sm">
+                      Tự động hạ dần mức thưởng theo số lượng người dùng (Auto-scale by User Count)
+                    </span>
+                    <p className="text-xs text-stone-500 m-0">
+                      Khi hệ thống đạt trên 5.000 user, hệ thống sẽ tự động điều chỉnh hệ số boost giảm dần để tối ưu hóa biên lợi nhuận.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Nút Lưu Cấu Hình */}
+              <div className="settings-action-bar">
+                <div className="text-xs text-stone-500">
+                  {boosterSettings.updatedAt && (
+                    <span>
+                      🕒 Cập nhật lần cuối: <b>{formatDate(boosterSettings.updatedAt)}</b>
+                      {boosterSettings.updatedBy && ` bởi ${boosterSettings.updatedBy}`}
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSaveSettings}
+                  disabled={savingSettings}
+                  className="admin-save-settings-btn"
+                >
+                  {savingSettings ? "Đang lưu cấu hình…" : "💾 Lưu Cấu Hình Ngay"}
+                </button>
+              </div>
+            </div>
+
+            {/* Card 2: Live Simulator - Bảng Mô Phỏng Trực Tiếp */}
+            <div className="admin-settings-card">
+              <div className="admin-settings-header mb-4">
+                <div>
+                  <h3>📊 Mô Phỏng Kết Quả Thực Tế (Live Simulator)</h3>
+                  <p>
+                    Bảng tính tự động áp dụng thông số trên để bạn nhìn thấy ngay % khách nhận được và % lợi nhuận DealHoàn giữ lại:
+                  </p>
+                </div>
+                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-full border border-emerald-200">
+                  Hệ số: {boosterSettings.boostFactor.toFixed(2)}x
+                </span>
+              </div>
+
+              <div className="table-responsive">
+                <table className="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th>Sản phẩm mẫu</th>
+                      <th>Ngành hàng</th>
+                      <th className="text-right">Giá niêm yết</th>
+                      <th className="text-center">Hoàn Ngay (%)</th>
+                      <th className="text-center">DealHoàn Thưởng</th>
+                      <th className="text-center">DealHoàn Hoàn (%)</th>
+                      <th className="text-right">Tiền hoàn khách nhận</th>
+                      <th className="text-right">Lợi nhuận DealHoàn</th>
+                      <th className="text-center">Đánh giá</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {SIMULATION_ITEMS.map((item, idx) => {
+                      const res = calcSimResult(item.hnRate, item.price, boosterSettings);
+                      return (
+                        <tr key={idx} className="admin-table-row">
+                          <td className="font-bold text-stone-900">{item.name}</td>
+                          <td className="text-stone-500 text-xs">{item.category}</td>
+                          <td className="text-right font-medium">{formatVnd(item.price)}</td>
+                          <td className="text-center text-stone-500">{item.hnRate}%</td>
+                          <td className="text-center font-bold text-orange-600">
+                            {res.bonus > 0 ? `+${res.bonus}%` : "0%"}
+                          </td>
+                          <td className="text-center font-black text-stone-900 bg-orange-50/50">
+                            {res.finalRate}%
+                          </td>
+                          <td className="text-right font-bold text-emerald-700">
+                            {formatVnd(res.cashbackAmount)}
+                          </td>
+                          <td className="text-right font-black text-emerald-600">
+                            {res.margin.toFixed(1)}%
+                          </td>
+                          <td className="text-center">
+                            <span className="status-badge badge-active text-[11px]">
+                              {res.margin >= 10 ? "✅ An toàn" : "⚠️ Cận biên"}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       {/* MODAL CHI TIẾT NGƯỜI DÙNG */}
