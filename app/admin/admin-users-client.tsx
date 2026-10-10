@@ -1993,7 +1993,7 @@ export default function AdminUsersClient({
                     <span className="text-base">⏱️</span>
                     <div>
                       <span className="font-bold text-stone-800">Chu kỳ quét tự động:</span>
-                      <span className="text-stone-600 ml-1">Mỗi 15 phút (Cron 24/7)</span>
+                      <span className="text-stone-600 ml-1">Mỗi 15 phút (Supabase Cron / Vercel Cron 24/7)</span>
                     </div>
                   </div>
                   {lastSyncAt && (
