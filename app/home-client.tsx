@@ -760,7 +760,7 @@ export default function HomeClient({
             <a className="active" href="#deals">
               <FlameIcon size={19} weight="fill" aria-hidden="true" /> Deal hot
             </a>
-            <a href="#coupons">Mã giảm giá</a>
+            {/* Tạm thời ẩn mục Mã giảm giá: <a href="#coupons">Mã giảm giá</a> */}
             <a href="#how">Cashback</a>
           </nav>
           <div className="account">
@@ -1156,8 +1156,9 @@ export default function HomeClient({
             </article>
           ))}
         </div>
-      </section>
-      <section className="container block" id="coupons">
+      {/* Tạm thời ẩn phần Mã giảm giá nổi bật */}
+      {false && (
+        <section className="container block" id="coupons">
         {/* Hero banner section from preview.html */}
         <div className="coupon-hero">
           <div>
@@ -1433,46 +1434,20 @@ export default function HomeClient({
             </p>
             <div className="buy-rules">
               {[
-                [
-                  "Không xoá sản phẩm khỏi giỏ hàng",
-                  "",
-                ],
-                [
-                  "Không bấm link, banner hay video khác",
-                  "sau khi đã mở link hoàn tiền.",
-                ],
-                [
-                  "Chờ khoảng 10 giây sau khi mở app",
-                  "rồi mới đặt hàng — không thao tác quá nhanh.",
-                ],
-                [
-                  "Không dùng trình duyệt ẩn danh",
-                  "hoặc chặn cookie/quảng cáo — hệ thống ghi nhận đơn qua cookie.",
-                ],
-                [
-                  "Không tự mua qua tài khoản affiliate",
-                  "hoặc tài khoản liên quan nếu sàn không cho phép.",
-                ],
-                [
-                  "Không hủy, hoàn trả hàng",
-                  "vì đơn hủy hoặc hoàn trả không được hoàn tiền theo quy định đối soát của sàn.",
-                ],
-              ].map(([head, body]) => (
+                "Không xoá sản phẩm khỏi giỏ hàng",
+                "Không bấm link, banner hay video khác",
+                "Chờ khoảng 10 giây sau khi mở app",
+                "Không dùng trình duyệt ẩn danh",
+                "Không tự mua qua tài khoản affiliate",
+                "Không hủy, hoàn trả hàng",
+              ].map((head) => (
                 <div key={head}>
                   <b>✓</b>
                   <span>
                     <strong>{head}</strong>
-                    {body && <> <span className="buy-rule-body">{body}</span></>}
                   </span>
                 </div>
               ))}
-            </div>
-            <div className="buy-warning">
-              ⚠️{" "}
-              <span>
-                Kết quả ghi nhận đơn phụ thuộc vào sàn và đối tác. Hệ thống
-                không thể sửa đơn đã bị sàn đánh dấu không hợp lệ.
-              </span>
             </div>
             <div className="buy-bottom">
               <div className="buy-actions">

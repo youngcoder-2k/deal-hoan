@@ -957,6 +957,14 @@ h2,
   padding: 0;
 }
 .buy-actions .primary {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  min-width: 140px;
+  min-height: 48px;
   background: linear-gradient(120deg, #ee4d2d 0%, #ff7337 100%);
   box-shadow: 0 8px 22px rgba(238, 77, 45, 0.35);
 }
@@ -6802,3 +6810,5 @@ select.account-input.select-bank-field:focus {
     transition: none;
   }
 }
+
+.buy-actions .primary > svg { flex-shrink: 0; width: 22px; height: 22px; }
