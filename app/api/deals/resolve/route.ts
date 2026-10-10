@@ -215,13 +215,21 @@ export async function POST(request: NextRequest) {
       const boosted = boostCashbackRate(
         fastShopeeProduct.cashbackRate,
         finalPrice,
-        fastShopeeProduct.commission
+        fastShopeeProduct.commission,
+        undefined,
+        fastShopeeProduct.cap
       );
       finalCashback = boosted.cashbackAmount;
       cashbackRate = boosted.finalRate;
     } else if (fastShopeeProduct?.commission && fastShopeeProduct.commission > 0 && finalPrice > 0) {
       const rawRate = Number(((fastShopeeProduct.commission / finalPrice) * 100).toFixed(2));
-      const boosted = boostCashbackRate(rawRate, finalPrice, fastShopeeProduct.commission);
+      const boosted = boostCashbackRate(
+        rawRate,
+        finalPrice,
+        fastShopeeProduct.commission,
+        undefined,
+        fastShopeeProduct.cap
+      );
       finalCashback = boosted.cashbackAmount;
       cashbackRate = boosted.finalRate;
     }

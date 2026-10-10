@@ -146,7 +146,8 @@ export function boostCashbackRate(
   rawHoanNgayRate: number,
   productPrice: number,
   rawCashbackAmount?: number,
-  customSettings?: CashbackBoosterSettings
+  customSettings?: CashbackBoosterSettings,
+  cap?: number
 ): BoostedCashbackResult {
   const settings = customSettings || getBoosterSettingsSync();
   const baseRate = Number(rawHoanNgayRate.toFixed(2));
@@ -165,9 +166,12 @@ export function boostCashbackRate(
 
   // Nếu Admin tắt hệ số kích cầu (boostFactor === 0), hoàn theo mức gốc thị trường
   if (settings.boostFactor <= 0) {
-    const amount = productPrice > 0 
+    let amount = productPrice > 0 
       ? Math.round(productPrice * (baseRate / 100))
       : (rawCashbackAmount || 0);
+    if (typeof cap === "number" && cap > 0 && amount > cap) {
+      amount = cap;
+    }
     return {
       baseRate,
       bonusRate: 0,
@@ -199,6 +203,14 @@ export function boostCashbackRate(
     cashbackAmount = Math.round(productPrice * (finalRate / 100));
   } else if (typeof rawCashbackAmount === "number" && rawCashbackAmount > 0) {
     cashbackAmount = Math.round(rawCashbackAmount * (finalRate / baseRate));
+  }
+
+  // 4. Nếu Shopee có mức trần (cap), áp dụng trần hoa hồng có cộng thưởng
+  if (typeof cap === "number" && cap > 0) {
+    const boostedCap = Math.round(cap * (finalRate / baseRate));
+    if (cashbackAmount > boostedCap) {
+      cashbackAmount = boostedCap;
+    }
   }
 
   return {
