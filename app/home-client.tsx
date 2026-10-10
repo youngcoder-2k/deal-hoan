@@ -326,7 +326,7 @@ export default function HomeClient({
   const [couponTab, setCouponTab] = useState<CouponCategory>("all");
   const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [toast, setToast] = useState("");
+  const [announcement, setAnnouncement] = useState("");
 
   const allCoupons = useMemo(() => {
     const fallback = getDailyShopeeCoupons();
@@ -449,12 +449,8 @@ export default function HomeClient({
       if (flashPauseTimeoutRef.current) clearTimeout(flashPauseTimeoutRef.current);
     };
   }, []);
-  const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const notify = (m: string) => {
-    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
-    setToast(m);
-    toastTimeoutRef.current = setTimeout(() => setToast(""), 2400);
-  };
+  // Announce feedback to assistive technology without floating toast overlays.
+  const notify = (message: string) => setAnnouncement(message);
 
   const toggleFavoriteDeal = (deal: Deal, e?: React.MouseEvent) => {
     if (e) {
@@ -1518,7 +1514,7 @@ export default function HomeClient({
           onNotify={notify}
         />
       )}
-      {toast && <div className="toast">{toast}</div>}
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</span>
     </main>
   );
 }
