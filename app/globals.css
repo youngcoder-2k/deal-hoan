@@ -2418,204 +2418,52 @@ h2,
 }
 .how {
   display: grid;
-  grid-template-columns: 1fr 0.92fr;
-  gap: 52px;
+  grid-template-columns: 1fr 0.95fr;
+  align-items: center;
+  gap: 48px;
   padding: 40px;
   border: 1px solid #ececec;
-  border-radius: 18px;
+  border-radius: 20px;
   background: #fff;
 }
 .step {
   display: flex;
+  align-items: center;
   gap: 14px;
-  margin-top: 20px;
+  margin-top: 18px;
 }
 .step i {
   display: grid;
   flex: none;
   place-items: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
   background: #fff1ed;
   color: #d73211;
-  font: 800 15px var(--font-app), "Be Vietnam Pro", sans-serif;
+  font: 800 16px var(--font-app), "Be Vietnam Pro", sans-serif;
   font-style: normal;
 }
-.step span b,
-.step span small {
+.step span b {
   display: block;
-}
-.step span small {
-  margin-top: 3px;
-  color: #737373;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #171717;
 }
 .demo {
   position: relative;
-  padding-top: 10px;
+  width: 100%;
 }
 .demo-receipt {
-  padding: 26px;
-  border: 1.5px solid #ececec;
-  border-radius: 20px;
+  padding: 24px;
+  border: 1px solid #ffddca;
+  border-radius: 22px;
   background: #fff;
-  box-shadow: 0 24px 60px #1717171a;
+  box-shadow: 0 16px 45px rgba(238, 77, 45, 0.08);
 }
-.demo-receipt-head,
-.demo-receipt-product,
-.demo-price-lines > div,
-.demo-actual-cost {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.demo-receipt-head {
-  margin-bottom: 16px;
-}
-.demo-receipt-head > b {
-  font-size: 15px;
-  font-weight: 700;
-}
-.demo-receipt-head > span {
-  flex: none;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: #fff1ed;
-  color: #d73211;
-  font-size: 12px;
-  font-weight: 800;
-}
-.demo-receipt-product {
-  align-items: flex-start;
-  justify-content: flex-start;
-  gap: 14px;
-  margin-bottom: 18px;
-}
-.placeholder.demo-image {
-  width: 74px;
-  height: 74px;
-  flex: none;
-  border-radius: 13px;
-}
-.demo-receipt-product > div:last-child > b {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.4;
-}
-.demo-receipt-product p {
-  margin: 5px 0 0;
-  color: #737373;
-  font-size: 12px;
-}
-.demo-receipt-product em {
-  color: #d73211;
-  font-style: normal;
-  font-weight: 600;
-}
-.demo-price-lines {
-  display: grid;
-  gap: 9px;
-  font-size: 14px;
-}
-.demo-price-lines > div {
-  color: #737373;
-}
-.demo-price-lines > div > b {
-  color: #ee4d2d;
-  font-weight: 700;
-}
-.demo-price-lines code {
-  padding: 1px 6px;
-  border-radius: 5px;
-  background: #f5f5f5;
-  color: #171717;
-  font: 700 12px var(--font-app), "Be Vietnam Pro", sans-serif;
-}
-.demo-price-lines hr {
-  width: 100%;
-  margin: 5px 0;
-  border: 0;
-  border-top: 1.5px dashed #e5e5e5;
-}
-.demo-price-lines .demo-total {
-  color: #171717;
-}
-.demo-total > b {
-  font-weight: 700;
-}
-.demo-total strong {
-  font: 900 27px var(--font-app), "Be Vietnam Pro", sans-serif;
-  letter-spacing: -0.8px;
-}
-.demo-price-lines > div:nth-of-type(5) span > b {
-  color: #16a34a;
-  font-weight: 700;
-}
-.demo-actual-cost {
-  margin-top: 12px;
-  padding: 10px 14px;
-  border: 1px solid #bbf7d0;
-  border-radius: 11px;
-  background: #f0fdf4;
-}
-.demo-actual-cost > b {
-  color: #15803d;
-  font-size: 12.5px;
-  font-weight: 700;
-}
-.demo-actual-cost > span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-}
-.demo-actual-cost strong {
-  color: #15803d;
-  font: 900 17px var(--font-app), "Be Vietnam Pro", sans-serif;
-  letter-spacing: -0.4px;
-}
-.demo-actual-cost em {
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: #dcfce7;
-  color: #15803d;
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 800;
-}
-.demo-receipt {
-  user-select: none;
-}
-.demo-receipt > .primary,
-.demo-receipt .demo-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  height: 50px;
-  margin-top: 18px;
-  border-radius: 13px;
-  box-shadow: 0 8px 20px rgba(238, 77, 45, 0.28);
-  font-weight: 700;
-  font-size: 15px;
-  color: #ffffff;
-  cursor: default;
-  pointer-events: none;
-  user-select: none;
-}
-.demo-receipt-foot {
-  margin: 10px 0 0;
-  color: #a3a3a3;
-  font-size: 11.5px;
-  text-align: center;
-}
-.demo-receipt-foot a {
-  color: #737373;
-  text-decoration: underline;
+.demo-receipt > div {
+  height: auto;
+  overflow: visible;
 }
 .float {
   position: absolute;
@@ -4736,70 +4584,28 @@ select.account-input.select-bank-field:focus {
     font-size: 13.5px;
   }
   .step {
+    align-items: center;
     gap: 12px;
     margin-top: 14px;
   }
   .step i {
-    width: 30px;
-    height: 30px;
-    font-size: 13px;
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
   }
-  .step small {
-    font-size: 12px;
+  .step span b {
+    font-size: 14.5px;
   }
   .demo {
     width: 100%;
     margin-top: 6px;
   }
   .demo-receipt {
-    padding: 16px;
-    border-radius: 16px;
+    padding: 16px 14px;
+    border-radius: 18px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     width: 100%;
     box-sizing: border-box;
-  }
-  .demo-receipt-head {
-    margin-bottom: 12px;
-  }
-  .demo-receipt-head > b {
-    font-size: 14px;
-  }
-  .demo-receipt-head > span {
-    font-size: 11px;
-    padding: 3px 8px;
-  }
-  .demo-receipt-product {
-    gap: 10px;
-    margin-bottom: 14px;
-  }
-  .demo-price-lines {
-    gap: 6px;
-    font-size: 13px;
-  }
-  .demo-total strong {
-    font-size: 22px;
-  }
-  .demo-actual-cost {
-    margin-top: 10px;
-    padding: 8px 10px;
-  }
-  .demo-actual-cost > b {
-    font-size: 11px;
-    white-space: normal;
-    line-height: 1.3;
-  }
-  .demo-actual-cost strong {
-    font-size: 15px;
-  }
-  .demo-actual-cost em {
-    font-size: 10px;
-    padding: 2px 5px;
-  }
-  .demo-receipt > .primary,
-  .demo-receipt .demo-btn {
-    height: 44px;
-    font-size: 13.5px;
-    margin-top: 14px;
   }
   .float {
     display: none;

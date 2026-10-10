@@ -193,70 +193,60 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-function DemoReceipt() {
+const DEMO_RECEIPT_PRODUCT: CalculatedProduct = {
+  name: "Tai nghe Bluetooth chống ồn Sony WF-C710N",
+  imageUrl: "/demo/sony-wf-c710n.jpg",
+  price: 1540000,
+  originalPrice: 1990000,
+  cashback: 77000,
+  platform: "Shopee Mall",
+  seller: "Sony Official Store",
+  discountPercent: 23,
+  savingsPercent: 26,
+  cashbackRate: 5,
+};
+
+function DemoReceipt({
+  onBuy,
+  notify,
+  onResetCalc,
+}: {
+  onBuy?: (product: CalculatedProduct) => void;
+  notify?: (msg: string) => void;
+  onResetCalc?: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  const demoTrackedLink = "https://s.shopee.vn/demo-cashback";
+
+  const handleCopy = () => {
+    navigator.clipboard?.writeText(demoTrackedLink);
+    setCopied(true);
+    notify?.("✓ Đã copy link nhận hoàn tiền!");
+    setTimeout(() => setCopied(false), 2500);
+  };
+
   return (
-    <div className="demo-receipt" aria-label="Minh hoạ cách tính hoàn tiền">
-      <div className="demo-receipt-head">
-        <b>Bạn thực trả bao nhiêu?</b>
-        <span>🔥 Deal Score 94</span>
-      </div>
-      <div className="demo-receipt-product">
-        <div className="placeholder demo-image">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/demo/sony-wf-c710n.jpg"
-            alt="Tai nghe Bluetooth chống ồn Sony WF-C710N"
-            className="deal-image"
-            loading="lazy"
-          />
-        </div>
-        <div>
-          <b>Tai nghe Bluetooth chống ồn Sony WF-C710N</b>
-          <p>
-            Shopee Mall · <em>còn 6 giờ</em>
-          </p>
-        </div>
-      </div>
-      <div className="demo-price-lines">
-        <div>
-          <span>Giá niêm yết</span>
-          <s>1.990.000đ</s>
-        </div>
-        <div>
-          <span>Giảm giá sàn</span>
-          <b>−400.000đ</b>
-        </div>
-        <div>
-          <span>
-            Mã <code>DEALHOAN50</code>
-          </span>
-          <b>−50.000đ</b>
-        </div>
-        <hr />
-        <div className="demo-total">
-          <b>Thanh toán hôm nay</b>
-          <strong>1.540.000đ</strong>
-        </div>
-        <div>
-          <span>
-            Hoàn về ví <b>sau 14–15 ngày</b>
-          </span>
-          <b className="green">+77.000đ</b>
-        </div>
-      </div>
-      <div className="demo-actual-cost">
-        <b>Chi phí thực sau khi nhận hoàn</b>
-        <span>
-          <strong>1.463.000đ</strong>
-          <em>tiết kiệm 26%</em>
-        </span>
-      </div>
-      <div className="primary demo-btn" aria-hidden="true">
-        Mua ngay &amp; Nhận hoàn tiền →
-      </div>
-      <p className="demo-receipt-foot">
-        Ghi nhận trong 24 giờ · nhận hoàn sau 14–15 ngày · điều kiện
-      </p>
+    <div className="demo-receipt">
+      <CashbackReceipt
+        product={DEMO_RECEIPT_PRODUCT}
+        trackedLink={demoTrackedLink}
+        copied={copied}
+        onCopy={handleCopy}
+        onBuy={() => {
+          if (onBuy) {
+            onBuy(DEMO_RECEIPT_PRODUCT);
+          } else {
+            window.open("https://shopee.vn", "_blank");
+          }
+        }}
+        onClear={() => {
+          if (onResetCalc) {
+            onResetCalc();
+          } else {
+            document.getElementById("deals")?.scrollIntoView({ behavior: "smooth" });
+          }
+        }}
+      />
     </div>
   );
 }
@@ -1315,36 +1305,34 @@ export default function HomeClient({
               kết mơ hồ.
             </p>
             {[
-              [
-                "Dán link hoặc chọn deal",
-                "Trên trang sản phẩm của Shopee, TikTok Shop hoặc Lazada, chọn Chia sẻ → Sao chép liên kết. Dán link vào ô tính hoàn tiền bên trên, hoặc chọn một deal có sẵn.",
-              ],
-              [
-                "Mua qua liên kết",
-                "Bấm mua và nhận hoàn tiền — bạn mua trực tiếp trên sàn như bình thường.",
-              ],
-              [
-                "Cashback chờ duyệt",
-                "Đơn ghi nhận trong 24 giờ, trạng thái chờ duyệt đến khi hết hạn đổi trả.",
-              ],
-              [
-                "Rút tiền về tài khoản",
-                "Cashback được duyệt vào ví, rút về tài khoản ngân hàng từ 50.000đ.",
-              ],
-            ].map((s, i) => (
-              <div className="step" key={s[0]}>
+              "Dán link hoặc chọn deal",
+              "Mua qua liên kết",
+              "Cashback chờ duyệt",
+              "Rút tiền về tài khoản",
+            ].map((title, i) => (
+              <div className="step" key={title}>
                 <i>{i + 1}</i>
                 <span>
-                  <b>{s[0]}</b>
-                  <small>{s[1]}</small>
+                  <b>{title}</b>
                 </span>
               </div>
             ))}
           </div>
           <div className="demo">
-            <span className="float top">▼ Giá thấp nhất 30 ngày</span>
-            <span className="float bottom">✓ +77.000đ hoàn sau 14 ngày</span>
-            <DemoReceipt />
+            <DemoReceipt
+              onBuy={(product) => {
+                setCalculatedProduct(product);
+                setTrackedLink("https://s.shopee.vn/demo-cashback");
+                setResult(product.platform);
+                setBuyOpen(true);
+              }}
+              notify={notify}
+              onResetCalc={() => {
+                linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                linkInputRef.current?.focus();
+                notify("⚡ Dán link sản phẩm vào đây để tính hoàn tiền nhé!");
+              }}
+            />
           </div>
         </div>
       </section>
