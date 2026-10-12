@@ -132,7 +132,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
             <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}</strong>
             <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}%</span>
           </div>
-          <span className={styles.rewardTiming}>Nhận sau 14–15 ngày</span>
+          <span className={styles.rewardTiming}>Nhận sau 14–15 ngày · Hoàn chuẩn theo giá thực trả</span>
         </div>
       </div>
       <dl className={styles.priceSummary}>
