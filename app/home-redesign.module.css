@@ -162,9 +162,9 @@
 .emptyDescription { max-width: 100%; min-height: 25px; margin: 0; color: #405d78; font-size: 16px; line-height: 1.55; text-wrap: balance; }
 .steps { list-style: none; width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; padding: 0; margin: 32px 0 0; }
 .steps li { position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-.stepIcon { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 74px; height: 74px; border: 1px solid #ffd6c0; border-radius: 20px; background: #fff5eccc; color: #fa4b23; }
+.stepIcon { position: relative; display: grid; place-items: center; flex-shrink: 0; width: 74px; height: 74px; border: 1.5px solid #f3ad88; border-radius: 20px; background: #fff5eccc; color: #fa4b23; }
 .stepIcon > svg { width: 42px; height: 42px; }
-.stepIcon > span { position: absolute; top: -8px; right: -6px; display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #ffcaa9; border-radius: 50%; background: #fff8ee; color: #c53b14; font-size: 13px; font-weight: 600; line-height: 1; }
+.stepIcon > span { position: absolute; top: -8px; right: -6px; display: grid; place-items: center; width: 23px; height: 23px; border: 1px solid #f2aa82; border-radius: 50%; background: #fff8ee; color: #c53b14; font-size: 13px; font-weight: 600; line-height: 1; }
 .stepLabel { color: #092d4b; font-size: 15px; font-weight: 650; line-height: 1.45; }
 .stepArrow { position: absolute; right: -27px; top: 26px; width: 36px; height: 27px; color: #ffb48e; transform: scaleY(-1); pointer-events: none; }
 .stepSparkle { position: absolute; top: 22px; left: calc(50% + 41px); color: #ffae1b; }
