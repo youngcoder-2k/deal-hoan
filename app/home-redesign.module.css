@@ -138,6 +138,167 @@
 .searchEmpty button { padding: 10px 16px; border: 1px solid #ffd3be; border-radius: 9px; background: #fff4ed; color: #c33b17; font-weight: 600; }
 .page :is(button, a):focus-visible { outline: 3px solid #f98151; outline-offset: 4px; }
 
+/* Variant Adjuster & Guarantee */
+.variantAdjusterSection { margin: 8px 0 6px; }
+.variantToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px dashed #fdba74;
+  border-radius: 8px;
+  background: #fffaf5;
+  color: #c2410c;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  justify-content: center;
+}
+.variantToggleBtn:hover {
+  background: #ffedd5;
+  border-color: #fb923c;
+  color: #9a3412;
+}
+.variantAdjusterBox {
+  padding: 10px 12px;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  background: #fffcf9;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: stateIn 0.25s ease both;
+}
+.variantAdjusterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.variantAdjusterTitle {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #9a3412;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.variantCloseBtn {
+  border: none;
+  background: transparent;
+  color: #78716c;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+.variantCloseBtn:hover { color: #dc2626; }
+.variantInputRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.variantInputWrap {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.variantInput {
+  width: 100%;
+  padding: 7px 28px 7px 10px;
+  border: 1px solid #fdba74;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1c1917;
+  outline: none;
+  background: #ffffff;
+}
+.variantInput:focus {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.12);
+}
+.variantInputSuffix {
+  position: absolute;
+  right: 10px;
+  color: #78716c;
+  font-size: 12px;
+  font-weight: 500;
+  pointer-events: none;
+}
+.variantResetBtn {
+  padding: 7px 10px;
+  border: 1px solid #e7e5e4;
+  border-radius: 7px;
+  background: #f5f5f4;
+  color: #57534e;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.variantResetBtn:hover {
+  background: #e7e5e4;
+  color: #292524;
+}
+.variantQuickChips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.variantChipLabel {
+  font-size: 11px;
+  color: #78716c;
+}
+.variantChip {
+  padding: 3px 8px;
+  border: 1px solid #ffedd5;
+  border-radius: 6px;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.variantChip:hover {
+  background: #fed7aa;
+  color: #9a3412;
+}
+.variantGuarantee {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  margin: 8px 0 4px;
+}
+.variantGuaranteeIcon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.variantGuaranteeText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #166534;
+}
+.variantGuaranteeText strong {
+  font-weight: 700;
+  color: #14532d;
+}
+.variantGuaranteeText b {
+  color: #047857;
+}
+
 @keyframes coinFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-13px); } }
 @keyframes stateIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes stateOut { to { opacity: 0; transform: translateY(-8px); } }
