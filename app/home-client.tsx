@@ -7,7 +7,7 @@ import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
-import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
+import HomeDiscovery from "./components/home-discovery";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
 import styles from "./home-redesign.module.css";
@@ -185,64 +185,6 @@ function HeartIcon({ filled }: { filled: boolean }) {
   );
 }
 
-const DEMO_RECEIPT_PRODUCT: CalculatedProduct = {
-  name: "Tai nghe Bluetooth chống ồn Sony WF-C710N",
-  imageUrl: "/demo/sony-wf-c710n.jpg",
-  price: 1540000,
-  originalPrice: 1990000,
-  cashback: 77000,
-  platform: "Shopee Mall",
-  seller: "Sony Official Store",
-  discountPercent: 23,
-  savingsPercent: 26,
-  cashbackRate: 5,
-  trackedLink:
-    "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn%2Fsearch%3Fkeyword%3DSony%2520WF-C710N&affiliate_id=17351320644&sub_id=dealhoan",
-};
-
-function DemoReceipt({
-  onBuy,
-  notify,
-  onResetCalc,
-}: {
-  onBuy?: (product: CalculatedProduct) => void;
-  notify?: (msg: string) => void;
-  onResetCalc?: () => void;
-}) {
-  const [copied, setCopied] = useState(false);
-  const demoTrackedLink = "https://s.shopee.vn/demo-cashback";
-
-  const handleCopy = () => {
-    navigator.clipboard?.writeText(DEMO_RECEIPT_PRODUCT.trackedLink || demoTrackedLink);
-    setCopied(true);
-    notify?.("✓ Đã copy link nhận hoàn tiền!");
-    setTimeout(() => setCopied(false), 2500);
-  };
-
-  return (
-    <div className="demo-receipt">
-      <CashbackReceipt
-        product={DEMO_RECEIPT_PRODUCT}
-        trackedLink={demoTrackedLink}
-        copied={copied}
-        onCopy={handleCopy}
-        onBuy={() => {
-          notify?.("Đang chuyển tới Shopee Mall để nhận hoàn tiền…");
-          if (onBuy) {
-            onBuy(DEMO_RECEIPT_PRODUCT);
-          }
-        }}
-        onClear={() => {
-          if (onResetCalc) {
-            onResetCalc();
-          } else {
-            document.getElementById("deals")?.scrollIntoView({ behavior: "smooth" });
-          }
-        }}
-      />
-    </div>
-  );
-}
 function getNextShopeeSlotEndMs(): number {
   const now = new Date();
   const vnTime = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
@@ -258,41 +200,6 @@ function getNextShopeeSlotEndMs(): number {
   const diffMs = target.getTime() - vnTime.getTime();
   return Date.now() + diffMs;
 }
-
-const FAQ_ITEMS = [
-  {
-    q: "DealHoàn kiếm tiền từ đâu để hoàn cho tôi?",
-    a: (
-      <>
-        Khi bạn mua sắm, các đối tác lớn (như Shopee) sẽ <b>trả tiền hoa hồng</b> cho DealHoàn. Chúng tôi giữ lại một phần nhỏ để duy trì hệ thống và <b>hoàn lại phần lớn số tiền đó</b> vào túi bạn.
-      </>
-    ),
-  },
-  {
-    q: "Tôi có cần tài khoản không?",
-    a: (
-      <>
-        Có. Để tích lũy tiền hoàn và rút về số dư, bạn cần có tài khoản DealHoàn. Chỉ mất <b>10 giây đăng nhập</b> nhanh qua Google hoặc Email (xác thực OTP) – không cần mật khẩu. Đặc biệt, lần đầu đăng nhập bạn sẽ được <b>tặng ngay 20.000đ</b> vào số dư!
-      </>
-    ),
-  },
-  {
-    q: "Mức rút tối thiểu là bao nhiêu?",
-    a: (
-      <>
-        Bạn có thể rút từ <b>50.000đ</b> trở lên. Chúng tôi <b>không thu bất kỳ khoản phí nào</b> khi rút tiền về tài khoản ngân hàng.
-      </>
-    ),
-  },
-  {
-    q: "Nếu huỷ đơn hoặc hoàn trả thì sao?",
-    a: (
-      <>
-        Số tiền hoàn tương ứng sẽ bị huỷ khỏi số dư. Chỉ đơn hàng đã được sàn xác nhận chính thức mới được tính là có thể rút.
-      </>
-    ),
-  },
-];
 
 export default function HomeClient({
   flashDeals,
@@ -386,7 +293,6 @@ export default function HomeClient({
   const [busy, setBusy] = useState(false);
   const [calcPercent, setCalcPercent] = useState(1);
   const [inputError, setInputError] = useState(false);
-  const [refCopied, setRefCopied] = useState(false);
   const [trackedLink, setTrackedLink] = useState("");
   const [copiedTracked, setCopiedTracked] = useState(false);
   const [calculatedProduct, setCalculatedProduct] = useState<CalculatedProduct | null>(null);
@@ -395,12 +301,6 @@ export default function HomeClient({
   const [authPending, setAuthPending] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [userBalance, setUserBalance] = useState<number | null>(null);
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  const toggleFaq = (index: number) => {
-    setOpenFaq((prev) => (prev === index ? null : index));
-  };
-
   const fetchUserBalance = () => {
     fetch("/api/wallet")
       .then((res) => (res.ok ? res.json() : null))
@@ -1330,167 +1230,18 @@ export default function HomeClient({
         )}
       </section>
       )}
-      <section className="container block" id="how">
-        <div className="how">
-          <div>
-            <h2>Cashback hoạt động thế nào?</h2>
-            <p>
-              Minh bạch từng bước — tiền hoàn có trạng thái rõ ràng, không cam
-              kết mơ hồ.
-            </p>
-            {[
-              [
-                "Dán link hoặc chọn deal",
-                "Trên trang sản phẩm của Shopee, TikTok Shop hoặc Lazada, chọn Chia sẻ → Sao chép liên kết. Dán link vào ô tính hoàn tiền bên trên, hoặc chọn một deal có sẵn.",
-              ],
-              [
-                "Mua qua liên kết",
-                "Bấm mua và nhận hoàn tiền — bạn mua trực tiếp trên sàn như bình thường.",
-              ],
-              [
-                "Cashback chờ duyệt",
-                "Đơn ghi nhận trong 24 giờ, trạng thái chờ duyệt đến khi hết hạn đổi trả.",
-              ],
-              [
-                "Rút tiền về tài khoản",
-                "Cashback được duyệt vào ví, rút về tài khoản ngân hàng từ 50.000đ.",
-              ],
-            ].map((s, i) => (
-              <div className="step" key={s[0]}>
-                <i>{i + 1}</i>
-                <span>
-                  <b>{s[0]}</b>
-                  <small>{s[1]}</small>
-                </span>
-              </div>
-            ))}
-          </div>
-          <div className="demo">
-            <DemoReceipt
-              onBuy={(product) => {
-                notify("Đang chuyển tới Shopee Mall để nhận hoàn tiền!");
-              }}
-              notify={notify}
-              onResetCalc={() => {
-                linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-                linkInputRef.current?.focus();
-                notify("⚡ Dán link sản phẩm vào đây để tính hoàn tiền nhé!");
-              }}
-            />
-          </div>
-        </div>
-      </section>
-      <section className="container block faq-section" id="faq">
-        <div className="faq-container">
-          <div className="faq-header">
-            <span className="faq-badge">CÂU HỎI THƯỜNG GẶP</span>
-            <h2 className="faq-title">Bạn đang băn khoăn?</h2>
-          </div>
-          <div className="faq-list">
-            {FAQ_ITEMS.map((item, index) => {
-              const isOpen = openFaq === index;
-              return (
-                <div
-                  key={index}
-                  className={`faq-card ${isOpen ? "open" : ""}`}
-                >
-                  <button
-                    type="button"
-                    className="faq-question-btn"
-                    onClick={() => toggleFaq(index)}
-                    aria-expanded={isOpen}
-                  >
-                    <span className="faq-question-text">{item.q}</span>
-                    <span className="faq-toggle-icon" aria-hidden="true">
-                      {isOpen ? (
-                        <XIcon size={18} weight="bold" />
-                      ) : (
-                        <PlusIcon size={18} weight="bold" />
-                      )}
-                    </span>
-                  </button>
-                  <div className="faq-answer-wrapper">
-                    <div className="faq-answer-inner">
-                      <div className="faq-answer">
-                        <p>{item.a}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-      <section className="container block" id="referral">
-        <div className="referral">
-          <div>
-            <h2>Mời bạn bè, nhận hoa hồng</h2>
-            <p>
-              Nhận 20.000đ khi bạn bè hoàn thành đơn đầu tiên, cộng 5% hoa hồng
-              từ cashback của họ trong 6 tháng.
-            </p>
-          </div>
-          <div>
-            <button
-              className="primary"
-              onClick={() => {
-                navigator.clipboard?.writeText(
-                  "https://dealhoan.vn/ref/BAN2026",
-                );
-                setRefCopied(true);
-                try {
-                  confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
-                } catch {}
-                setTimeout(() => setRefCopied(false), 2500);
-                notify("✓ Đã copy link giới thiệu");
-              }}
-            >
-              {refCopied ? "✓ Đã copy link" : "Copy link giới thiệu"}
-            </button>
-            <button className="outline">Chia sẻ Zalo</button>
-          </div>
-        </div>
-      </section>
-      <footer className="site-footer" id="contact">
-        <div className="container">
-          <div>
-            <h3>
-              Deal<span>Hoàn</span>
-            </h3>
-            <p>
-              Nền tảng săn deal & hoàn tiền cho người mua sắm thông minh tại
-              Việt Nam.
-            </p>
-          </div>
-          <div className="footer-links">
-            <div>
-              <b>Khám phá</b>
-              <a>Deal hot</a>
-              <a>Mã giảm giá</a>
-              <a>Danh mục</a>
-              <a>Thương hiệu</a>
-            </div>
-            <div>
-              <b>Cashback</b>
-              <a href="#how">Cách hoạt động</a>
-              <a>Chính sách hoàn tiền</a>
-              <a>Rút tiền</a>
-              <a href="#faq">FAQ</a>
-            </div>
-            <div>
-              <b>DealHoàn</b>
-              <a>Giới thiệu bạn bè</a>
-              <a>Blog</a>
-              <a>Liên hệ</a>
-            </div>
-          </div>
-        </div>
-        <small>
-          © 2026 DealHoàn. Cashback ghi nhận qua liên kết tiếp thị của các sàn
-          TMĐT.
-        </small>
-      </footer>
+      <HomeDiscovery
+        signedIn={Boolean(user)}
+        accountPending={authPending}
+        onStart={() => {
+          linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          linkInputRef.current?.focus({ preventScroll: true });
+        }}
+        onAccount={() => {
+          if (user) setAccountOpen(true);
+          else void signInWithGoogle();
+        }}
+      />
       {buyOpen && (
         <div className="buy-overlay" onClick={() => setBuyOpen(false)}>
           <div className="buy-modal" onClick={(e) => e.stopPropagation()}>

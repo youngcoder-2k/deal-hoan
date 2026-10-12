@@ -57,10 +57,10 @@ export function CashbackStory() {
 
 const glassProperties = ["--glass-light-x", "--glass-light-y", "--glass-rotate-x", "--glass-rotate-y"];
 
-function moveGlassLight(event: PointerEvent<HTMLDivElement>) {
+function moveGlassLight(event: PointerEvent<HTMLDivElement>, surface?: HTMLDivElement) {
   // Touch scrolling and accessibility preferences never drive the optical tilt.
   if (event.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce), (forced-colors: active)").matches) return;
-  const shell = event.currentTarget.parentElement;
+  const shell = surface ?? event.currentTarget.parentElement;
   if (!shell) return;
   const rect = shell.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
@@ -72,8 +72,8 @@ function moveGlassLight(event: PointerEvent<HTMLDivElement>) {
   shell.style.setProperty("--glass-rotate-y", `${((x - .5) * 3).toFixed(2)}deg`);
 }
 
-function resetGlassLight(event: PointerEvent<HTMLDivElement>) {
-  const shell = event.currentTarget.parentElement;
+function resetGlassLight(event: PointerEvent<HTMLDivElement>, surface?: HTMLDivElement) {
+  const shell = surface ?? event.currentTarget.parentElement;
   glassProperties.forEach((property) => shell?.style.removeProperty(property));
 }
 
@@ -87,9 +87,9 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
     <div
       className={`${styles.emptyCard} ${busy ? styles.emptyBusy : ""}`}
       aria-labelledby="cashback-empty-title"
-      onPointerMove={moveGlassLight}
-      onPointerLeave={resetGlassLight}
-      onPointerCancel={resetGlassLight}
+      onPointerMove={(event) => moveGlassLight(event)}
+      onPointerLeave={(event) => resetGlassLight(event)}
+      onPointerCancel={(event) => resetGlassLight(event)}
     >
       <div className={styles.emptyIntro}>
         <p className={styles.emptyEyebrow}>
@@ -152,10 +152,23 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
           // eslint-disable-next-line @next/next/no-img-element
           <img className={styles.productImage} src={product.imageUrl} alt={product.name} width={64} height={64} />
         )}
-        <div><h3 title={product.name}>{product.name}</h3><p title={product.seller}>{product.platform}{product.seller ? ` · ${product.seller}` : ""}</p></div>
+        <div>
+          <h3 title={product.name}>{product.name}</h3>
+          <p title={product.seller}>{product.platform}{product.seller ? ` · ${product.seller}` : ""}</p>
+          <div className={styles.productPrice}>
+            <span>Thanh toán</span>
+            <strong>{hasPrice ? formatPrice(price) : "Chưa có giá"}</strong>
+            {hasPrice && originalPrice > price && <s>{formatPrice(originalPrice)}</s>}
+          </div>
+        </div>
         <span className={styles.platformBadge}><MarketplaceBrand platform={product.platform} /></span>
       </div>
-      <div className={styles.reward}>
+      <div
+        className={styles.reward}
+        onPointerMove={(event) => moveGlassLight(event, event.currentTarget)}
+        onPointerLeave={(event) => resetGlassLight(event, event.currentTarget)}
+        onPointerCancel={(event) => resetGlassLight(event, event.currentTarget)}
+      >
         <div className={styles.rewardContent}>
           <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
@@ -165,10 +178,6 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
           <span className={styles.rewardTiming}>{hasPrice ? "Nhận sau 14–15 ngày · Hoàn chuẩn theo giá thực trả" : "Chưa có giá và tiền hoàn từ sàn cho sản phẩm này."}</span>
         </div>
       </div>
-      <dl className={styles.priceSummary}>
-        <div><dt>Thanh toán</dt><dd>{hasPrice ? formatPrice(price) : "Chưa có giá"} {hasPrice && originalPrice > price && <s>{formatPrice(originalPrice)}</s>}</dd></div>
-        <div><dt>Chi phí sau hoàn</dt><dd className={styles.netCost}>{hasPrice ? formatPrice(price - cashback) : "—"}</dd></div>
-      </dl>
       {trackedLink && (
         <div className={styles.linkSection}>
           <p>Link nhận hoàn</p>

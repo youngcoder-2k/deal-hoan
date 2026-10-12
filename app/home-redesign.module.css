@@ -185,27 +185,33 @@
 .platformBadge .marketplaceBrand { color: #192332; font-size: 11px; font-weight: 600; }
 .platformBadge .marketplaceBrand img { width: 20px; height: auto; }
 .platformBadge .lazadaBrand { width: 68px; }
-.product { display: flex; align-items: center; gap: 12px; height: 64px; flex-shrink: 0; margin-bottom: 12px; min-width: 0; }
+.product { display: flex; align-items: center; gap: 12px; min-height: 88px; flex-shrink: 0; margin-bottom: 14px; min-width: 0; }
 .productImage { flex-shrink: 0; width: 52px; height: 64px; object-fit: cover; border-radius: 8px; background: #fff7e9; }
 .product > div { min-width: 0; flex: 1; }
 .product h3 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin: 0; font-size: 13px; font-weight: 600; line-height: 1.5; }
 .product p { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin: 5px 0 0; color: #727b89; font-size: 12px; line-height: 1.5; }
-.reward { display: flex; align-items: center; position: relative; flex-shrink: 0; margin: 0 0 10px; padding: 14px 18px; height: 138px; border: 0; border-radius: 12px; background: #fff3ed; color: #ef431a; container-type: inline-size; }
+.productPrice { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; margin-top: 6px; line-height: 1.4; }
+.productPrice > span { color: #677182; font-size: 11px; }
+.productPrice > strong { color: #17202e; font-size: 16px; font-weight: 650; white-space: nowrap; }
+.productPrice > s { color: #8b929f; font-size: 11px; white-space: nowrap; }
+/* Mint optical surface: only reflections move, not the text or layout. */
+.reward { display: flex; align-items: center; position: relative; isolation: isolate; flex-shrink: 0; margin: 0; padding: 14px 18px; min-height: 138px; border: 1.5px solid #16804b; border-radius: 16px; background: #eaf8ee; color: #14653c; container-type: inline-size; box-shadow: inset 0 2px 3px #ffffffed, inset -2px -3px 7px #16653414, 0 8px 20px -14px #16653450; }
+.reward::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(ellipse at var(--glass-light-x, 25%) var(--glass-light-y, 15%), #ffffffcc, transparent 55%), linear-gradient(125deg, #ffffff30, #b8edce40 50%, #ffffff70); background-size: 100% 100%, 200% 200%; animation: rewardGlassFlow 10s ease-in-out infinite alternate; }
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .reward { background: #e3f6eab8; -webkit-backdrop-filter: blur(18px) saturate(135%); backdrop-filter: blur(18px) saturate(135%); }
+}
+@keyframes rewardGlassFlow { from { background-position: 0 0, 0% 20%; } to { background-position: 0 0, 100% 80%; } }
+@media (prefers-reduced-motion: reduce) { .reward::before { animation: none; } }
+@media (prefers-reduced-transparency: reduce) { .reward { background: #eaf8ee; -webkit-backdrop-filter: none; backdrop-filter: none; } .reward::before { display: none; } }
+@media (forced-colors: active) { .reward { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; } .reward::before { display: none; } }
 .rewardContent { position: relative; z-index: 1; width: 100%; }
 .rewardContent > p { margin: 0 0 5px; font-size: 14px; font-weight: 600; }
 .rewardAmountRow { display: flex; align-items: center; flex-wrap: nowrap; gap: 12px; padding: 0; }
 .rewardAmountRow > strong { min-width: 0; font-size: clamp(32px, 12cqw, 60px); font-weight: 800; line-height: 1.15; letter-spacing: -2.5px; white-space: nowrap; }
 .rewardAmountRow > strong.longAmount { font-size: clamp(24px, 8.5cqw, 44px); letter-spacing: -1.5px; }
-.ratePill { display: inline-block; flex-shrink: 0; padding: 6px 12px; border-radius: 99px; border: 1px solid #ffd0bb; color: #e84a1f; background: #ffebe0; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.rewardTiming { display: block; margin-top: 3px; color: #727b89; font-size: 12px; font-weight: 400; }
+.ratePill { display: inline-block; flex-shrink: 0; padding: 6px 12px; border-radius: 99px; border: 1px solid #7fc49a; color: #14653c; background: #ffffffa6; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.rewardTiming { display: block; margin-top: 5px; color: #416451; font-size: 12px; font-weight: 400; }
 
-.priceSummary { margin: 0; }
-.priceSummary > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid #e8eaed; }
-.priceSummary > div:last-child { border-bottom: 1px solid #e8eaed; }
-.priceSummary dt { font-size: 14px; font-weight: 400; }
-.priceSummary dd { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: flex-end; gap: 4px 12px; margin: 0; font-size: 16px; font-weight: 500; white-space: nowrap; }
-.priceSummary s { color: #a0a5af; font-size: 12px; font-weight: 400; }
-.priceSummary dd.netCost { font-size: 22px; line-height: 1.2; font-weight: 700; letter-spacing: -.5px; }
 .linkSection { margin-top: 10px; }
 .linkSection > p { margin: 0 0 5px; font-size: 11px; color: #79808b; }
 .linkRow { display: flex; align-items: stretch; gap: 8px; }
@@ -363,21 +369,17 @@
   .clearInput { width: 32px; min-width: 32px; height: 34px; }
   .calculateButton { width: 82px; min-width: 82px; min-height: 50px; height: 50px; padding: 0 8px; gap: 4px; font-size: 14px; }
   .receiptHeading { margin-bottom: 8px; }
-  .product { gap: 10px; height: 64px; }
+  .product { gap: 10px; min-height: 86px; }
   .productImage { width: 52px; height: 64px; }
   .product h3 { font-size: 12px; }
   .product p { font-size: 11px; }
   .product .platformBadge { display: none; }
-  .reward { height: 132px; padding: 14px 12px; }
+  .reward { min-height: 132px; padding: 14px 12px; }
   .rewardContent > p { font-size: 13px; }
   .rewardAmountRow { gap: 8px; }
   .rewardAmountRow > strong { font-size: clamp(30px, 14cqw, 48px); letter-spacing: -1.5px; }
   .rewardAmountRow > strong.longAmount { font-size: clamp(21px, 10cqw, 34px); letter-spacing: -1px; }
   .ratePill { padding: 5px 8px; font-size: 11px; }
-  .priceSummary dt { font-size: 12px; }
-  .priceSummary dd { font-size: 14px; gap: 3px 6px; }
-  .priceSummary s { font-size: 11px; }
-  .priceSummary dd.netCost { font-size: 20px; }
   .linkRow button { min-height: 44px; flex-basis: 88px; }
   .linkRow > a { font-size: 10px; padding: 12px 8px; }
   .buyButton { min-height: 44px; font-size: 13px; }
