@@ -310,6 +310,10 @@ export default function HomeClient({
   flashSlot?: string;
 }) {
   const linkInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    linkInputRef.current?.focus({ preventScroll: true });
+  }, []);
   const calculationIdRef = useRef(0);
   const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
