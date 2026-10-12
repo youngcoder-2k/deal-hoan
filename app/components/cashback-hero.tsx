@@ -1,5 +1,6 @@
 "use client";
 
+import type { PointerEvent } from "react";
 import Image from "next/image";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
@@ -54,6 +55,28 @@ export function CashbackStory() {
   );
 }
 
+const glassProperties = ["--glass-light-x", "--glass-light-y", "--glass-rotate-x", "--glass-rotate-y"];
+
+function moveGlassLight(event: PointerEvent<HTMLDivElement>) {
+  // Touch scrolling and accessibility preferences never drive the optical tilt.
+  if (event.pointerType !== "mouse" || window.matchMedia("(prefers-reduced-motion: reduce), (prefers-reduced-transparency: reduce), (forced-colors: active)").matches) return;
+  const shell = event.currentTarget.parentElement;
+  if (!shell) return;
+  const rect = shell.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const x = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+  const y = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
+  shell.style.setProperty("--glass-light-x", `${(x * 100).toFixed(1)}%`);
+  shell.style.setProperty("--glass-light-y", `${(y * 100).toFixed(1)}%`);
+  shell.style.setProperty("--glass-rotate-x", `${((.5 - y) * 3).toFixed(2)}deg`);
+  shell.style.setProperty("--glass-rotate-y", `${((x - .5) * 3).toFixed(2)}deg`);
+}
+
+function resetGlassLight(event: PointerEvent<HTMLDivElement>) {
+  const shell = event.currentTarget.parentElement;
+  glassProperties.forEach((property) => shell?.style.removeProperty(property));
+}
+
 export function CashbackEmpty({ busy }: { busy: boolean }) {
   const steps = [
     { title: "Sao chép", detail: "link sản phẩm", Icon: CopyIcon },
@@ -61,7 +84,13 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
     { title: "Xem tiền", detail: "hoàn dự kiến", Icon: CurrencyCircleDollarIcon },
   ];
   return (
-    <div className={`${styles.emptyCard} ${busy ? styles.emptyBusy : ""}`} aria-labelledby="cashback-empty-title">
+    <div
+      className={`${styles.emptyCard} ${busy ? styles.emptyBusy : ""}`}
+      aria-labelledby="cashback-empty-title"
+      onPointerMove={moveGlassLight}
+      onPointerLeave={resetGlassLight}
+      onPointerCancel={resetGlassLight}
+    >
       <div className={styles.emptyIntro}>
         <p className={styles.emptyEyebrow}>
           {busy ? "ĐANG KIỂM TRA LINK" : "CHỈ 3 BƯỚC"}
