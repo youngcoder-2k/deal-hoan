@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Image from "next/image";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
@@ -110,17 +109,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   const { price, originalPrice, cashback } = product;
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
-
-  const [customPriceInput, setCustomPriceInput] = useState<string>("");
-  const [showAdjuster, setShowAdjuster] = useState<boolean>(false);
-
-  const customNumericPrice = customPriceInput ? Number(customPriceInput.replace(/\D/g, "")) : 0;
-  const isCustomPriceActive = customNumericPrice > 0;
-  const activePrice = isCustomPriceActive ? customNumericPrice : price;
-  const activeCashback = isCustomPriceActive
-    ? Math.round(activePrice * (cashbackRate / 100))
-    : cashback;
-  const reward = formatPrice(activeCashback);
+  const reward = formatPrice(cashback);
   const targetUrl = product.trackedLink || trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
@@ -138,123 +127,18 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
       </div>
       <div className={styles.reward}>
         <div className={styles.rewardContent}>
-          <p>
-            Bạn được hoàn dự kiến
-            {isCustomPriceActive && (
-              <span style={{ fontSize: "11px", fontWeight: 500, color: "#c2410c", marginLeft: "5px" }}>
-                (theo phân loại bạn chọn)
-              </span>
-            )}
-          </p>
+          <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
             <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}</strong>
             <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}%</span>
           </div>
-          <span className={styles.rewardTiming}>Nhận sau 14–15 ngày · Hoàn chuẩn theo giá thực trả</span>
+          <span className={styles.rewardTiming}>Nhận sau 14–15 ngày</span>
         </div>
       </div>
       <dl className={styles.priceSummary}>
-        <div>
-          <dt>Thanh toán</dt>
-          <dd>
-            {formatPrice(activePrice)}{" "}
-            {!isCustomPriceActive && originalPrice > price && <s>{formatPrice(originalPrice)}</s>}
-          </dd>
-        </div>
-        <div>
-          <dt>Chi phí sau hoàn</dt>
-          <dd className={styles.netCost}>{formatPrice(activePrice - activeCashback)}</dd>
-        </div>
+        <div><dt>Thanh toán</dt><dd>{formatPrice(price)} {originalPrice > price && <s>{formatPrice(originalPrice)}</s>}</dd></div>
+        <div><dt>Chi phí sau hoàn</dt><dd className={styles.netCost}>{formatPrice(price - cashback)}</dd></div>
       </dl>
-
-      {/* Interactive Variant Adjuster */}
-      <div className={styles.variantAdjusterSection}>
-        {!showAdjuster ? (
-          <button
-            type="button"
-            className={styles.variantToggleBtn}
-            onClick={() => setShowAdjuster(true)}
-          >
-            <span>🔄</span> Bạn chọn phân loại khác hoặc mua nhiều món? Bấm để tính nhanh
-          </button>
-        ) : (
-          <div className={styles.variantAdjusterBox}>
-            <div className={styles.variantAdjusterHeader}>
-              <span className={styles.variantAdjusterTitle}>
-                <span>💡</span> Nhập giá phân loại bạn chọn trên {product.platform || "Shopee"}:
-              </span>
-              <button
-                type="button"
-                className={styles.variantCloseBtn}
-                onClick={() => {
-                  setShowAdjuster(false);
-                  setCustomPriceInput("");
-                }}
-              >
-                ✕ Đóng
-              </button>
-            </div>
-
-            <div className={styles.variantInputRow}>
-              <div className={styles.variantInputWrap}>
-                <input
-                  type="text"
-                  placeholder={`Ví dụ: ${formatPrice(Math.round(price * 2.33))}`}
-                  value={customPriceInput}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/\D/g, "");
-                    if (!val) {
-                      setCustomPriceInput("");
-                    } else {
-                      setCustomPriceInput(Number(val).toLocaleString("vi-VN"));
-                    }
-                  }}
-                  className={styles.variantInput}
-                />
-                <span className={styles.variantInputSuffix}>đ</span>
-              </div>
-              {isCustomPriceActive && (
-                <button
-                  type="button"
-                  className={styles.variantResetBtn}
-                  onClick={() => setCustomPriceInput("")}
-                >
-                  Giá gốc
-                </button>
-              )}
-            </div>
-
-            <div className={styles.variantQuickChips}>
-              <span className={styles.variantChipLabel}>Gợi ý:</span>
-              {[
-                { label: "1.073k (Bộ lớn)", value: 1073000 },
-                { label: "x2 số lượng", value: price * 2 },
-                { label: "x3 số lượng", value: price * 3 },
-              ].map((chip) => (
-                <button
-                  key={chip.label}
-                  type="button"
-                  className={styles.variantChip}
-                  onClick={() => setCustomPriceInput(chip.value.toLocaleString("vi-VN"))}
-                >
-                  {chip.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Variant Guarantee Notice */}
-      <div className={styles.variantGuarantee}>
-        <div className={styles.variantGuaranteeIcon}>🛡️</div>
-        <div className={styles.variantGuaranteeText}>
-          <strong>Cam kết hoàn chuẩn theo phân loại thực tế:</strong>
-          <span>
-            Hệ thống DealHoàn ghi nhận đơn theo <b>tổng tiền thực tế bạn thanh toán tại {product.platform || "Shopee"}</b>. Dù bạn chọn phân loại nào hoặc mua thêm sản phẩm khác, bạn vẫn nhận đủ chuẩn <b>{cashbackRate}%</b> tiền hoàn vào ví!
-          </span>
-        </div>
-      </div>
       {trackedLink && (
         <div className={styles.linkSection}>
           <p>Link nhận hoàn</p>
