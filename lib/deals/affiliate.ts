@@ -274,7 +274,7 @@ export function buildCustomShortUrl(
     return shortUrl.toString();
   }
 
-  const cleanUrl = cleanShopeeUrl(rawUrl);
+  const cleanUrl = isTikTokUrl(rawUrl) ? cleanTikTokUrl(rawUrl) : cleanShopeeUrl(rawUrl);
 
   try {
     const u = new URL(cleanUrl.startsWith("http") ? cleanUrl : `https://${cleanUrl}`);

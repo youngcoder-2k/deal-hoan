@@ -138,7 +138,8 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   const { price, originalPrice, cashback } = product;
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
-  const reward = formatPrice(cashback);
+  const hasPrice = price > 0;
+  const reward = hasPrice ? formatPrice(cashback) : "Chưa xác định";
   const targetUrl = product.trackedLink || trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
@@ -159,14 +160,14 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
           <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
             <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}</strong>
-            <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}%</span>
+            {hasPrice && <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}%</span>}
           </div>
-          <span className={styles.rewardTiming}>Nhận sau 14–15 ngày · Hoàn chuẩn theo giá thực trả</span>
+          <span className={styles.rewardTiming}>{hasPrice ? "Nhận sau 14–15 ngày · Hoàn chuẩn theo giá thực trả" : "Chưa có giá và tiền hoàn từ sàn cho sản phẩm này."}</span>
         </div>
       </div>
       <dl className={styles.priceSummary}>
-        <div><dt>Thanh toán</dt><dd>{formatPrice(price)} {originalPrice > price && <s>{formatPrice(originalPrice)}</s>}</dd></div>
-        <div><dt>Chi phí sau hoàn</dt><dd className={styles.netCost}>{formatPrice(price - cashback)}</dd></div>
+        <div><dt>Thanh toán</dt><dd>{hasPrice ? formatPrice(price) : "Chưa có giá"} {hasPrice && originalPrice > price && <s>{formatPrice(originalPrice)}</s>}</dd></div>
+        <div><dt>Chi phí sau hoàn</dt><dd className={styles.netCost}>{hasPrice ? formatPrice(price - cashback) : "—"}</dd></div>
       </dl>
       {trackedLink && (
         <div className={styles.linkSection}>

@@ -8,13 +8,12 @@ import {
   generateAccessTradeTikTokLink,
   buildCustomShortUrl,
   extractUrlFromText,
-  formatSubIdForUser,
 } from "@/lib/deals/affiliate";
 import { cashbackFor } from "@/lib/deals/score";
 import type { Platform } from "@/lib/deals/types";
 import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resolve";
 import { lookupAccessTradeProduct } from "@/lib/deals/providers/accesstrade";
-import { lookupHoanNgayProduct as lookupFastShopeeProduct } from "@/lib/deals/providers/hoanngay";
+import { lookupHoanNgayProduct } from "@/lib/deals/providers/hoanngay";
 import { boostCashbackRate } from "@/lib/deals/cashback-booster";
 
 export const dynamic = "force-dynamic";
@@ -46,6 +45,7 @@ export async function POST(request: NextRequest) {
     }
 
     const isShopee = isShopeeUrl(rawUrl);
+    const isTikTok = isTikTokUrl(rawUrl);
 
     let canonicalUrl = rawUrl;
     let ogTitle: string | null = null;
@@ -53,9 +53,9 @@ export async function POST(request: NextRequest) {
     let extractedPrice: number | null = null;
     let showDiscount: number | null = null;
 
-    // 1. Concurrently trigger fast Shopee resolution for any Shopee link (direct or shortlink)
-    const fastShopeeDirectPromise = isShopee
-      ? lookupFastShopeeProduct(rawUrl).catch(() => null)
+    // 1. Resolve Shopee and TikTok share/direct links through the same HoanNgay provider.
+    const hoanNgayDirectPromise = isShopee || isTikTok
+      ? lookupHoanNgayProduct(rawUrl).catch(() => null)
       : Promise.resolve(null);
 
     // 2. Concurrently expand shortlink or fetch OpenGraph metadata with quick 1800ms timeout
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
     })();
 
     // Await both tasks in parallel
-    const [fastShopeeDirect, metaResult] = await Promise.all([
-      fastShopeeDirectPromise,
+    const [hoanNgayDirect, metaResult] = await Promise.all([
+      hoanNgayDirectPromise,
       metadataPromise,
     ]);
 
@@ -144,33 +144,34 @@ export async function POST(request: NextRequest) {
     }
 
     const isCurrentShopee = isShopeeUrl(canonicalUrl) || isShopee;
+    const isCurrentTikTok = isTikTokUrl(canonicalUrl) || isTikTok;
 
-    // If fastShopeeDirect was already resolved, update original price if discount was detected
-    let fastShopeeProduct = fastShopeeDirect;
-    if (fastShopeeProduct && showDiscount && showDiscount > 0) {
-      const realOrig = Math.round((fastShopeeProduct.price / (1 - showDiscount / 100)) / 1000) * 1000;
-      if (realOrig > fastShopeeProduct.price) {
-        fastShopeeProduct = { ...fastShopeeProduct, originalPrice: realOrig };
+    // Apply Shopee discount metadata only to Shopee; retry canonical links if needed.
+    let hoanNgayProduct = hoanNgayDirect;
+    if (hoanNgayProduct && isCurrentShopee && showDiscount && showDiscount > 0) {
+      const realOrig = Math.round((hoanNgayProduct.price / (1 - showDiscount / 100)) / 1000) * 1000;
+      if (realOrig > hoanNgayProduct.price) {
+        hoanNgayProduct = { ...hoanNgayProduct, originalPrice: realOrig };
       }
-    } else if (!fastShopeeProduct && isCurrentShopee) {
-      fastShopeeProduct = await lookupFastShopeeProduct(canonicalUrl, showDiscount).catch(() => null);
+    } else if (!hoanNgayProduct && (isCurrentShopee || isCurrentTikTok)) {
+      hoanNgayProduct = await lookupHoanNgayProduct(canonicalUrl, showDiscount).catch(() => null);
     }
 
-    // Canonicalize link if fastShopee returned the direct product URL
-    if (fastShopeeProduct?.productLink) {
-      canonicalUrl = fastShopeeProduct.productLink;
+    // Canonicalize with the provider product URL, not an upstream affiliate link.
+    if (hoanNgayProduct?.productLink) {
+      canonicalUrl = hoanNgayProduct.productLink;
     }
 
     // 3. Query AccessTrade product datafeed (exact SKU match for real price & CDN image)
-    const atProduct = !fastShopeeProduct
+    const atProduct = !hoanNgayProduct
       ? await lookupAccessTradeProduct(canonicalUrl).catch(() => null)
       : null;
 
     // 4. Fallback to local catalog resolution if external providers yielded no match
     const baseProduct = resolveProductLocally(canonicalUrl, [], ogTitle);
 
-    const finalPlatform: Platform = fastShopeeProduct
-      ? "Shopee"
+    const finalPlatform: Platform = hoanNgayProduct
+      ? isCurrentTikTok ? "TikTok Shop" : "Shopee"
       : atProduct?.platform
         ? atProduct.platform
         : canonicalUrl.toLowerCase().includes("tiktok")
@@ -184,51 +185,54 @@ export async function POST(request: NextRequest) {
               : "Shopee";
 
     const isVerifiedPrice = Boolean(
-      fastShopeeProduct?.isVerifiedPrice ||
+      hoanNgayProduct?.isVerifiedPrice ||
       atProduct?.isVerifiedPrice ||
       extractedPrice !== null
     );
 
-    const priceType = (fastShopeeProduct?.isVerifiedPrice || atProduct?.isVerifiedPrice || extractedPrice !== null)
+    const priceType = (hoanNgayProduct?.isVerifiedPrice || atProduct?.isVerifiedPrice || extractedPrice !== null)
       ? "exact"
       : "estimated";
 
-    const finalName = fastShopeeProduct?.name || atProduct?.name || ogTitle || baseProduct.name;
-    const finalImage = fastShopeeProduct?.imageUrl || atProduct?.imageUrl || ogImage || baseProduct.imageUrl;
-    const finalPrice = fastShopeeProduct?.price ?? atProduct?.price ?? (extractedPrice || baseProduct.price);
+    const finalName = hoanNgayProduct?.name || atProduct?.name || ogTitle || baseProduct.name;
+    const finalImage = hoanNgayProduct?.imageUrl || atProduct?.imageUrl || ogImage || baseProduct.imageUrl;
+    const finalPrice = hoanNgayProduct?.price ?? atProduct?.price ?? (extractedPrice || baseProduct.price);
     const finalOriginalPrice =
-      fastShopeeProduct?.originalPrice ??
+      hoanNgayProduct?.originalPrice ??
       atProduct?.originalPrice ??
       (baseProduct.originalPrice > finalPrice
         ? baseProduct.originalPrice
         : Math.round((finalPrice * 1.28) / 1000) * 1000);
 
     const hasRealCommission = Boolean(
-      (fastShopeeProduct?.commission && fastShopeeProduct.commission > 0) ||
-      (fastShopeeProduct?.cashbackRate && fastShopeeProduct.cashbackRate > 0)
+      typeof hoanNgayProduct?.commission === "number" ||
+      typeof hoanNgayProduct?.cashbackRate === "number"
     );
 
     let finalCashback = cashbackFor(finalPrice, finalPlatform);
-    let cashbackRate = finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 5;
+    let cashbackRate = finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 0;
 
-    if (fastShopeeProduct?.cashbackRate && fastShopeeProduct.cashbackRate > 0) {
+    if (hasRealCommission && (hoanNgayProduct?.cashbackRate ?? 0) === 0 && (hoanNgayProduct?.commission ?? 0) === 0) {
+      finalCashback = 0;
+      cashbackRate = 0;
+    } else if (hoanNgayProduct?.cashbackRate && hoanNgayProduct.cashbackRate > 0) {
       const boosted = boostCashbackRate(
-        fastShopeeProduct.cashbackRate,
+        hoanNgayProduct.cashbackRate,
         finalPrice,
-        fastShopeeProduct.commission,
+        hoanNgayProduct.commission,
         undefined,
-        fastShopeeProduct.cap
+        hoanNgayProduct.cap
       );
       finalCashback = boosted.cashbackAmount;
       cashbackRate = boosted.finalRate;
-    } else if (fastShopeeProduct?.commission && fastShopeeProduct.commission > 0 && finalPrice > 0) {
-      const rawRate = Number(((fastShopeeProduct.commission / finalPrice) * 100).toFixed(2));
+    } else if (hoanNgayProduct?.commission && hoanNgayProduct.commission > 0 && finalPrice > 0) {
+      const rawRate = Number(((hoanNgayProduct.commission / finalPrice) * 100).toFixed(2));
       const boosted = boostCashbackRate(
         rawRate,
         finalPrice,
-        fastShopeeProduct.commission,
+        hoanNgayProduct.commission,
         undefined,
-        fastShopeeProduct.cap
+        hoanNgayProduct.cap
       );
       finalCashback = boosted.cashbackAmount;
       cashbackRate = boosted.finalRate;
@@ -254,15 +258,15 @@ export async function POST(request: NextRequest) {
     let trackedLink: string;
     if (isShopee) {
       const cleanShopeeLink =
-        fastShopeeProduct?.shopId && fastShopeeProduct?.itemId
-          ? `https://shopee.vn/product/${fastShopeeProduct.shopId}/${fastShopeeProduct.itemId}`
+        hoanNgayProduct?.shopId && hoanNgayProduct?.itemId
+          ? `https://shopee.vn/product/${hoanNgayProduct.shopId}/${hoanNgayProduct.itemId}`
           : cleanShopeeUrl(canonicalUrl);
       trackedLink = buildShopeeAffiliateUrl(cleanShopeeLink, {
         affiliateId: "17351320644",
         subId,
       });
-    } else if (isTikTokUrl(canonicalUrl)) {
-      const atResult = await generateAccessTradeTikTokLink(canonicalUrl, { subId });
+    } else if (isCurrentTikTok) {
+      const atResult = await generateAccessTradeTikTokLink(cleanTikTokUrl(canonicalUrl), { subId });
       trackedLink = atResult.success && atResult.affiliateUrl
         ? atResult.affiliateUrl
         : buildCustomShortUrl(canonicalUrl, { baseUrl: siteBase, subId });
@@ -270,8 +274,8 @@ export async function POST(request: NextRequest) {
       trackedLink = buildCustomShortUrl(canonicalUrl, {
         baseUrl: siteBase,
         subId,
-        shopId: fastShopeeProduct?.shopId,
-        itemId: fastShopeeProduct?.itemId,
+        shopId: hoanNgayProduct?.shopId,
+        itemId: hoanNgayProduct?.itemId,
       });
     }
 
@@ -282,13 +286,13 @@ export async function POST(request: NextRequest) {
       originalPrice: finalOriginalPrice,
       cashback: finalCashback,
       platform: finalPlatform,
-      seller: atProduct?.seller || fastShopeeProduct?.seller || baseProduct.seller,
+      seller: atProduct?.seller || hoanNgayProduct?.seller || baseProduct.seller,
       trackedLink,
       discountPercent,
       savingsPercent,
       isVerifiedPrice,
       priceType,
-      cap: fastShopeeProduct?.cap,
+      cap: hoanNgayProduct?.cap,
       isExactCashback: hasRealCommission,
       cashbackRate,
     };

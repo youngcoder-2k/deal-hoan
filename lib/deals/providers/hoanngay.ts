@@ -1,4 +1,4 @@
-import { isShopeeUrl, extractUrlFromText } from "../affiliate";
+import { isShopeeUrl, isTikTokUrl, cleanTikTokUrl, extractUrlFromText } from "../affiliate";
 
 export type HoanNgayProduct = {
   name: string;
@@ -30,11 +30,40 @@ type CacheEntry = {
 
 const cache = new Map<string, CacheEntry>();
 
+function isSupportedTikTokUrl(url: string): boolean {
+  if (!isTikTokUrl(url)) return false;
+  try {
+    const parsed = new URL(url);
+    return (parsed.protocol === "https:" || parsed.protocol === "http:") &&
+      (parsed.hostname === "tiktok.com" || parsed.hostname.endsWith(".tiktok.com"));
+  } catch {
+    return false;
+  }
+}
+
+function cleanHoanNgayTikTokLink(url: string): string {
+  const parsed = new URL(cleanTikTokUrl(url));
+  if (/\/(?:pdp|view\/product)\/\d+\/?$/i.test(parsed.pathname)) {
+    // Product identity is in the path: remove personal share/tracking payloads.
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (!["region", "locale", "local"].includes(key)) parsed.searchParams.delete(key);
+    }
+    parsed.hash = "";
+  }
+  return parsed.toString();
+}
+
 function getCacheKey(url: string): string {
   try {
     const extracted = extractUrlFromText(url);
     const u = new URL(extracted.startsWith("http") ? extracted : `https://${extracted}`);
-    // Extract shopId and itemId if present for canonical caching
+    // TikTok may identify the product in query params, not just the path.
+    if (isSupportedTikTokUrl(u.href)) {
+      u.hash = "";
+      u.searchParams.sort();
+      return `tiktok_${u.href}`;
+    }
+    // Extract Shopee shopId and itemId if present for canonical caching
     const m1 = u.pathname.match(/\/product\/(\d+)\/(\d+)/i);
     const m2 = u.pathname.match(/-i\.(\d+)\.(\d+)/i);
     if (m1) return `shopee_${m1[1]}_${m1[2]}`;
@@ -280,8 +309,8 @@ async function queryLonghouseFallback(cleanLink: string): Promise<LonghouseRawPr
 }
 
 /**
- * Resolves verified real-time Shopee product, cashback %, price, title, shop name, and CDN image from hoanngay.vn.
- * Falls back safely to Longhouse if hoanngay.vn is unreachable.
+ * Resolves real-time Shopee/TikTok product data and cashback from HoanNgay.
+ * Only Shopee uses the Longhouse fallback; TikTok returns null on provider failure.
  * Uses 10-minute in-memory cache to minimize external queries.
  */
 export async function lookupHoanNgayProduct(
@@ -289,11 +318,14 @@ export async function lookupHoanNgayProduct(
   discountPercentHint?: number | null,
 ): Promise<HoanNgayProduct | null> {
   const rawCleanLink = extractUrlFromText(rawUrl);
-  if (!isShopeeUrl(rawCleanLink)) {
-    return null;
-  }
+  const isShopee = isShopeeUrl(rawCleanLink);
+  const isTikTok = isSupportedTikTokUrl(rawCleanLink);
+  if (!isShopee && !isTikTok) return null;
 
-  const cleanLink = await expandShopeeShortLink(rawCleanLink);
+  // Preserve short-link/product-selector queries; strip personal params from direct PDP URLs.
+  const cleanLink = isShopee
+    ? await expandShopeeShortLink(rawCleanLink)
+    : cleanHoanNgayTikTokLink(rawCleanLink);
 
   const cacheKey = getCacheKey(cleanLink);
   const cached = getFromCache(cacheKey);
@@ -320,25 +352,30 @@ export async function lookupHoanNgayProduct(
   }
 
   if (hoanNgayData) {
+    // Reject mismatched upstream platforms rather than labeling Shopee data as TikTok.
+    const upstreamPlatform = hoanNgayData.platform || hoanNgayData.platform_name;
+    if (isTikTok && upstreamPlatform && !upstreamPlatform.toLowerCase().includes("tiktok")) return null;
     const price = Number(hoanNgayData.price);
-    if (Number.isFinite(price) && price > 0) {
+    const hasProductDetails = Boolean(String(hoanNgayData.product_name || "").trim());
+    if (Number.isFinite(price) && (price > 0 || (isTikTok && price === 0 && hasProductDetails))) {
       const cashbackRate = Number(hoanNgayData.cashback_rate);
       const rawCashback = Number(hoanNgayData.cashback_amount);
       const commission =
-        Number.isFinite(rawCashback) && rawCashback > 0
+        Number.isFinite(rawCashback) && rawCashback >= 0
           ? rawCashback
-          : Number.isFinite(cashbackRate) && cashbackRate > 0
+          : Number.isFinite(cashbackRate) && cashbackRate >= 0
             ? Math.round(price * (cashbackRate / 100))
             : undefined;
 
       let originalPrice = price;
-      if (discountPercentHint && discountPercentHint > 0 && discountPercentHint < 90) {
+      if (isShopee && discountPercentHint && discountPercentHint > 0 && discountPercentHint < 90) {
         originalPrice = Math.round((price / (1 - discountPercentHint / 100)) / 1000) * 1000;
-      } else {
+      } else if (isShopee) {
         originalPrice = Math.round((price * 1.35) / 1000) * 1000;
       }
 
-      const productLink = hoanNgayData.product_url ? String(hoanNgayData.product_url).trim() : undefined;
+      const upstreamLink = hoanNgayData.product_url ? String(hoanNgayData.product_url).trim() : undefined;
+      const productLink = upstreamLink && (!isTikTok || isSupportedTikTokUrl(upstreamLink)) ? upstreamLink : undefined;
       const shopId = hoanNgayData.shop_id ? String(hoanNgayData.shop_id).trim() : undefined;
       const itemId = hoanNgayData.item_id ? String(hoanNgayData.item_id).trim() : undefined;
 
@@ -348,26 +385,30 @@ export async function lookupHoanNgayProduct(
         originalPrice: originalPrice > price ? originalPrice : price,
         imageUrl: hoanNgayData.image ? String(hoanNgayData.image).trim() : null,
         seller: hoanNgayData.shop_name ? String(hoanNgayData.shop_name).trim() : undefined,
-        isVerifiedPrice: true,
-        commission,
-        cashbackRate: Number.isFinite(cashbackRate) && cashbackRate > 0 ? cashbackRate : undefined,
+        isVerifiedPrice: price > 0,
+        commission: price > 0 ? commission : undefined,
+        cashbackRate: price > 0 && Number.isFinite(cashbackRate) && cashbackRate >= 0 ? cashbackRate : undefined,
         productLink,
         shopId,
         itemId,
         rating: hoanNgayData.rating ? String(hoanNgayData.rating) : undefined,
-        platform: hoanNgayData.platform_name || "Shopee",
+        platform: isTikTok ? "TikTok Shop" : hoanNgayData.platform_name || "Shopee",
         source: "hoanngay",
       };
 
       setInCache(cacheKey, result);
-      if (shopId && itemId) {
+      if (isShopee && shopId && itemId) {
         setInCache(`shopee_${shopId}_${itemId}`, result);
+      } else if (isTikTok && productLink) {
+        setInCache(getCacheKey(productLink), result);
       }
       return result;
     }
   }
 
-  // 2. Secondary fallback to Longhouse if HoanNgay was unreachable or had an error
+  if (!isShopee) return null;
+
+  // 2. Secondary Shopee-only fallback to Longhouse if HoanNgay had an error
   const lhInfo = await queryLonghouseFallback(cleanLink);
   if (lhInfo) {
     const price = Number(lhInfo.price);
