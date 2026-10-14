@@ -21,7 +21,6 @@ import { getDailyShopeeCoupons } from "@/lib/deals/coupons-static";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   buildShopeeAffiliateUrl,
-  buildShopeeFoodAffiliateUrl,
   isShopeeUrl,
   buildCustomShortUrl,
   extractUrlFromText,
@@ -602,16 +601,6 @@ export default function HomeClient({
     }
   };
 
-  const handleOpenShopeeFood = () => {
-    const subId = user ? formatSubIdForUser(user.id) : "quickfood";
-    const foodUrl = buildShopeeFoodAffiliateUrl("", {
-      affiliateId: "17351320644",
-      subId,
-    });
-    window.open(foodUrl, "_blank");
-    notify("🍔 Đang mở ShopeeFood — Đặt món bất kỳ để nhận hoàn tiền tự động!");
-  };
-
   const calc = (e: React.FormEvent) => {
     e.preventDefault();
     executeCalculation(link);
@@ -783,31 +772,6 @@ export default function HomeClient({
                 {busy ? <span aria-live="polite">{calcPercent}%</span> : <><LightningIcon size={22} weight="fill" aria-hidden="true" /> Tính</>}
               </button>
             </form>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginTop: "8px", padding: "0 4px", fontSize: "12px" }}>
-              <span style={{ color: "#78716c", fontWeight: 500 }}>🍔 Đặt đồ ăn / thức uống:</span>
-              <button
-                type="button"
-                onClick={handleOpenShopeeFood}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  padding: "4px 10px",
-                  borderRadius: "9999px",
-                  background: "#fff1f0",
-                  color: "#cf1322",
-                  border: "1px solid #ffa39e",
-                  fontSize: "11.5px",
-                  fontWeight: 600,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)",
-                }}
-                title="Mở ShopeeFood nhận hoàn tiền mọi đơn hàng"
-              >
-                <span>Mở ShopeeFood nhận hoàn tiền ➔</span>
-              </button>
-            </div>
             <div className={styles.calculatorState}>
               {result && calculatedProduct ? (
                 <div className={`${styles.resultState} ${resultClosing ? styles.resultClosing : ""}`}>
