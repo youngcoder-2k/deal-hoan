@@ -16,13 +16,13 @@ exception when others then
 end $$;
 
 -- 3. Tạo Cron Job chạy tự động mỗi 15 phút
--- Thay đổi 'https://dealhoan.vn' bằng domain thực tế của bạn khi triển khai
+-- Sử dụng domain live của bạn: https://deal-hoan.vercel.app
 select cron.schedule(
   'sync-shopee-orders-every-15-mins',
   '*/15 * * * *',
   $$
   select net.http_get(
-    url := 'https://dealhoan.vn/api/cron/sync-orders',
+    url := 'https://deal-hoan.vercel.app/api/cron/sync-orders',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'User-Agent', 'Supabase-Cron-Worker'
