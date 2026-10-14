@@ -73,8 +73,8 @@ export default async function AdminPage(props: {
   const initialStats = calculateKPIStats(realUsers);
 
   const initialTab =
-    searchParams?.tab === "import" || searchParams?.tab === "shopee"
-      ? "import"
+    searchParams?.tab === "sync" || searchParams?.tab === "import" || searchParams?.tab === "shopee"
+      ? "sync"
       : searchParams?.tab === "settings"
       ? "settings"
       : "users";

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminApiAuth } from "@/lib/auth/admin-server";
+import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { recordCashbackOrder } from "@/lib/deals/cashback";
 import { parseShopeeMoney } from "@/lib/deals/shopee-import";
 import { parseUserIdFromSubId } from "@/lib/deals/affiliate";
@@ -19,6 +20,18 @@ export async function GET(request: NextRequest) {
     }
 
     const config = getShopeeSyncConfig();
+    const supabaseAdmin = getSupabaseAdminClient();
+    let recentOrders: any[] = [];
+    if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from("cashback_orders")
+        .select("*")
+        .eq("platform", "Shopee")
+        .order("created_at", { ascending: false })
+        .limit(30);
+      recentOrders = data || [];
+    }
+
     return NextResponse.json({
       success: true,
       config: {
@@ -29,6 +42,7 @@ export async function GET(request: NextRequest) {
           : "",
         hasCookie: Boolean(config.shopeeCookie),
       },
+      recentOrders,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
@@ -134,6 +148,17 @@ export async function POST(request: NextRequest) {
     let successCount = 0;
     let totalCashback = 0;
     const userSet = new Set<string>();
+    const syncedOrders: Array<{
+      orderId: string;
+      subId: string;
+      userId: string;
+      productName: string;
+      orderValue: number;
+      commissionAmount: number;
+      cashbackAmount: number;
+      status: "pending" | "completed" | "rejected";
+      orderedAt: string;
+    }> = [];
 
     for (const item of rawList) {
       const orderId = String(item.order_sn || item.order_id || "").trim();
@@ -170,6 +195,17 @@ export async function POST(request: NextRequest) {
         successCount++;
         totalCashback += cashbackAmount;
         userSet.add(userId);
+        syncedOrders.push({
+          orderId,
+          subId,
+          userId,
+          productName: item.item_name || item.product_name || "Sản phẩm mua qua DealHoàn",
+          orderValue,
+          commissionAmount,
+          cashbackAmount,
+          status,
+          orderedAt: item.create_time ? new Date(item.create_time * 1000).toISOString() : new Date().toISOString(),
+        });
       }
     }
 
@@ -189,6 +225,7 @@ export async function POST(request: NextRequest) {
         matchedUsersCount: userSet.size,
         totalCashback,
       },
+      syncedOrders,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";

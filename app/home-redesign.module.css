@@ -195,22 +195,22 @@
 .productPrice > strong { color: #17202e; font-size: 16px; font-weight: 650; white-space: nowrap; }
 .productPrice > s { color: #8b929f; font-size: 11px; white-space: nowrap; }
 /* Mint optical surface: only reflections move, not the text or layout. */
-.reward { display: flex; align-items: center; position: relative; isolation: isolate; flex-shrink: 0; margin: 0; padding: 14px 18px; min-height: 138px; border: 1.5px solid #16804b; border-radius: 16px; background: #eaf8ee; color: #14653c; container-type: inline-size; box-shadow: inset 0 2px 3px #ffffffed, inset -2px -3px 7px #16653414, 0 8px 20px -14px #16653450; }
-.reward::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(ellipse at var(--glass-light-x, 25%) var(--glass-light-y, 15%), #ffffffcc, transparent 55%), linear-gradient(125deg, #ffffff30, #b8edce40 50%, #ffffff70); background-size: 100% 100%, 200% 200%; animation: rewardGlassFlow 10s ease-in-out infinite alternate; }
+.reward { display: flex; align-items: center; position: relative; isolation: isolate; flex-shrink: 0; margin: 0; padding: 14px 18px; min-height: 138px; border: 1.5px solid #35b96f; border-radius: 16px; background: #edfff3; color: #168344; container-type: inline-size; box-shadow: inset 0 2px 3px #ffffffed, inset -2px -3px 7px #22a55912, 0 8px 20px -14px #22a55930; }
+.reward::before { content: ""; position: absolute; z-index: -1; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(ellipse at var(--glass-light-x, 25%) var(--glass-light-y, 15%), #ffffffcc, transparent 55%), linear-gradient(125deg, #ffffff30, #bdffd640 50%, #ffffff70); background-size: 100% 100%, 200% 200%; animation: rewardGlassFlow 10s ease-in-out infinite alternate; }
 @supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .reward { background: #e3f6eab8; -webkit-backdrop-filter: blur(18px) saturate(135%); backdrop-filter: blur(18px) saturate(135%); }
+  .reward { background: #e4ffecb8; -webkit-backdrop-filter: blur(18px) saturate(135%); backdrop-filter: blur(18px) saturate(135%); }
 }
 @keyframes rewardGlassFlow { from { background-position: 0 0, 0% 20%; } to { background-position: 0 0, 100% 80%; } }
 @media (prefers-reduced-motion: reduce) { .reward::before { animation: none; } }
-@media (prefers-reduced-transparency: reduce) { .reward { background: #eaf8ee; -webkit-backdrop-filter: none; backdrop-filter: none; } .reward::before { display: none; } }
+@media (prefers-reduced-transparency: reduce) { .reward { background: #edfff3; -webkit-backdrop-filter: none; backdrop-filter: none; } .reward::before { display: none; } }
 @media (forced-colors: active) { .reward { background: Canvas; color: CanvasText; border-color: CanvasText; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; } .reward::before { display: none; } }
 .rewardContent { position: relative; z-index: 1; width: 100%; }
 .rewardContent > p { margin: 0 0 5px; font-size: 14px; font-weight: 600; }
 .rewardAmountRow { display: flex; align-items: center; flex-wrap: nowrap; gap: 12px; padding: 0; }
 .rewardAmountRow > strong { min-width: 0; font-size: clamp(32px, 12cqw, 60px); font-weight: 800; line-height: 1.15; letter-spacing: -2.5px; white-space: nowrap; }
 .rewardAmountRow > strong.longAmount { font-size: clamp(24px, 8.5cqw, 44px); letter-spacing: -1.5px; }
-.ratePill { display: inline-block; flex-shrink: 0; padding: 6px 12px; border-radius: 99px; border: 1px solid #7fc49a; color: #14653c; background: #ffffffa6; font-size: 13px; font-weight: 600; white-space: nowrap; }
-.rewardTiming { display: block; margin-top: 5px; color: #416451; font-size: 12px; font-weight: 400; }
+.ratePill { display: inline-block; flex-shrink: 0; padding: 6px 12px; border-radius: 99px; border: 1px solid #9cdeb4; color: #168344; background: #ffffffa6; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.rewardTiming { display: block; margin-top: 5px; color: #4a7059; font-size: 12px; font-weight: 400; }
 
 .linkSection { margin-top: 10px; }
 .linkSection > p { margin: 0 0 5px; font-size: 11px; color: #79808b; }

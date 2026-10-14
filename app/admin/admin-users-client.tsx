@@ -7,12 +7,6 @@ import {
   type CashbackBoosterSettings,
   DEFAULT_BOOSTER_SETTINGS,
 } from "@/lib/deals/cashback-booster-types";
-import {
-  parseShopeeConversionReport,
-  SAMPLE_SHOPEE_CSV,
-  type ParseReportResult,
-  type ParsedShopeeOrder,
-} from "@/lib/deals/shopee-import";
 
 function formatVnd(amount: number) {
   return (amount || 0).toLocaleString("vi-VN") + "đ";
@@ -166,7 +160,7 @@ export default function AdminUsersClient({
   initialUsers: AdminUserItem[];
   initialStats: AdminKPIStats;
   isInitialRealData: boolean;
-  initialTab?: "users" | "settings" | "import";
+  initialTab?: "users" | "settings" | "sync" | "import";
 }) {
   const [users, setUsers] = useState<AdminUserItem[]>(() => applyLocalBalanceOverrides(initialUsers));
   const [stats, setStats] = useState<AdminKPIStats>(initialStats);
@@ -174,41 +168,21 @@ export default function AdminUsersClient({
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Tab điều hướng: "users" (Quản lý User), "settings" (Cấu hình % Hoàn tiền), "import" (Nhập Báo Cáo Shopee)
-  const [activeTab, setActiveTab] = useState<"users" | "settings" | "import">(() => {
+  // Tab điều hướng: "users" (Quản lý User), "settings" (Cấu hình % Hoàn tiền), "sync" (Tự Động Đồng Bộ Shopee)
+  const [activeTab, setActiveTab] = useState<"users" | "settings" | "sync" | "import">(() => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
       const t = p.get("tab");
-      if (t === "import" || t === "shopee") return "import";
+      if (t === "sync" || t === "import" || t === "shopee") return "sync";
       if (t === "settings") return "settings";
     }
-    return initialTab;
+    return initialTab === "import" ? "sync" : initialTab;
   });
   const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
-  // State quản lý Nhập báo cáo Shopee tự động
-  const [importCsvText, setImportCsvText] = useState<string>("");
-  const [importFileName, setImportFileName] = useState<string>("");
-  const [parsedReport, setParsedReport] = useState<ParseReportResult | null>(null);
-  const [isProcessingImport, setIsProcessingImport] = useState<boolean>(false);
-  const [importResultSummary, setImportResultSummary] = useState<{
-    success: boolean;
-    message: string;
-    details?: {
-      totalProcessed: number;
-      successCount: number;
-      failedCount: number;
-      matchedUsersCount: number;
-      totalCommission: number;
-      totalCashback: number;
-      netProfitMargin: number;
-    };
-  } | null>(null);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-
-  // State tự động đồng bộ qua Cookie Shopee
+  // State tự động đồng bộ qua Cookie Shopee (Auto-Pilot 24/7)
   const [shopeeCookie, setShopeeCookie] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("dealhoan_shopee_cookie") || "";
@@ -219,10 +193,27 @@ export default function AdminUsersClient({
   const [shopeeSyncResult, setShopeeSyncResult] = useState<{
     success: boolean;
     message: string;
+    details?: {
+      totalOrdersFound?: number;
+      successCount?: number;
+      matchedUsersCount?: number;
+      totalCashback?: number;
+    };
   } | null>(null);
   const [autoSyncEnabled, setAutoSyncEnabled] = useState(true);
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [lastSyncResult, setLastSyncResult] = useState<string | null>(null);
+  const [recentSyncedOrders, setRecentSyncedOrders] = useState<Array<{
+    orderId: string;
+    subId: string;
+    userId: string;
+    productName: string;
+    orderValue: number;
+    commissionAmount: number;
+    cashbackAmount: number;
+    status: "pending" | "completed" | "rejected";
+    orderedAt?: string;
+  }>>([]);
 
   const loadShopeeSyncConfig = async () => {
     try {
@@ -236,6 +227,21 @@ export default function AdminUsersClient({
           setAutoSyncEnabled(data.config.autoSyncEnabled ?? true);
           setLastSyncAt(data.config.lastSyncAt || null);
           setLastSyncResult(data.config.lastSyncResult || null);
+        }
+        if (Array.isArray(data.recentOrders) && data.recentOrders.length > 0) {
+          setRecentSyncedOrders(
+            data.recentOrders.map((o: any) => ({
+              orderId: o.order_id || o.orderId,
+              subId: o.sub_id || o.subId,
+              userId: o.user_id || o.userId,
+              productName: o.product_name || o.productName,
+              orderValue: o.order_value || o.orderValue,
+              commissionAmount: o.commission_amount || o.commissionAmount,
+              cashbackAmount: o.cashback_amount || o.cashbackAmount,
+              status: o.status,
+              orderedAt: o.ordered_at || o.created_at,
+            }))
+          );
         }
       }
     } catch (err) {
@@ -279,9 +285,16 @@ export default function AdminUsersClient({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setShopeeSyncResult({ success: true, message: data.message });
+        setShopeeSyncResult({
+          success: true,
+          message: data.message,
+          details: data.summary,
+        });
         setLastSyncAt(new Date().toISOString());
         setLastSyncResult(data.message);
+        if (Array.isArray(data.syncedOrders) && data.syncedOrders.length > 0) {
+          setRecentSyncedOrders(data.syncedOrders);
+        }
         if (!silent) {
           setToastMsg("🎉 " + data.message);
           setTimeout(() => setToastMsg(null), 4000);
@@ -312,99 +325,6 @@ export default function AdminUsersClient({
     }, 15 * 60 * 1000);
     return () => clearInterval(interval);
   }, [autoSyncEnabled, shopeeCookie]);
-
-  const handleParseCsv = (content: string, filename?: string) => {
-    setImportCsvText(content);
-    if (filename) setImportFileName(filename);
-    setImportResultSummary(null);
-    try {
-      const result = parseShopeeConversionReport(content, {
-        safetyMarginPercent: boosterSettings.safetyMarginPercent,
-      });
-      setParsedReport(result);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Lỗi phân tích";
-      alert("Lỗi phân tích file CSV: " + msg);
-    }
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setImportFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = evt.target?.result;
-      if (typeof text === "string") {
-        handleParseCsv(text, file.name);
-      }
-    };
-    reader.readAsText(file, "UTF-8");
-  };
-
-  const handleDropFile = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files?.[0];
-    if (!file) return;
-    setImportFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      const text = evt.target?.result;
-      if (typeof text === "string") {
-        handleParseCsv(text, file.name);
-      }
-    };
-    reader.readAsText(file, "UTF-8");
-  };
-
-  const handleUseDemoCsv = () => {
-    handleParseCsv(SAMPLE_SHOPEE_CSV, "shopee_conversion_report_demo.csv");
-  };
-
-  const handleExecuteImport = async () => {
-    if (!parsedReport || parsedReport.validOrders.length === 0) {
-      alert("Không có đơn hàng hợp lệ nào khớp với thành viên để nạp tiền.");
-      return;
-    }
-
-    setIsProcessingImport(true);
-    setImportResultSummary(null);
-    try {
-      const res = await fetch("/api/admin/orders/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orders: parsedReport.validOrders,
-        }),
-      });
-
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setImportResultSummary({
-          success: true,
-          message: data.message,
-          details: data.summary,
-        });
-        setToastMsg("🎉 " + data.message);
-        setTimeout(() => setToastMsg(null), 4000);
-        await reloadUsers();
-      } else {
-        setImportResultSummary({
-          success: false,
-          message: data.error || "Có lỗi xảy ra khi nạp đơn vào ví.",
-        });
-      }
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Lỗi kết nối";
-      setImportResultSummary({
-        success: false,
-        message: msg,
-      });
-    } finally {
-      setIsProcessingImport(false);
-    }
-  };
 
   // Tải cấu hình tỷ lệ hoàn tiền
   const loadBoosterSettings = async () => {
@@ -1123,13 +1043,16 @@ export default function AdminUsersClient({
         </button>
         <button
           type="button"
-          className={`admin-nav-tab-btn ${activeTab === "import" ? "active" : ""}`}
-          onClick={() => setActiveTab("import")}
+          className={`admin-nav-tab-btn ${activeTab === "sync" || activeTab === "import" ? "active" : ""}`}
+          onClick={() => {
+            setActiveTab("sync");
+            loadShopeeSyncConfig();
+          }}
         >
-          <span className="tab-icon">📥</span>
-          <span>Nhập Báo Cáo Shopee (Tự Động Nạp Tiền)</span>
+          <span className="tab-icon">⚡</span>
+          <span>Tự Động Đồng Bộ Shopee (Auto-Pilot 24/7)</span>
           <span className="tab-pill">
-            {parsedReport ? `${parsedReport.validOrders.length} đơn` : "Auto"}
+            {autoSyncEnabled ? "🟢 15p/lần" : "⚪ Tắt"}
           </span>
         </button>
       </div>
@@ -1901,63 +1824,20 @@ export default function AdminUsersClient({
           </section>
         )}
 
-        {activeTab === "import" && (
+        {(activeTab === "sync" || activeTab === "import") && (
           <section className="admin-import-container">
-            {/* Header Card */}
-            <div className="admin-settings-card">
-              <div className="admin-settings-header">
-                <div>
-                  <h3>
-                    <span>📥</span> Nhập Báo Cáo Chuyển Đổi Shopee (Tự Động Nạp Tiền Vào Ví)
-                  </h3>
-                  <p>
-                    Giải pháp cho tài khoản chưa có Open API: Bạn chỉ cần tải file Excel/CSV từ Shopee về và nạp vào đây.
-                    Hệ thống tự động nhận diện mã <code>Sub_ID</code> (khách hàng DealHoàn), áp dụng tỷ lệ hoàn Parabol và cộng thẳng tiền vào ví.
-                  </p>
-                </div>
-                <span className="admin-security-badge">
-                  <span>⚡</span> Khớp Tự Động 100%
-                </span>
-              </div>
-
-              {/* 3 Steps Guide */}
-              <div className="admin-instruction-steps">
-                <div className="admin-step-box">
-                  <div className="admin-step-num">1</div>
-                  <div className="admin-step-title">Xuất file từ Shopee</div>
-                  <p className="admin-step-desc">
-                    Vào <b>Shopee Affiliate Portal</b> &rarr; mục <b>Báo cáo chuyển đổi (Conversion Report)</b> &rarr; chọn khoảng thời gian &rarr; bấm <b>Xuất file Excel / CSV</b>.
-                  </p>
-                </div>
-                <div className="admin-step-box">
-                  <div className="admin-step-num">2</div>
-                  <div className="admin-step-title">Tải file vào DealHoàn</div>
-                  <p className="admin-step-desc">
-                    Kéo thả file CSV vừa tải về vào ô bên dưới, hoặc bấm nút <b>&quot;Thử file mẫu Shopee&quot;</b> để trải nghiệm thử.
-                  </p>
-                </div>
-                <div className="admin-step-box">
-                  <div className="admin-step-num">3</div>
-                  <div className="admin-step-title">1 Click Nạp tiền</div>
-                  <p className="admin-step-desc">
-                    Hệ thống tự động lọc các đơn có gắn mã <code>u_User</code>, tính toán số tiền hoàn và cộng vào ví người dùng ngay tức thì!
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Auto-Sync with Cookie Card (Hands-free 24/7 Background Cron) */}
+            {/* Header Hero Card */}
             <div className="admin-settings-card border-orange-200 bg-orange-50/20">
-              <div className="admin-settings-header mb-3">
+              <div className="admin-settings-header mb-4">
                 <div>
                   <h3 className="text-orange-950 flex items-center gap-2">
-                    <span>⚡</span> Tự Động Chạy Ngầm 24/7 (Hoàn Toàn Không Cần Bấm Nút)
+                    <span>⚡</span> Tự Động Đồng Bộ Shopee 24/7 (Hoàn Toàn Không Cần Nạp CSV)
                   </h3>
                   <p>
-                    Hệ thống tích hợp <b>Cron Job chạy ngầm 24/7</b>: Cứ mỗi 15 phút, máy chủ tự động vào Shopee kéo đơn mới về, khớp <code>Sub_ID</code> và cộng thẳng tiền vào ví thành viên mà bạn không cần phải mở web hay bấm nút gì cả!
+                    Hệ thống vận hành <b>100% tự động qua Background Cron</b>: Cứ mỗi 15 phút, máy chủ tự kết nối Shopee Affiliate API, kéo toàn bộ đơn hàng mới phát sinh, đối chiếu mã <code>Sub_ID</code> của khách hàng, tính toán tiền hoàn và tự động cộng thẳng vào ví thành viên.
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span
                     className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
                       autoSyncEnabled
@@ -1978,6 +1858,7 @@ export default function AdminUsersClient({
                 </div>
               </div>
 
+              {/* Cookie Input and Manual Trigger */}
               <div className="flex flex-col gap-3">
                 <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
                   <input
@@ -1991,27 +1872,20 @@ export default function AdminUsersClient({
                     type="button"
                     onClick={() => handleSyncShopee(false)}
                     disabled={isSyncingShopee || !shopeeCookie.trim()}
-                    className="admin-btn-primary bg-orange-600 hover:bg-orange-700 whitespace-nowrap text-xs py-2.5 px-4 font-bold"
+                    className="admin-btn-primary bg-orange-600 hover:bg-orange-700 whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
                   >
-                    {isSyncingShopee ? "Đang quét..." : "🔄 Quét Thủ Công Ngay"}
+                    {isSyncingShopee ? (
+                      <>
+                        <span className="animate-spin inline-block">🔄</span>
+                        <span>Đang đồng bộ...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🔄</span>
+                        <span>Kích Hoạt Quét Ngay</span>
+                      </>
+                    )}
                   </button>
-                </div>
-
-                {/* Auto-Sync Status Info Bar */}
-                <div className="p-3 bg-white rounded-xl border border-orange-200/80 text-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-base">⏱️</span>
-                    <div>
-                      <span className="font-bold text-stone-800">Chu kỳ quét tự động:</span>
-                      <span className="text-stone-600 ml-1">Mỗi 15 phút (Supabase Cron / Vercel Cron 24/7)</span>
-                    </div>
-                  </div>
-                  {lastSyncAt && (
-                    <div className="text-[11.5px] text-stone-500">
-                      Lần quét gần nhất: <b className="text-stone-700">{formatDate(lastSyncAt)}</b>
-                      {lastSyncResult && <span className="ml-1 text-emerald-700">({lastSyncResult})</span>}
-                    </div>
-                  )}
                 </div>
 
                 {shopeeSyncResult && (
@@ -2026,142 +1900,74 @@ export default function AdminUsersClient({
                   </div>
                 )}
 
-                <div className="text-[11.5px] text-stone-500 flex items-center gap-1">
+                <div className="text-[11.5px] text-stone-500 flex items-center gap-1.5">
                   <span>💡</span>
-                  <span>Cách lấy Cookie 1 lần duy nhất: Đăng nhập <b>affiliate.shopee.vn</b> &rarr; nhấn <code>F12</code> &rarr; tab <code>Application</code> &rarr; <code>Cookies</code> &rarr; copy giá trị cookie.</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Dropzone & File Input Card */}
-            <div className="admin-settings-card">
-              <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
-                <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
-                  <span>📊</span> Tải lên file Báo cáo đơn hàng (.csv, .xlsx, .txt)
-                </h4>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleUseDemoCsv}
-                    className="text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 font-bold px-3 py-1.5 rounded-lg transition-colors border border-orange-300"
-                  >
-                    🧪 Dùng file mẫu Shopee (Demo 5 đơn)
-                  </button>
-                  {parsedReport && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setParsedReport(null);
-                        setImportCsvText("");
-                        setImportFileName("");
-                        setImportResultSummary(null);
-                      }}
-                      className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Xóa dữ liệu đang xem
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Dropzone */}
-              <div
-                className={`admin-dropzone ${isDragging ? "dragging" : ""}`}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDropFile}
-                onClick={() => document.getElementById("shopee-file-input")?.click()}
-              >
-                <input
-                  id="shopee-file-input"
-                  type="file"
-                  accept=".csv,.tsv,.txt"
-                  className="hidden"
-                  onChange={handleFileUpload}
-                />
-                <div className="admin-dropzone-icon">📁</div>
-                <div>
-                  <p className="admin-dropzone-title">
-                    {importFileName ? (
-                      <span className="text-orange-600 font-bold">📄 {importFileName}</span>
-                    ) : (
-                      "Kéo thả file CSV của Shopee vào đây hoặc Bấm để chọn file"
-                    )}
-                  </p>
-                  <p className="admin-dropzone-subtitle">
-                    Hỗ trợ file báo cáo Shopee tiếng Việt (&quot;Mã đơn hàng&quot;, &quot;Sub_ID&quot;) và tiếng Anh (&quot;Order ID&quot;, &quot;Sub ID 1&quot;)
-                  </p>
-                </div>
-              </div>
-
-              {/* Success Result Banner */}
-              {importResultSummary && (
-                <div
-                  className={`mt-4 p-4 rounded-xl border ${
-                    importResultSummary.success
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-900"
-                      : "bg-red-50 border-red-200 text-red-900"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{importResultSummary.success ? "🎉" : "⚠️"}</span>
-                    <div>
-                      <p className="font-bold text-sm m-0">{importResultSummary.message}</p>
-                      {importResultSummary.details && (
-                        <p className="text-xs text-emerald-700 mt-1 m-0">
-                          Đã nạp {importResultSummary.details.successCount} đơn &bull; Khớp {importResultSummary.details.matchedUsersCount} thành viên &bull; Tổng tiền hoàn ví: {formatVnd(importResultSummary.details.totalCashback)} &bull; DealHoàn giữ lãi: {importResultSummary.details.netProfitMargin}%
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Parsed Report Preview */}
-            {parsedReport && (
-              <div className="admin-settings-card">
-                <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-                  <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
-                    <span>🔍</span> Kết Quả Phân Tích Dữ Liệu File
-                  </h4>
-                  <span className="text-xs bg-stone-100 text-stone-700 font-bold px-2.5 py-1 rounded-full">
-                    {parsedReport.totalRows} dòng đơn hàng
+                  <span>
+                    <b>Cách lấy Cookie (1 lần duy nhất):</b> Đăng nhập <b>affiliate.shopee.vn</b> &rarr; nhấn <code>F12</code> &rarr; tab <code>Application</code> (hoặc <code>Storage</code>) &rarr; <code>Cookies</code> &rarr; copy giá trị <code>SPC_EC</code> hoặc toàn bộ chuỗi cookie dán vào đây.
                   </span>
                 </div>
+              </div>
+            </div>
 
-                {/* Stat badges */}
-                <div className="admin-import-stats-grid">
-                  <div className="admin-import-stat-card">
-                    <span className="admin-import-stat-title">Tổng đơn trong file</span>
-                    <span className="admin-import-stat-value">{parsedReport.totalRows}</span>
-                    <span className="admin-import-stat-note">Bao gồm cả đơn không có SubID</span>
-                  </div>
+            {/* KPI Status Grid */}
+            <div className="admin-import-stats-grid">
+              <div className="admin-import-stat-card">
+                <span className="admin-import-stat-title">Chu kỳ quét tự động</span>
+                <span className="admin-import-stat-value text-orange-600">Mỗi 15 phút</span>
+                <span className="admin-import-stat-note">Chạy ngầm 24/7 không cần mở web</span>
+              </div>
 
-                  <div className="admin-import-stat-card highlight">
-                    <span className="admin-import-stat-title">Đơn khớp khách DealHoàn</span>
-                    <span className="admin-import-stat-value">{parsedReport.validOrders.length}</span>
-                    <span className="admin-import-stat-note">Có mã Sub_ID dạng u_User</span>
-                  </div>
+              <div className="admin-import-stat-card highlight">
+                <span className="admin-import-stat-title">Lần quét gần nhất</span>
+                <span className="admin-import-stat-value text-stone-900">
+                  {lastSyncAt ? formatDate(lastSyncAt) : "Chưa có"}
+                </span>
+                <span className="admin-import-stat-note">
+                  {lastSyncResult || "Sẵn sàng hoạt động"}
+                </span>
+              </div>
 
-                  <div className="admin-import-stat-card">
-                    <span className="admin-import-stat-title">Hoa hồng Shopee trả</span>
-                    <span className="admin-import-stat-value">{formatVnd(parsedReport.totalCommission)}</span>
-                    <span className="admin-import-stat-note">Doanh thu sàn ghi nhận</span>
-                  </div>
+              <div className="admin-import-stat-card">
+                <span className="admin-import-stat-title">Đơn hàng Shopee đã kéo</span>
+                <span className="admin-import-stat-value text-emerald-700">
+                  {recentSyncedOrders.length} đơn
+                </span>
+                <span className="admin-import-stat-note">Trong 30 ngày gần nhất</span>
+              </div>
 
-                  <div className="admin-import-stat-card highlight">
-                    <span className="admin-import-stat-title">Cộng vào ví thành viên</span>
-                    <span className="admin-import-stat-value">{formatVnd(parsedReport.totalCashback)}</span>
-                    <span className="admin-import-stat-note">Đã áp dụng công thức thưởng</span>
-                  </div>
+              <div className="admin-import-stat-card highlight">
+                <span className="admin-import-stat-title">Cơ chế bảo vệ</span>
+                <span className="admin-import-stat-value text-emerald-700">Zero Loss Guard</span>
+                <span className="admin-import-stat-note">Giữ lại {boosterSettings.safetyMarginPercent}% biên an toàn</span>
+              </div>
+            </div>
+
+            {/* Synced Orders Table */}
+            <div className="admin-settings-card">
+              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
+                  <span>📋</span> Đơn Hàng Shopee Đồng Bộ Tự Động Gần Nhất ({recentSyncedOrders.length})
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => handleSyncShopee(false)}
+                  disabled={isSyncingShopee || !shopeeCookie.trim()}
+                  className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                >
+                  <span>🔄</span> Làm mới danh sách
+                </button>
+              </div>
+
+              {recentSyncedOrders.length === 0 ? (
+                <div className="p-8 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-500 text-sm">
+                  <p className="text-2xl mb-2">🤖</p>
+                  <p className="font-semibold text-stone-700">Chưa có đơn hàng nào được ghi nhận</p>
+                  <p className="text-xs text-stone-500 mt-1">
+                    Khi khách hàng mua qua liên kết DealHoàn và Cron Job 15 phút quét xong, toàn bộ đơn hàng sẽ tự động hiển thị tại đây.
+                  </p>
                 </div>
-
-                {/* Table preview */}
-                <div className="table-responsive mt-4">
+              ) : (
+                <div className="table-responsive">
                   <table className="admin-data-table">
                     <thead>
                       <tr>
@@ -2172,11 +1978,11 @@ export default function AdminUsersClient({
                         <th className="text-right">Hoa hồng sàn</th>
                         <th className="text-right">Tiền hoàn về ví</th>
                         <th className="text-center">Trạng thái</th>
+                        <th className="text-right">Thời gian</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {parsedReport.validOrders.map((ord, idx) => {
-                        // Find matching user from existing users list for friendly display
+                      {recentSyncedOrders.map((ord, idx) => {
                         const matchedUser = users.find((u) => ord.userId && u.id.startsWith(ord.userId));
                         return (
                           <tr key={idx} className="admin-table-row">
@@ -2204,7 +2010,7 @@ export default function AdminUsersClient({
                               {formatVnd(ord.commissionAmount)}
                             </td>
                             <td className="text-right text-xs font-black text-emerald-700 bg-emerald-50/50">
-                              {formatVnd(ord.cashbackAmount)}
+                              +{formatVnd(ord.cashbackAmount)}
                             </td>
                             <td className="text-center">
                               <span
@@ -2223,39 +2029,17 @@ export default function AdminUsersClient({
                                   : "Chờ duyệt"}
                               </span>
                             </td>
+                            <td className="text-right text-xs text-stone-500 whitespace-nowrap">
+                              {ord.orderedAt ? formatDate(ord.orderedAt) : "—"}
+                            </td>
                           </tr>
                         );
                       })}
                     </tbody>
                   </table>
                 </div>
-
-                {/* Action button */}
-                <div className="admin-import-actions">
-                  <span className="text-xs text-stone-500">
-                    Sẽ cộng tiền cho <b>{parsedReport.validOrders.length}</b> đơn hàng hợp lệ
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleExecuteImport}
-                    disabled={isProcessingImport || parsedReport.validOrders.length === 0}
-                    className="admin-import-submit-btn"
-                  >
-                    {isProcessingImport ? (
-                      <>
-                        <span className="animate-spin inline-block mr-1">⏳</span>
-                        <span>Đang xử lý nạp tiền...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>🚀</span>
-                        <span>Xác Nhận Nạp {parsedReport.validOrders.length} Đơn Vào Ví Thành Viên</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            )}
+              )}
+            </div>
           </section>
         )}
       </main>
