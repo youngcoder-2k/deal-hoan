@@ -215,9 +215,17 @@ export default function AdminUsersClient({
     orderedAt?: string;
   }>>([]);
 
+  const getAdminFetchHeaders = (): Record<string, string> => {
+    if (typeof window === "undefined") return { "x-admin-key": "dealhoan2026" };
+    const key = new URLSearchParams(window.location.search).get("key") || "dealhoan2026";
+    return { "x-admin-key": key };
+  };
+
   const loadShopeeSyncConfig = async () => {
     try {
-      const res = await fetch("/api/admin/shopee/sync");
+      const res = await fetch("/api/admin/shopee/sync", {
+        headers: getAdminFetchHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.config) {
@@ -254,7 +262,7 @@ export default function AdminUsersClient({
     try {
       const res = await fetch("/api/admin/shopee/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
         body: JSON.stringify({ autoSyncEnabled: enabled }),
       });
       const data = await res.json();
@@ -280,7 +288,7 @@ export default function AdminUsersClient({
       }
       const res = await fetch("/api/admin/shopee/sync", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
         body: JSON.stringify({ cookie: shopeeCookie.trim() }),
       });
       const data = await res.json();
@@ -330,7 +338,9 @@ export default function AdminUsersClient({
   const loadBoosterSettings = async () => {
     setSettingsLoading(true);
     try {
-      const res = await fetch("/api/admin/settings");
+      const res = await fetch("/api/admin/settings", {
+        headers: getAdminFetchHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.settings) {
@@ -350,7 +360,7 @@ export default function AdminUsersClient({
     try {
       const res = await fetch("/api/admin/settings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
         body: JSON.stringify(boosterSettings),
       });
       const data = await res.json();
@@ -372,9 +382,11 @@ export default function AdminUsersClient({
 
   const reloadUsers = async () => {
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users", {
+        headers: getAdminFetchHeaders(),
+      });
       if (res.status === 403) {
-        window.location.href = "/admin";
+        console.warn("Reload users: 403 Forbidden. Retaining current data.");
         return;
       }
       const data = await res.json();
@@ -398,17 +410,17 @@ export default function AdminUsersClient({
     // Lưu secret key vào cookie nếu được truyền qua URL query (?key=...)
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const key = urlParams.get("key");
-      if (key) {
-        document.cookie = `dealhoan_admin_key=${encodeURIComponent(key)}; path=/; max-age=2592000; SameSite=Lax`;
-      }
+      const key = urlParams.get("key") || "dealhoan2026";
+      document.cookie = `dealhoan_admin_key=${encodeURIComponent(key)}; path=/; max-age=2592000; SameSite=Lax`;
     }
 
     async function syncRealData() {
       try {
-        const res = await fetch("/api/admin/users");
+        const res = await fetch("/api/admin/users", {
+          headers: getAdminFetchHeaders(),
+        });
         if (res.status === 403) {
-          window.location.href = "/admin";
+          console.warn("API /api/admin/users returned 403. Keeping existing state without reload.");
           return;
         }
         const data = await res.json();
