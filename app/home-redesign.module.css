@@ -39,8 +39,8 @@
 .coinThree { width: 77px; top: 142px; left: -2%; rotate: -18deg; animation-delay: -3s; }
 .calculatorPanel { width: 570px; max-width: 100%; height: var(--calculator-height, 610px); min-width: 0; justify-self: center; align-self: center; display: flex; flex-direction: column; padding: 20px; border: 0; border-radius: 22px; background: #fff; box-shadow: 0 14px 40px #b54c100a; }
 .calculator { display: flex; align-items: stretch; flex-shrink: 0; gap: 10px; margin: 0 0 12px; }
-.inputWrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; height: 48px; padding: 5px 9px; border: 2px solid #f46a3d; border-radius: 11px; background: #fffaf7; transition: border-color .18s, box-shadow .18s; }
-.inputWrap:focus-within { border-color: #e84016; box-shadow: 0 0 0 4px #fa4b2329; }
+.inputWrap { min-width: 0; flex: 1; display: flex; align-items: center; gap: 7px; height: 48px; padding: 5px 9px; border: 1px solid transparent; border-radius: 11px; background: linear-gradient(#fffaf7, #fffaf7) padding-box, linear-gradient(115deg, #ff914d, #ff603d 50%, #f05291) border-box; transition: box-shadow .18s; }
+.inputWrap:focus-within { box-shadow: 0 0 0 4px #fa4b2329; }
 .inputIcon { box-sizing: content-box; flex-shrink: 0; width: 18px; height: 18px; padding: 6px; border-radius: 50%; color: #657584; background: #fff5f0; }
 .inputWrap input { min-width: 0; flex: 1; width: 100%; border: 0; padding: 0; outline: 0; background: transparent; color: #27303d; font-size: 14px; height: 100%; text-overflow: ellipsis; }
 .inputWrap input::placeholder { color: #87909d; opacity: 1; }
@@ -52,7 +52,7 @@
 .calculateButton:hover:not(:disabled), .buyButton:hover { background: #ed421c; box-shadow: 0 5px 14px #f4562430; color: #fff; text-decoration: none; }
 .calculateButton:disabled { cursor: wait; opacity: .85; }
 .calculateButton > span { font-variant-numeric: tabular-nums; }
-.inputError { border-color: #dc2626; animation: inputShake .3s ease; }
+.inputError { background: linear-gradient(#fffaf7, #fffaf7) padding-box, linear-gradient(#dc2626, #dc2626) border-box; animation: inputShake .3s ease; }
 .calculatorState { min-height: 0; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
 .emptyCard, .receipt { height: 100%; min-height: 0; min-width: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 /* The guide has a glass shell; the form keeps its independent white surface. */
