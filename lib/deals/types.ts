@@ -1,5 +1,5 @@
 /** Normalised deal shape shared by every marketplace provider. */
-export type Platform = "Shopee" | "Shopee Mall" | "Lazada" | "TikTok Shop";
+export type Platform = "Shopee" | "Shopee Mall" | "ShopeeFood" | "Lazada" | "TikTok Shop";
 
 export type Deal = {
   /** Stable id, prefixed by provider so ids never collide across sources. */

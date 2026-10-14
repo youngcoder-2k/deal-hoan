@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildShopeeAffiliateUrl,
+  buildShopeeFoodAffiliateUrl,
   cleanShopeeUrl,
   isShopeeUrl,
+  isShopeeFoodUrl,
   isTikTokUrl,
   cleanTikTokUrl,
   generateAccessTradeTikTokLink,
@@ -26,7 +28,31 @@ export async function POST(request: NextRequest) {
     const proto = request.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
     const origin = host ? `${proto}://${host}` : request.nextUrl.origin || "https://dealhoan.vn";
 
-    // 1. SHOPEE
+    // 1. SHOPEEFOOD
+    if (isShopeeFoodUrl(rawUrl)) {
+      const cleanUrl = cleanShopeeUrl(rawUrl);
+      const affiliateUrl = buildShopeeFoodAffiliateUrl(cleanUrl, {
+        affiliateId: "17351320644",
+        subId,
+      });
+      const customShortLink = buildCustomShortUrl(cleanUrl, {
+        baseUrl: origin,
+        subId,
+      });
+
+      return NextResponse.json({
+        success: true,
+        platform: "shopeefood",
+        isShopeeFood: true,
+        cleanUrl,
+        affiliateUrl,
+        shortUrl: customShortLink,
+        trackedLink: affiliateUrl,
+        hasCommission: true,
+      });
+    }
+
+    // 2. SHOPEE
     if (isShopeeUrl(rawUrl)) {
       const cleanUrl = cleanShopeeUrl(rawUrl);
       const affiliateUrl = buildShopeeAffiliateUrl(cleanUrl, {

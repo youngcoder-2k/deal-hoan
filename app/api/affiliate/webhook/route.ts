@@ -37,11 +37,13 @@ export async function GET(request: NextRequest) {
     "shopee"
   ).toLowerCase();
 
-  const platform = platformParam.includes("tiktok")
+  const platform: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada" = platformParam.includes("tiktok")
     ? "TikTok Shop"
     : platformParam.includes("lazada")
       ? "Lazada"
-      : "Shopee";
+      : platformParam.includes("food")
+        ? "ShopeeFood"
+        : "Shopee";
 
   const productName = searchParams.get("product_name") || searchParams.get("item_name") || "Sản phẩm mua qua DealHoàn";
   const orderValue = Number(searchParams.get("order_amount") || searchParams.get("transaction_value") || 0);
@@ -102,11 +104,13 @@ export async function POST(request: NextRequest) {
     const userId = body.userId ? String(body.userId).trim() : undefined;
     const rawPlatform = String(body.platform || body.merchant || "Shopee").toLowerCase();
 
-    const platform: "Shopee" | "TikTok Shop" | "Lazada" = rawPlatform.includes("tiktok")
+    const platform: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada" = rawPlatform.includes("tiktok")
       ? "TikTok Shop"
       : rawPlatform.includes("lazada")
         ? "Lazada"
-        : "Shopee";
+        : rawPlatform.includes("food")
+          ? "ShopeeFood"
+          : "Shopee";
 
     const productName = body.productName || body.product_name || "Sản phẩm mua qua DealHoàn";
     const productImage = body.productImage || body.product_image || "";

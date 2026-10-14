@@ -1,4 +1,4 @@
-import { buildShopeeAffiliateUrl, cleanShopeeUrl, isShopeeUrl } from "./affiliate";
+import { buildShopeeAffiliateUrl, cleanShopeeUrl, isShopeeUrl, isShopeeFoodUrl } from "./affiliate";
 import { cashbackFor } from "./score";
 import type { Deal, Platform } from "./types";
 
@@ -31,6 +31,17 @@ export const SAMPLE_CHIP_PRODUCTS: Record<string, CalculatedProduct> = {
     seller: "Sony Official Store",
     discountPercent: 23,
     savingsPercent: 26,
+  },
+  "https://shopeefood.vn/tra-sua-gong-cha": {
+    name: "Trà sữa Gong Cha Oolong Milk Foam trân châu đen",
+    imageUrl: "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80",
+    price: 58000,
+    originalPrice: 75000,
+    cashback: 8000,
+    platform: "ShopeeFood",
+    seller: "Gong Cha Official Store",
+    discountPercent: 23,
+    savingsPercent: 30,
   },
   "https://vt.tiktok.com/ZS8abcd/": {
     name: "Áo thun cotton unisex form rộng phong cách Hàn Quốc",
@@ -182,6 +193,13 @@ export const CATEGORY_FALLBACKS: Array<{
     defaultPrice: 186000,
     defaultOriginalPrice: 300000,
   },
+  {
+    keywords: ["trà sữa", "tra sua", "cơm", "com", "bún", "bun", "phở", "pho", "bánh", "banh", "mì", "mi", "gà rán", "ga ran", "cafe", "cà phê", "pizza", "burger", "đồ ăn", "thức uống", "now-food", "shopeefood", "quán"],
+    imageUrl: "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80",
+    nameFallback: "Món ngon ShopeeFood giao tận nơi",
+    defaultPrice: 65000,
+    defaultOriginalPrice: 85000,
+  },
 ];
 
 export function parseSlugFromUrl(rawUrl: string): string | null {
@@ -268,14 +286,17 @@ export function resolveProductLocally(
   if (matched) return matched;
 
   const trimmed = rawUrl.trim();
+  const isFood = isShopeeFoodUrl(trimmed);
   const isShopee = isShopeeUrl(trimmed);
-  const platform: Platform = trimmed.toLowerCase().includes("tiktok")
-    ? "TikTok Shop"
-    : trimmed.toLowerCase().includes("lazada")
-      ? "Lazada"
-      : isShopee
-        ? "Shopee Mall"
-        : "Shopee";
+  const platform: Platform = isFood
+    ? "ShopeeFood"
+    : trimmed.toLowerCase().includes("tiktok")
+      ? "TikTok Shop"
+      : trimmed.toLowerCase().includes("lazada")
+        ? "Lazada"
+        : isShopee
+          ? "Shopee Mall"
+          : "Shopee";
 
   const slug = parseSlugFromUrl(trimmed);
   const name = titleHint?.trim() || (slug

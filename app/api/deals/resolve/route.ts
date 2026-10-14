@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildShopeeAffiliateUrl,
+  buildShopeeFoodAffiliateUrl,
   cleanShopeeUrl,
   isShopeeUrl,
+  isShopeeFoodUrl,
   isTikTokUrl,
   cleanTikTokUrl,
   generateAccessTradeTikTokLink,
@@ -44,7 +46,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
     }
 
-    const isShopee = isShopeeUrl(rawUrl);
+    const isShopeeFood = isShopeeFoodUrl(rawUrl);
+    const isShopee = isShopeeUrl(rawUrl) || isShopeeFood;
     const isTikTok = isTikTokUrl(rawUrl);
 
     let canonicalUrl = rawUrl;
@@ -170,19 +173,21 @@ export async function POST(request: NextRequest) {
     // 4. Fallback to local catalog resolution if external providers yielded no match
     const baseProduct = resolveProductLocally(canonicalUrl, [], ogTitle);
 
-    const finalPlatform: Platform = hoanNgayProduct
-      ? isCurrentTikTok ? "TikTok Shop" : "Shopee"
-      : atProduct?.platform
-        ? atProduct.platform
-        : canonicalUrl.toLowerCase().includes("tiktok")
-          ? "TikTok Shop"
-          : canonicalUrl.toLowerCase().includes("lazada")
-            ? "Lazada"
-            : isCurrentShopee
-              ? baseProduct.platform === "Shopee"
-                ? "Shopee"
-                : "Shopee Mall"
-              : "Shopee";
+    const finalPlatform: Platform = isShopeeFood
+      ? "ShopeeFood"
+      : hoanNgayProduct
+        ? isCurrentTikTok ? "TikTok Shop" : "Shopee"
+        : atProduct?.platform
+          ? atProduct.platform
+          : canonicalUrl.toLowerCase().includes("tiktok")
+            ? "TikTok Shop"
+            : canonicalUrl.toLowerCase().includes("lazada")
+              ? "Lazada"
+              : isCurrentShopee
+                ? baseProduct.platform === "Shopee"
+                  ? "Shopee"
+                  : "Shopee Mall"
+                : "Shopee";
 
     const isVerifiedPrice = Boolean(
       hoanNgayProduct?.isVerifiedPrice ||
@@ -256,7 +261,12 @@ export async function POST(request: NextRequest) {
       ? `${proto}://${host}`
       : request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.vn";
     let trackedLink: string;
-    if (isShopee) {
+    if (isShopeeFood) {
+      trackedLink = buildShopeeFoodAffiliateUrl(canonicalUrl, {
+        affiliateId: "17351320644",
+        subId,
+      });
+    } else if (isShopee) {
       const cleanShopeeLink =
         hoanNgayProduct?.shopId && hoanNgayProduct?.itemId
           ? `https://shopee.vn/product/${hoanNgayProduct.shopId}/${hoanNgayProduct.itemId}`

@@ -103,7 +103,42 @@ export function buildShopeeAffiliateUrl(
 }
 
 /**
- * Checks if a URL belongs to Shopee (web, shortlink, universal link)
+ * Checks if a URL belongs to ShopeeFood (now.vn, food.shopee.vn, shopeefood.vn, shopee.vn/now-food)
+ */
+export function isShopeeFoodUrl(rawUrl: string): boolean {
+  try {
+    const extracted = extractUrlFromText(rawUrl);
+    const lower = extracted.toLowerCase();
+    return (
+      lower.includes("shopeefood.vn") ||
+      lower.includes("food.shopee.vn") ||
+      lower.includes("shopee.vn/now-food") ||
+      lower.includes("now.vn") ||
+      lower.includes("gofood")
+    );
+  } catch {
+    return false;
+  }
+}
+
+export const DEFAULT_SHOPEEFOOD_URL = "https://shopee.vn/now-food";
+
+/**
+ * Generates an official ShopeeFood Affiliate tracking link
+ */
+export function buildShopeeFoodAffiliateUrl(
+  rawUrl?: string,
+  options?: {
+    affiliateId?: string;
+    subId?: string;
+  }
+): string {
+  const targetUrl = rawUrl?.trim() ? cleanShopeeUrl(rawUrl) : DEFAULT_SHOPEEFOOD_URL;
+  return buildShopeeAffiliateUrl(targetUrl, options);
+}
+
+/**
+ * Checks if a URL belongs to Shopee (web, shortlink, universal link, or ShopeeFood)
  */
 export function isShopeeUrl(rawUrl: string): boolean {
   try {
@@ -113,7 +148,8 @@ export function isShopeeUrl(rawUrl: string): boolean {
       lower.includes("shopee.vn") ||
       lower.includes("s.shopee.vn") ||
       lower.includes("shope.ee") ||
-      lower.includes("vn.shp.ee")
+      lower.includes("vn.shp.ee") ||
+      isShopeeFoodUrl(rawUrl)
     );
   } catch {
     return false;

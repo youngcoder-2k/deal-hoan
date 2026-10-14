@@ -178,17 +178,25 @@ export async function POST(request: NextRequest) {
           ? "rejected"
           : "pending";
 
+      const isFood =
+        (item.item_name || item.product_name || "").toLowerCase().includes("shopeefood") ||
+        (item.shop_name || "").toLowerCase().includes("food") ||
+        item.order_type === "food" ||
+        item.order_type === 2;
+
+      const platform: "Shopee" | "ShopeeFood" = isFood ? "ShopeeFood" : "Shopee";
+
       const res = await recordCashbackOrder({
         orderId,
         subId,
         userId,
-        platform: "Shopee",
-        productName: item.item_name || item.product_name || "Sản phẩm mua qua DealHoàn",
+        platform,
+        productName: item.item_name || item.product_name || (isFood ? "Đơn món ShopeeFood" : "Sản phẩm mua qua DealHoàn"),
         orderValue,
         commissionAmount,
         cashbackAmount,
         status,
-        note: `Tự động đồng bộ từ Shopee qua Bot API (${new Date().toLocaleDateString("vi-VN")})`,
+        note: `Tự động đồng bộ từ ${platform} qua Bot API (${new Date().toLocaleDateString("vi-VN")})`,
       });
 
       if (res.success) {
@@ -199,7 +207,7 @@ export async function POST(request: NextRequest) {
           orderId,
           subId,
           userId,
-          productName: item.item_name || item.product_name || "Sản phẩm mua qua DealHoàn",
+          productName: item.item_name || item.product_name || (isFood ? "Đơn món ShopeeFood" : "Sản phẩm mua qua DealHoàn"),
           orderValue,
           commissionAmount,
           cashbackAmount,

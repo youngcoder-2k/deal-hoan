@@ -110,17 +110,25 @@ async function handleAutomatedSync(request: NextRequest) {
           ? "rejected"
           : "pending";
 
+      const isFood =
+        (item.item_name || item.product_name || "").toLowerCase().includes("shopeefood") ||
+        (item.shop_name || "").toLowerCase().includes("food") ||
+        item.order_type === "food" ||
+        item.order_type === 2;
+
+      const platform: "Shopee" | "ShopeeFood" = isFood ? "ShopeeFood" : "Shopee";
+
       const orderRes = await recordCashbackOrder({
         orderId,
         subId,
         userId,
-        platform: "Shopee",
-        productName: item.item_name || item.product_name || "Sản phẩm mua qua DealHoàn",
+        platform,
+        productName: item.item_name || item.product_name || (isFood ? "Đơn món ShopeeFood" : "Sản phẩm mua qua DealHoàn"),
         orderValue,
         commissionAmount,
         cashbackAmount,
         status,
-        note: `Cron tự động đồng bộ từ Shopee lúc ${new Date().toLocaleTimeString("vi-VN")}`,
+        note: `Cron tự động đồng bộ từ ${platform} lúc ${new Date().toLocaleTimeString("vi-VN")}`,
       });
 
       if (orderRes.success) {

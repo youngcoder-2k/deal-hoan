@@ -69,11 +69,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const orderId = String(body.orderId || "").trim();
     const rawPlatform = String(body.platform || "Shopee").toLowerCase();
-    const platform: "Shopee" | "TikTok Shop" | "Lazada" = rawPlatform.includes("tiktok")
+    const platform: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada" = rawPlatform.includes("tiktok")
       ? "TikTok Shop"
       : rawPlatform.includes("lazada")
         ? "Lazada"
-        : "Shopee";
+        : rawPlatform.includes("food")
+          ? "ShopeeFood"
+          : "Shopee";
 
     const orderValue = Number(body.orderValue || 0);
     const productName = body.productName ? String(body.productName).trim() : "Đơn hàng người dùng báo soát";

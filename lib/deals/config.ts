@@ -14,6 +14,7 @@ import type { Platform } from "./types";
 export const CASHBACK_RATE: Record<Platform, number> = {
   Shopee: 0.05,
   "Shopee Mall": 0.05,
+  ShopeeFood: 0.06,
   Lazada: 0.045,
   "TikTok Shop": 0.05,
 };

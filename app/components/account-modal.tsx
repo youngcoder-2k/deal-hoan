@@ -28,7 +28,7 @@ export interface WithdrawalItem {
 export interface CashbackOrderItem {
   id: string;
   order_id: string;
-  platform: "Shopee" | "TikTok Shop" | "Lazada";
+  platform: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada";
   product_name?: string | null;
   product_image?: string | null;
   order_value: number;
@@ -126,7 +126,7 @@ export default function AccountModal({
   const [orders, setOrders] = useState<CashbackOrderItem[]>([]);
   const [showClaimForm, setShowClaimForm] = useState(false);
   const [claimOrderId, setClaimOrderId] = useState("");
-  const [claimPlatform, setClaimPlatform] = useState<"Shopee" | "TikTok Shop" | "Lazada">("Shopee");
+  const [claimPlatform, setClaimPlatform] = useState<"Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada">("Shopee");
   const [claimOrderValue, setClaimOrderValue] = useState("");
   const [claiming, setClaiming] = useState(false);
 
@@ -688,7 +688,9 @@ export default function AccountModal({
                       ? "platform-tiktok"
                       : order.platform === "Lazada"
                         ? "platform-lazada"
-                        : "platform-shopee";
+                        : order.platform === "ShopeeFood"
+                          ? "platform-shopeefood"
+                          : "platform-shopee";
 
                   return (
                     <div key={order.id} className="order-item">
@@ -760,6 +762,7 @@ export default function AccountModal({
                     onChange={(e) => setClaimPlatform(e.target.value as any)}
                   >
                     <option value="Shopee">Shopee</option>
+                    <option value="ShopeeFood">ShopeeFood</option>
                     <option value="TikTok Shop">TikTok Shop</option>
                     <option value="Lazada">Lazada</option>
                   </select>

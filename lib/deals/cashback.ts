@@ -6,7 +6,7 @@ export interface CashbackOrderRecord {
   id: string;
   user_id: string;
   order_id: string;
-  platform: "Shopee" | "TikTok Shop" | "Lazada";
+  platform: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada";
   product_name?: string | null;
   product_image?: string | null;
   order_value: number;
@@ -67,7 +67,7 @@ export interface RecordCashbackOrderParams {
   orderId: string;
   subId?: string;
   userId?: string;
-  platform?: "Shopee" | "TikTok Shop" | "Lazada";
+  platform?: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada";
   productName?: string;
   productImage?: string;
   orderValue: number;

@@ -19,6 +19,14 @@ export function MarketplaceBrand({ platform }: { platform: string }) {
   if (platform.toLowerCase().includes("lazada")) {
     return <Image src="/brand/lazada-logo.png" width={108} height={34} alt="Lazada" className={styles.lazadaBrand} />;
   }
+  if (platform.toLowerCase().includes("food")) {
+    return (
+      <span className={`${styles.marketplaceBrand} ${styles.shopeeBrand}`} style={{ color: "#d9381e" }}>
+        <span style={{ fontSize: "16px", lineHeight: 1 }}>🍔</span>
+        ShopeeFood
+      </span>
+    );
+  }
   const shopee = platform.toLowerCase().includes("shopee");
   return (
     <span className={`${styles.marketplaceBrand} ${shopee ? styles.shopeeBrand : ""}`}>
@@ -39,9 +47,10 @@ export function CashbackStory() {
         Dán link, xem tiền hoàn.<br />
         Mua món bạn thích, nhận lại một phần tiền.
       </p>
-      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, TikTok Shop và Lazada">
+      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, ShopeeFood, TikTok Shop và Lazada">
         <span>Hỗ trợ:</span>
         <MarketplaceBrand platform="Shopee" />
+        <MarketplaceBrand platform="ShopeeFood" />
         <MarketplaceBrand platform="TikTok Shop" />
         <MarketplaceBrand platform="Lazada" />
       </div>
@@ -119,7 +128,7 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
           </li>
         ))}
       </ol>
-      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee, TikTok Shop và Lazada.</p>
+      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee, ShopeeFood, TikTok Shop và Lazada.</p>
       <div className={styles.guideFooter}>
         <a href="#how" className={styles.guideLink}>Cách lấy link sản phẩm <ArrowRightIcon size={22} aria-hidden="true" /></a>
       </div>
@@ -199,7 +208,8 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
           if (onBuy) onBuy();
         }}
       >
-        <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" /> Mua ngay
+        <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" />
+        {product.platform?.toLowerCase().includes("food") ? "Đặt món ngay" : "Mua ngay"}
       </a>
       <div className={styles.receiptFooter}>
         <span>Ghi nhận trong 24 giờ · <a href="#how">điều kiện</a></span>
