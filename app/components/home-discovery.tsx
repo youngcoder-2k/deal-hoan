@@ -4,22 +4,31 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
-import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
-import { ShoppingBagIcon } from "@phosphor-icons/react/dist/csr/ShoppingBag";
 import { WalletIcon } from "@phosphor-icons/react/dist/csr/Wallet";
 import { EyeIcon } from "@phosphor-icons/react/dist/csr/Eye";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
-import { TicketIcon } from "@phosphor-icons/react/dist/csr/Ticket";
 import { ShareNetworkIcon } from "@phosphor-icons/react/dist/csr/ShareNetwork";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import s from "./home-discovery.module.css";
+import linkArtwork from "@/public/home-art/link-v1.webp";
+import shoppingArtwork from "@/public/home-art/shopping-v1.webp";
+import walletArtwork from "@/public/home-art/wallet-v1.webp";
+import sharingArtwork from "@/public/home-art/sharing-v1.webp";
+import helpArtwork from "@/public/home-art/help-v1.webp";
+
+const artworks = { link: linkArtwork, shopping: shoppingArtwork, wallet: walletArtwork, sharing: sharingArtwork, help: helpArtwork };
+
+function Artwork({ name, className, sizes }: { name: keyof typeof artworks; className?: string; sizes: string }) {
+  const [failed, setFailed] = useState(false);
+  return <Image src={artworks[name]} alt="" className={className} sizes={sizes} placeholder="blur" onError={() => setFailed(true)} style={failed ? { visibility: "hidden" } : undefined} />;
+}
 
 const journey = [
-  { icon: LinkIcon, title: "Xem khoản hoàn", text: "Sao chép link từ sàn, dán vào DealHoàn để xem giá và tiền hoàn dự kiến." },
-  { icon: ShoppingBagIcon, title: "Mua qua link mới", text: "Bấm Mua ngay từ kết quả. Bạn vẫn đặt hàng và thanh toán trực tiếp trên sàn." },
-  { icon: WalletIcon, title: "Theo dõi & nhận tiền", text: "Xem đơn trong tài khoản. Khi khoản hoàn được duyệt, bạn có thể yêu cầu rút về ngân hàng." },
-];
+  { artwork: "link", title: "Xem khoản hoàn", text: "Sao chép link từ sàn, dán vào DealHoàn để xem giá và tiền hoàn dự kiến." },
+  { artwork: "shopping", title: "Mua qua link mới", text: "Bấm Mua ngay từ kết quả. Bạn vẫn đặt hàng và thanh toán trực tiếp trên sàn." },
+  { artwork: "wallet", title: "Theo dõi & nhận tiền", text: "Xem đơn trong tài khoản. Khi khoản hoàn được duyệt, bạn có thể yêu cầu rút về ngân hàng." },
+] as const;
 
 const benefits = [
   { icon: EyeIcon, title: "Biết trước, mua chủ động", text: "Giá mua, khoản hoàn dự kiến và chi phí sau hoàn nằm cùng một chỗ, dễ so sánh trước khi quyết định." },
@@ -28,10 +37,10 @@ const benefits = [
 ];
 
 const guides = [
-  { icon: LinkIcon, tag: "BẮT ĐẦU", title: "Lấy link đúng, nhận hoàn dễ hơn", brief: "Một thao tác nhỏ trước mỗi lần mua.", body: ["Mở sản phẩm trên Shopee, TikTok Shop hoặc Lazada. Chọn Chia sẻ, rồi Sao chép liên kết.", "Dán liên kết vào ô đầu trang và bấm Tính. Kiểm tra đúng sản phẩm, giá và khoản hoàn dự kiến.", "Dùng nút Mua ngay hoặc link mới trong kết quả để tiếp tục mua trên sàn."] },
-  { icon: TicketIcon, tag: "MẸO TIẾT KIỆM", title: "Săn mã, rồi kiểm tra tiền hoàn", brief: "Nhìn cả giá thanh toán lẫn khoản nhận lại.", body: ["Kiểm tra voucher và phí vận chuyển trên sàn trước khi thanh toán. Mỗi mã có điều kiện sử dụng riêng.", "Khoản hoàn hiển thị là dự kiến; giá trị cuối cùng phụ thuộc giá trị đơn hợp lệ và kết quả đối soát.", "Sau khi mở link nhận hoàn, tránh bấm thêm link, banner hoặc video tiếp thị khác trước khi đặt hàng."] },
-  { icon: WalletIcon, tag: "HIỂU TIỀN HOÀN", title: "Từ đơn mua đến số dư được duyệt", brief: "Phân biệt ghi nhận, chờ duyệt và được rút.", body: ["Đăng nhập để theo dõi đơn hàng và ví trong tài khoản DealHoàn.", "Đơn được ghi nhận chưa đồng nghĩa tiền đã được duyệt. Sàn và đối tác cần xác nhận đơn hợp lệ.", "Đơn hủy hoặc hoàn trả không được hoàn tiền. Yêu cầu rút chỉ sử dụng số dư đã được duyệt, từ 50.000đ."] },
-];
+  { artwork: "link", tag: "BẮT ĐẦU", title: "Lấy link đúng, nhận hoàn dễ hơn", brief: "Một thao tác nhỏ trước mỗi lần mua.", body: ["Mở sản phẩm trên Shopee, TikTok Shop hoặc Lazada. Chọn Chia sẻ, rồi Sao chép liên kết.", "Dán liên kết vào ô đầu trang và bấm Tính. Kiểm tra đúng sản phẩm, giá và khoản hoàn dự kiến.", "Dùng nút Mua ngay hoặc link mới trong kết quả để tiếp tục mua trên sàn."] },
+  { artwork: "shopping", tag: "MẸO TIẾT KIỆM", title: "Săn mã, rồi kiểm tra tiền hoàn", brief: "Nhìn cả giá thanh toán lẫn khoản nhận lại.", body: ["Kiểm tra voucher và phí vận chuyển trên sàn trước khi thanh toán. Mỗi mã có điều kiện sử dụng riêng.", "Khoản hoàn hiển thị là dự kiến; giá trị cuối cùng phụ thuộc giá trị đơn hợp lệ và kết quả đối soát.", "Sau khi mở link nhận hoàn, tránh bấm thêm link, banner hoặc video tiếp thị khác trước khi đặt hàng."] },
+  { artwork: "wallet", tag: "HIỂU TIỀN HOÀN", title: "Từ đơn mua đến số dư được duyệt", brief: "Phân biệt ghi nhận, chờ duyệt và được rút.", body: ["Đăng nhập để theo dõi đơn hàng và ví trong tài khoản DealHoàn.", "Đơn được ghi nhận chưa đồng nghĩa tiền đã được duyệt. Sàn và đối tác cần xác nhận đơn hợp lệ.", "Đơn hủy hoặc hoàn trả không được hoàn tiền. Yêu cầu rút chỉ sử dụng số dư đã được duyệt, từ 50.000đ."] },
+] as const;
 
 const questions = [
   ["Tiền hoàn đến từ đâu?", "DealHoàn chia sẻ lại một phần hoa hồng tiếp thị nhận được từ đơn mua hợp lệ. Mức hoàn dự kiến được hiển thị trước khi bạn mở link mua hàng."],
@@ -63,15 +72,15 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
   return (
     <div className={s.discovery}>
       <section className={s.section} id="how" aria-labelledby="journey-title">
-        <header className={s.heading}>
+        <header className={`${s.heading} ${s.journeyHeading}`}>
           <span className={s.eyebrow}>TỪ LINK ĐẾN TIỀN HOÀN</span>
           <h2 id="journey-title">Mua như mọi ngày.<br /><em>Nhận lại một phần tiền.</em></h2>
           <p>Không đổi cách mua sắm. Chỉ thêm một lần kiểm tra link.</p>
         </header>
         <ol className={s.journey}>
-          {journey.map(({ icon: Icon, title, text }, i) => (
+          {journey.map(({ artwork, title, text }, i) => (
             <li key={title}>
-              <div className={s.stepTop}><span className={s.icon}><Icon size={30} weight="duotone" aria-hidden="true" /></span><span className={s.stepNumber}>0{i + 1}</span></div>
+              <div className={s.stepTop}><Artwork name={artwork} className={s.journeyArt} sizes="(max-width: 480px) calc(100vw - 32px), (max-width: 760px) 156px, (max-width: 1000px) 30vw, 378px" /><span className={s.stepNumber}>0{i + 1}</span></div>
               <h3>{title}</h3><p>{text}</p>
             </li>
           ))}
@@ -85,10 +94,13 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
             <span className={s.eyebrow}>VÌ SAO CHỌN DEALHOÀN?</span>
             <h2 id="benefits-title">Tiết kiệm rõ ràng,<br /><em>mua sắm nhẹ đầu.</em></h2>
             <p>Điều quan trọng không chỉ là hoàn bao nhiêu, mà còn là bạn hiểu khoản hoàn của mình.</p>
-            <div className={s.walletPreview} aria-label="Minh họa trạng thái tiền hoàn">
+            <div className={s.walletScene}>
+              <Artwork name="wallet" className={s.walletArtwork} sizes="(max-width: 480px) 300px, (max-width: 760px) 320px, 340px" />
+              <div className={s.walletPreview} aria-label="Minh họa trạng thái tiền hoàn">
               <div><WalletIcon size={24} aria-hidden="true" /><b>Ví tiền hoàn của bạn</b><span>Minh họa</span></div>
               <p><span className={s.waitDot} />Chờ xác nhận <small>Đang đối soát với sàn</small></p>
               <p><span className={s.doneDot} />Đã duyệt <small>Sẵn sàng yêu cầu rút</small></p>
+              </div>
             </div>
           </div>
           <div className={s.benefitList}>
@@ -98,7 +110,7 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
       </section>
 
       <section className={`${s.section} ${s.shareSection}`} id="referral" aria-labelledby="share-title">
-        <div className={s.shareIcon}><ShareNetworkIcon size={36} weight="duotone" aria-hidden="true" /></div>
+        <Artwork name="sharing" className={s.shareArtwork} sizes="(max-width: 480px) 190px, (max-width: 760px) 124px, (max-width: 1000px) 140px, 170px" />
         <div><span className={s.eyebrow}>MẸO HAY, CHIA SẺ NGAY</span><h2 id="share-title">Mua khéo cùng bạn bè</h2><p>Gửi DealHoàn cho người bạn hay săn deal cùng bạn.</p></div>
         <div className={s.shareActions}><button className={s.secondary} onClick={shareHome}>{shareStatus === "copied" ? <CheckIcon aria-hidden="true" /> : <ShareNetworkIcon aria-hidden="true" />}{shareStatus === "copied" ? "Đã copy" : "Copy link chia sẻ"}</button><span role="status" className={s.shareStatus}>{shareStatus === "error" ? "Chưa copy được. Hãy sao chép địa chỉ trang trên trình duyệt." : ""}</span></div>
       </section>
@@ -106,9 +118,9 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
       <section className={s.section} id="guides" aria-labelledby="guides-title">
         <header className={`${s.heading} ${s.headingLeft}`}><span className={s.eyebrow}>CẨM NANG MUA KHÉO</span><h2 id="guides-title">Mẹo nhỏ. <em>Tiết kiệm hơn.</em></h2><p>Hiểu cách dùng trước khi chốt đơn đầu tiên.</p></header>
         <div className={s.guides}>
-          {guides.map(({ icon: Icon, tag, title, brief, body }) => (
+          {guides.map(({ artwork, tag, title, brief, body }) => (
             <details className={s.guide} key={title}>
-              <summary><span className={s.guideIcon}><Icon size={36} weight="duotone" aria-hidden="true" /></span><span className={s.guideTag}>{tag}</span><h3>{title}</h3><p>{brief}</p><span className={s.readGuide}>Đọc hướng dẫn <ArrowRightIcon aria-hidden="true" /></span></summary>
+              <summary><span className={s.guideArtwork}><Artwork name={artwork} sizes="(max-width: 480px) calc(100vw - 32px), (max-width: 760px) calc(100vw - 40px), (max-width: 1000px) 30vw, 378px" /></span><span className={s.guideTag}>{tag}</span><h3>{title}</h3><p>{brief}</p><span className={s.readGuide}>Đọc hướng dẫn <ArrowRightIcon aria-hidden="true" /></span></summary>
               <ol>{body.map(text => <li key={text}>{text}</li>)}</ol>
             </details>
           ))}
@@ -116,12 +128,12 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
       </section>
 
       <section className={`${s.section} ${s.faqSection}`} id="faq" aria-labelledby="faq-title">
-        <header className={`${s.heading} ${s.headingLeft}`}><span className={s.eyebrow}>GIẢI ĐÁP NHANH</span><h2 id="faq-title">Bạn hỏi,<br /><em>DealHoàn trả lời.</em></h2><p>Những điều nên biết để mua sắm chủ động hơn.</p><Link href="/terms" className={s.textAction}>Xem điều khoản <ArrowRightIcon aria-hidden="true" /></Link></header>
+        <header className={`${s.heading} ${s.headingLeft}`}><span className={s.eyebrow}>GIẢI ĐÁP NHANH</span><h2 id="faq-title">Bạn hỏi,<br /><em>DealHoàn trả lời.</em></h2><p>Những điều nên biết để mua sắm chủ động hơn.</p><Artwork name="help" className={s.faqArtwork} sizes="(max-width: 480px) 210px, (max-width: 760px) 180px, 265px" /><Link href="/terms" className={s.textAction}>Xem điều khoản <ArrowRightIcon aria-hidden="true" /></Link></header>
         <div className={s.faqList}>{questions.map(([q, a]) => <details key={q}><summary>{q}<PlusIcon size={20} aria-hidden="true" /></summary><p>{a}</p></details>)}</div>
       </section>
 
       <section className={`${s.section} ${s.startBanner}`} aria-labelledby="start-title">
-        <Image src="/hero/cashback-coin.png" width={130} height={130} sizes="(max-width: 600px) 64px, 110px" className={s.bannerCoin} alt="" />
+        <Artwork name="shopping" className={s.bannerArtwork} sizes="(max-width: 480px) 190px, (max-width: 760px) 130px, (max-width: 1000px) 145px, 190px" />
         <div><span className={s.bannerEyebrow}>MÓN BẠN THÍCH, KHOẢN HOÀN BẠN BIẾT</span><h2 id="start-title">Link đầu tiên của bạn đâu?</h2><p>Dán vào DealHoàn, xem khoản hoàn trước khi mua.</p></div>
         <div className={s.bannerActions}><button className={s.whiteButton} onClick={onStart}>Tính tiền hoàn <ArrowRightIcon aria-hidden="true" /></button><button className={s.accountButton} disabled={accountPending} onClick={onAccount}>{accountPending ? "Đang mở…" : signedIn ? "Mở ví của tôi" : "Đăng nhập để theo dõi đơn"}</button></div>
       </section>
