@@ -74,7 +74,7 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
       <section className={s.section} id="how" aria-labelledby="journey-title">
         <header className={`${s.heading} ${s.journeyHeading}`}>
           <span className={s.eyebrow}>TỪ LINK ĐẾN TIỀN HOÀN</span>
-          <h2 id="journey-title">Mua như mọi ngày.<br /><em>Nhận lại một phần tiền.</em></h2>
+          <h2 id="journey-title">Mua món bạn mê.<br /><em>Đón tiền hoàn về.</em></h2>
           <p>Không đổi cách mua sắm. Chỉ thêm một lần kiểm tra link.</p>
         </header>
         <ol className={s.journey}>
@@ -92,7 +92,7 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
         <div className={s.benefitsInner}>
           <div className={s.benefitIntro}>
             <span className={s.eyebrow}>VÌ SAO CHỌN DEALHOÀN?</span>
-            <h2 id="benefits-title">Tiết kiệm rõ ràng,<br /><em>mua sắm nhẹ đầu.</em></h2>
+            <h2 id="benefits-title">Tiền hoàn rõ ràng.<br /><em>Mua sắm nhẹ nhàng.</em></h2>
             <p>Điều quan trọng không chỉ là hoàn bao nhiêu, mà còn là bạn hiểu khoản hoàn của mình.</p>
             <div className={s.walletScene}>
               <Artwork name="wallet" className={s.walletArtwork} sizes="(max-width: 480px) 300px, (max-width: 760px) 320px, 340px" />
