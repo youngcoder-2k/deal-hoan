@@ -31,6 +31,7 @@
 .marketplaceBrand img { width: 25px; height: auto; object-fit: contain; }
 .shopeeBrand { color: #f04b27; font-weight: 500; }
 .lazadaBrand { object-fit: contain; width: 103px; height: auto; }
+.shopeeFoodBrand { display: block; flex-shrink: 0; object-fit: contain; width: 124px; height: auto; }
 .heroIllustration { position: relative; width: calc(100% + 50px); height: 422px; margin: 18px -25px 0; pointer-events: none; }
 .shoppingBag { position: absolute; width: 100%; height: auto; bottom: -4px; left: 0; object-fit: contain; }
 .floatingCoin { position: absolute; height: auto; object-fit: contain; animation: coinFloat 4.8s ease-in-out infinite; }
@@ -253,6 +254,7 @@
   .marketplaceBrand { font-size: 13px; }
   .marketplaceBrand img { width: 21px; height: auto; }
   .lazadaBrand { width: 88px; }
+  .shopeeFoodBrand { width: 108px; }
   .heroIllustration { height: 340px; margin-top: 40px; }
   .coinTwo { width: 110px; }
   .rewardAmountRow { padding-right: 70px; gap: 6px 12px; }
@@ -315,6 +317,7 @@
   .marketplaceBrand { font-size: 11px; gap: 4px; }
   .marketplaceBrand img { width: 19px; height: auto; }
   .lazadaBrand { width: 72px; }
+  .shopeeFoodBrand { width: 92px; }
   .heroIllustration { width: 136px; height: 170px; right: -4px; bottom: 53px; opacity: .95; }
   .coinOne { width: 33px; top: 13px; left: 12px; }
   .coinTwo { width: 47px; top: -3px; right: 4px; }
@@ -341,6 +344,7 @@
   .marketplaces { gap: 7px; }
   .marketplaceBrand { font-size: 10px; }
   .lazadaBrand { width: 64px; }
+  .shopeeFoodBrand { width: 84px; }
   .header :global(.brand-wordmark) { width: 106px; }
 }
 @media (prefers-reduced-motion: reduce) {

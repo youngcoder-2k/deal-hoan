@@ -2,6 +2,7 @@
 
 import type { PointerEvent } from "react";
 import Image from "next/image";
+import shopeeFoodLogo from "@/public/brand/shopeefood-logo.png";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
 import { ArrowArcRightIcon } from "@phosphor-icons/react/dist/csr/ArrowArcRight";
@@ -21,10 +22,7 @@ export function MarketplaceBrand({ platform }: { platform: string }) {
   }
   if (platform.toLowerCase().includes("food")) {
     return (
-      <span className={`${styles.marketplaceBrand} ${styles.shopeeBrand}`} style={{ color: "#d9381e" }}>
-        <span style={{ fontSize: "16px", lineHeight: 1 }}>🍔</span>
-        ShopeeFood
-      </span>
+      <Image src={shopeeFoodLogo} alt="ShopeeFood" className={styles.shopeeFoodBrand} sizes="(max-width: 374px) 84px, (max-width: 600px) 92px, (max-width: 1200px) 108px, 124px" />
     );
   }
   const shopee = platform.toLowerCase().includes("shopee");
@@ -47,12 +45,11 @@ export function CashbackStory() {
         Dán link, xem tiền hoàn.<br />
         Mua món bạn thích, nhận lại một phần tiền.
       </p>
-      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, ShopeeFood, TikTok Shop và Lazada">
+      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, ShopeeFood và TikTok Shop">
         <span>Hỗ trợ:</span>
         <MarketplaceBrand platform="Shopee" />
         <MarketplaceBrand platform="ShopeeFood" />
         <MarketplaceBrand platform="TikTok Shop" />
-        <MarketplaceBrand platform="Lazada" />
       </div>
       <div className={styles.heroIllustration} aria-hidden="true">
         <Image className={styles.shoppingBag} src="/hero/deal-hoan-shopping-bag.webp" width={640} height={520} alt="" preload sizes="(max-width: 900px) 220px, 520px" />
