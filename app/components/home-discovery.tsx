@@ -10,14 +10,20 @@ import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { ShareNetworkIcon } from "@phosphor-icons/react/dist/csr/ShareNetwork";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
+import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
+import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import s from "./home-discovery.module.css";
 import linkArtwork from "@/public/home-art/link-v2.webp";
 import shoppingArtwork from "@/public/home-art/shopping-v2.webp";
 import walletArtwork from "@/public/home-art/wallet-v2.webp";
 import sharingArtwork from "@/public/home-art/sharing-v2.webp";
 import helpArtwork from "@/public/home-art/help-v2.webp";
+import journeyPhone from "@/public/home-art/journey/phone.webp";
+import journeyShopping from "@/public/home-art/journey/shopping.webp";
+import journeyWallet from "@/public/home-art/journey/wallet.webp";
+import journeyUnderline from "@/public/home-art/journey/underline.webp";
 
-const artworks = { link: linkArtwork, shopping: shoppingArtwork, wallet: walletArtwork, sharing: sharingArtwork, help: helpArtwork };
+const artworks = { link: linkArtwork, shopping: shoppingArtwork, wallet: walletArtwork, sharing: sharingArtwork, help: helpArtwork, journeyPhone, journeyShopping, journeyWallet };
 
 function Artwork({ name, className, sizes }: { name: keyof typeof artworks; className?: string; sizes: string }) {
   const [failed, setFailed] = useState(false);
@@ -25,9 +31,9 @@ function Artwork({ name, className, sizes }: { name: keyof typeof artworks; clas
 }
 
 const journey = [
-  { artwork: "link", title: "Xem khoản hoàn", text: "Sao chép link từ sàn, dán vào DealHoàn để xem giá và tiền hoàn dự kiến." },
-  { artwork: "shopping", title: "Mua qua link mới", text: "Bấm Mua ngay từ kết quả. Bạn vẫn đặt hàng và thanh toán trực tiếp trên sàn." },
-  { artwork: "wallet", title: "Theo dõi & nhận tiền", text: "Xem đơn trong tài khoản. Khi khoản hoàn được duyệt, bạn có thể yêu cầu rút về ngân hàng." },
+  { artwork: "journeyPhone", title: "Xem khoản hoàn", text: "Sao chép link từ sàn, dán vào DealHoàn để xem giá và tiền hoàn dự kiến." },
+  { artwork: "journeyShopping", title: "Mua qua link mới", text: "Bấm Mua ngay từ kết quả. Bạn vẫn đặt hàng và thanh toán trực tiếp trên sàn." },
+  { artwork: "journeyWallet", title: "Theo dõi & nhận tiền", text: "Xem đơn trong tài khoản. Khi khoản hoàn được duyệt, bạn có thể yêu cầu rút về ngân hàng." },
 ] as const;
 
 const benefits = [
@@ -71,21 +77,25 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
 
   return (
     <div className={s.discovery}>
-      <section className={s.section} id="how" aria-labelledby="journey-title">
-        <header className={`${s.heading} ${s.journeyHeading}`}>
-          <span className={s.eyebrow}>TỪ LINK ĐẾN TIỀN HOÀN</span>
-          <h2 id="journey-title">Mua món bạn mê.<br /><em>Đón tiền hoàn về.</em></h2>
-          <p>Không đổi cách mua sắm. Chỉ thêm một lần kiểm tra link.</p>
-        </header>
-        <ol className={s.journey}>
-          {journey.map(({ artwork, title, text }, i) => (
-            <li key={title}>
-              <div className={s.stepTop}><Artwork name={artwork} className={s.journeyArt} sizes="(max-width: 480px) calc(100vw - 32px), (max-width: 760px) 156px, (max-width: 1000px) 30vw, 378px" /><span className={s.stepNumber}>0{i + 1}</span></div>
-              <h3>{title}</h3><p>{text}</p>
-            </li>
-          ))}
-        </ol>
-        <button className={s.textAction} onClick={onStart}>Thử với link của bạn <ArrowRightIcon aria-hidden="true" /></button>
+      <section className={s.journeyScene} id="how" aria-labelledby="journey-title">
+        <div className={s.journeyInner}>
+          <header className={s.journeyIntro}>
+            <span className={s.journeyEyebrow}><span><LinkIcon weight="bold" aria-hidden="true" /></span>TỪ LINK ĐẾN TIỀN HOÀN</span>
+            <h2 id="journey-title">Mua món bạn mê.<br /><em>Đón tiền hoàn về.<Image src={journeyUnderline} alt="" className={s.journeyUnderline} sizes="(max-width: 700px) 300px, 500px" /></em></h2>
+            <p>Không đổi cách mua sắm.<br />Chỉ thêm một lần kiểm tra link.</p>
+          </header>
+          <ol className={s.journeySteps}>
+            {journey.map(({ artwork, title, text }, i) => (
+              <li key={title}>
+                <span className={s.journeyNumber}>0{i + 1}</span>
+                <h3>{title}</h3><p>{text}</p>
+                <Artwork name={artwork} className={s.journeyObject} sizes="(max-width: 700px) 360px, (max-width: 1100px) 30vw, 340px" />
+                {i < journey.length - 1 && <CaretRightIcon className={s.journeyConnector} weight="bold" aria-hidden="true" />}
+              </li>
+            ))}
+          </ol>
+          <button className={s.journeyCta} onClick={onStart}>Thử với link của bạn <ArrowRightIcon weight="bold" aria-hidden="true" /></button>
+        </div>
       </section>
 
       <section className={s.benefitsSection} id="benefits" aria-labelledby="benefits-title">
