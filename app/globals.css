@@ -1218,8 +1218,8 @@ h2,
   background: #fff;
 }
 .flash-section {
-  padding-top: 48px;
-  padding-bottom: 28px;
+  padding-top: 72px;
+  padding-bottom: 72px;
 }
 .flash-top {
   display: flex;
@@ -3831,8 +3831,8 @@ select.account-input.select-bank-field:focus {
     padding-bottom: 32px;
   }
   .flash-section {
-    padding-top: 40px;
-    padding-bottom: 24px;
+    padding-top: 56px;
+    padding-bottom: 56px;
   }
   .block {
     padding-top: 36px;
@@ -4226,8 +4226,8 @@ select.account-input.select-bank-field:focus {
 
   /* Flash Deals Section */
   .flash-section {
-    padding-top: 32px;
-    padding-bottom: 24px;
+    padding-top: 40px;
+    padding-bottom: 40px;
   }
   .flash {
     margin-top: 0;
