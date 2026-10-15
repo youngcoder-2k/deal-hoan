@@ -1218,15 +1218,15 @@ h2,
   background: #fff;
 }
 .flash-section {
-  padding-top: 44px;
-  padding-bottom: 8px;
+  padding-top: 48px;
+  padding-bottom: 28px;
 }
 .flash-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 20px;
-  padding: 18px 24px;
+  padding: 24px 32px;
   background: linear-gradient(120deg, #ee4d2d 0%, #ff7337 100%);
   color: #fff;
   flex-wrap: wrap;
@@ -1330,6 +1330,7 @@ h2,
   grid-auto-flow: column;
 }
 .flash-scroll {
+  padding-block: 6px;
   overflow-x: auto;
   scrollbar-width: none;
   scroll-snap-type: x proximity;
@@ -3737,6 +3738,9 @@ select.account-input.select-bank-field:focus {
     padding-left: 32px;
     padding-right: 32px;
   }
+  .container.flash-section {
+    max-width: 1360px;
+  }
   .deal-grid {
     grid-template-columns: repeat(4, 1fr);
     gap: 20px;
@@ -3752,6 +3756,9 @@ select.account-input.select-bank-field:focus {
     max-width: 1200px;
     padding-left: 24px;
     padding-right: 24px;
+  }
+  .container.flash-section {
+    max-width: 1280px;
   }
   .nav {
     gap: 20px;
@@ -3824,8 +3831,8 @@ select.account-input.select-bank-field:focus {
     padding-bottom: 32px;
   }
   .flash-section {
-    padding-top: 36px;
-    padding-bottom: 8px;
+    padding-top: 40px;
+    padding-bottom: 24px;
   }
   .block {
     padding-top: 36px;
@@ -4219,8 +4226,8 @@ select.account-input.select-bank-field:focus {
 
   /* Flash Deals Section */
   .flash-section {
-    padding-top: 28px;
-    padding-bottom: 8px;
+    padding-top: 32px;
+    padding-bottom: 24px;
   }
   .flash {
     margin-top: 0;
@@ -4232,7 +4239,7 @@ select.account-input.select-bank-field:focus {
     row-gap: 10px;
     column-gap: 8px;
     align-items: center;
-    padding: 12px 14px;
+    padding: 18px 18px;
   }
   .flash-top-left {
     display: contents;
@@ -4992,7 +4999,7 @@ select.account-input.select-bank-field:focus {
     height: 28px;
   }
   .flash-top {
-    padding: 10px 12px;
+    padding: 16px 14px;
     row-gap: 8px;
   }
   .flash-top-left h2 {

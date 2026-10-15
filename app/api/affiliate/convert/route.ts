@@ -11,6 +11,7 @@ import {
   buildCustomShortUrl,
   formatSubIdForUser,
 } from "@/lib/deals/affiliate";
+import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
 
@@ -76,10 +77,11 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 2. TIKTOK SHOP (Via AccessTrade API)
+    // 3. TIKTOK SHOP (Via AccessTrade API)
     if (isTikTokUrl(rawUrl)) {
       const cleanUrl = cleanTikTokUrl(rawUrl);
-      const atResult = await generateAccessTradeTikTokLink(cleanUrl, { subId });
+      const atToken = getAccessTradeToken();
+      const atResult = await generateAccessTradeTikTokLink(cleanUrl, { subId, authToken: atToken });
 
       const customShortLink = buildCustomShortUrl(cleanUrl, {
         baseUrl: origin,

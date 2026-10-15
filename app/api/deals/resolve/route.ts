@@ -17,6 +17,7 @@ import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resol
 import { lookupAccessTradeProduct } from "@/lib/deals/providers/accesstrade";
 import { lookupHoanNgayProduct } from "@/lib/deals/providers/hoanngay";
 import { boostCashbackRate } from "@/lib/deals/cashback-booster";
+import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
 
@@ -276,7 +277,8 @@ export async function POST(request: NextRequest) {
         subId,
       });
     } else if (isCurrentTikTok) {
-      const atResult = await generateAccessTradeTikTokLink(cleanTikTokUrl(canonicalUrl), { subId });
+      const atToken = getAccessTradeToken();
+      const atResult = await generateAccessTradeTikTokLink(cleanTikTokUrl(canonicalUrl), { subId, authToken: atToken });
       trackedLink = atResult.success && atResult.affiliateUrl
         ? atResult.affiliateUrl
         : buildCustomShortUrl(canonicalUrl, { baseUrl: siteBase, subId });

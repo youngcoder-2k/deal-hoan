@@ -8,6 +8,7 @@ import {
   generateAccessTradeTikTokLink,
 } from "@/lib/deals/affiliate";
 import { lookupFastShopeeProduct } from "@/lib/deals/providers/fast-shopee";
+import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,8 @@ export async function GET(request: NextRequest) {
   // 2. TikTok Shop: Convert via AccessTrade API
   if (isTikTokUrl(targetUrl)) {
     const cleanTarget = cleanTikTokUrl(targetUrl);
-    const atResult = await generateAccessTradeTikTokLink(cleanTarget, { subId });
+    const atToken = getAccessTradeToken();
+    const atResult = await generateAccessTradeTikTokLink(cleanTarget, { subId, authToken: atToken });
     const redirectUrl = atResult.success && atResult.affiliateUrl ? atResult.affiliateUrl : cleanTarget;
     return NextResponse.redirect(redirectUrl, {
       status: 307,

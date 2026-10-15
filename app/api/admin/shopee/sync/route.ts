@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     const config = getShopeeSyncConfig();
     const supabaseAdmin = getSupabaseAdminClient();
-    let recentOrders: any[] = [];
+    let recentOrders: Record<string, unknown>[] = [];
     if (supabaseAdmin) {
       const { data } = await supabaseAdmin
         .from("cashback_orders")
@@ -41,6 +41,10 @@ export async function GET(request: NextRequest) {
           ? config.shopeeCookie.slice(0, 15) + "..." + config.shopeeCookie.slice(-10)
           : "",
         hasCookie: Boolean(config.shopeeCookie),
+        accesstradeTokenMasked: config.accesstradeToken
+          ? config.accesstradeToken.slice(0, 8) + "..." + config.accesstradeToken.slice(-6)
+          : "",
+        hasAccessTradeToken: Boolean(config.accesstradeToken || process.env.ACCESSTRADE_TOKEN),
       },
       recentOrders,
     });
@@ -61,6 +65,16 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
+
+    // Cập nhật AccessTrade API Token
+    if (typeof body.accesstradeToken === "string") {
+      const updated = saveShopeeSyncConfig({ accesstradeToken: body.accesstradeToken.trim() });
+      return NextResponse.json({
+        success: true,
+        message: "Đã lưu mã AccessTrade API Token cho TikTok Shop / Lazada thành công!",
+        config: updated,
+      });
+    }
 
     // Cập nhật bật/tắt chế độ tự động chạy ngầm
     if (typeof body.autoSyncEnabled === "boolean") {
@@ -98,7 +112,25 @@ export async function POST(request: NextRequest) {
 
     const shopeeApiUrl = `https://affiliate.shopee.vn/api/v3/conversion_report?start_time=${thirtyDaysAgo}&end_time=${now}&page=1&limit=50`;
 
-    let shopeeData: any = null;
+    interface ShopeeConversionItem {
+      order_sn?: string;
+      order_id?: string;
+      sub_id?: string;
+      sub1?: string;
+      gmv?: number | string;
+      order_amount?: number | string;
+      commission?: number | string;
+      pub_commission?: number | string;
+      status?: number | string;
+      item_name?: string;
+      product_name?: string;
+      shop_name?: string;
+      order_type?: string | number;
+      create_time?: number;
+      [key: string]: unknown;
+    }
+
+    let shopeeData: { code?: number; msg?: string; data?: { list?: ShopeeConversionItem[] } } | null = null;
     let fetchError: string | null = null;
 
     try {

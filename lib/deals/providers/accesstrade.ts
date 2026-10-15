@@ -1,6 +1,7 @@
 import { FETCH_TIMEOUT_MS } from "../config";
 import { cashbackFor, dealScore } from "../score";
 import type { Deal, DealProvider, Platform } from "../types";
+import { getAccessTradeToken } from "../shopee-sync-config";
 
 /**
  * AccessTrade Vietnam — the affiliate network that carries Shopee, Lazada and
@@ -46,7 +47,7 @@ const num = (v: unknown, fallback = 0) => {
 };
 
 function token() {
-  return process.env.ACCESSTRADE_TOKEN || null;
+  return getAccessTradeToken() || process.env.ACCESSTRADE_TOKEN || null;
 }
 
 function merchants() {
@@ -186,6 +187,37 @@ export async function lookupAccessTradeProduct(
 
     let domain = "";
     let sku = "";
+
+    if (host.includes("tiktok.com") || host.includes("douyin.com")) {
+      try {
+        const ttUrl = `https://api.accesstrade.vn/v2/tiktokshop_product_feeds?product_url=${encodeURIComponent(rawUrl)}&limit=1`;
+        const ttRes = await fetch(ttUrl, {
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(3500),
+          cache: "no-store",
+        });
+        if (ttRes.ok) {
+          const ttBody = await ttRes.json();
+          const ttItem = ttBody?.data?.[0];
+          if (ttItem && (ttItem.product_name || ttItem.title)) {
+            const price = num(ttItem.price || ttItem.final_price);
+            const originalPrice = num(ttItem.original_price) || Math.round((price * 1.3) / 1000) * 1000;
+            return {
+              name: String(ttItem.product_name || ttItem.title).trim(),
+              price,
+              originalPrice,
+              imageUrl: ttItem.image || ttItem.product_image || null,
+              platform: "TikTok Shop",
+              seller: ttItem.shop_name || "TikTok Shop",
+              isVerifiedPrice: price > 0,
+            };
+          }
+        }
+      } catch {}
+    }
 
     if (host.includes("shopee.vn") || host.includes("shp.ee")) {
       domain = "shopee.vn";

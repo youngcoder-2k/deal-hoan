@@ -190,6 +190,9 @@ export default function AdminUsersClient({
     return "";
   });
   const [isSyncingShopee, setIsSyncingShopee] = useState(false);
+  const [accesstradeToken, setAccesstradeToken] = useState("");
+  const [isSavingAtToken, setIsSavingAtToken] = useState(false);
+  const [atTokenResult, setAtTokenResult] = useState<{ success: boolean; message: string } | null>(null);
   const [shopeeSyncResult, setShopeeSyncResult] = useState<{
     success: boolean;
     message: string;
@@ -231,6 +234,9 @@ export default function AdminUsersClient({
         if (data.config) {
           if (data.config.shopeeCookie && !shopeeCookie) {
             setShopeeCookie(data.config.shopeeCookie);
+          }
+          if (data.config.accesstradeToken && !accesstradeToken) {
+            setAccesstradeToken(data.config.accesstradeToken);
           }
           setAutoSyncEnabled(data.config.autoSyncEnabled ?? true);
           setLastSyncAt(data.config.lastSyncAt || null);
@@ -320,6 +326,30 @@ export default function AdminUsersClient({
       setShopeeSyncResult({ success: false, message: msg });
     } finally {
       if (!silent) setIsSyncingShopee(false);
+    }
+  };
+
+  const handleSaveAccesstradeToken = async () => {
+    try {
+      setIsSavingAtToken(true);
+      setAtTokenResult(null);
+      const res = await fetch("/api/admin/shopee/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+        body: JSON.stringify({ accesstradeToken: accesstradeToken.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setAtTokenResult({ success: true, message: data.message || "Đã lưu token thành công!" });
+        setToastMsg("✅ Đã lưu mã AccessTrade Token cho TikTok Shop");
+        setTimeout(() => setToastMsg(null), 3000);
+      } else {
+        setAtTokenResult({ success: false, message: data.error || "Không thể lưu token" });
+      }
+    } catch {
+      setAtTokenResult({ success: false, message: "Lỗi kết nối máy chủ" });
+    } finally {
+      setIsSavingAtToken(false);
     }
   };
 
@@ -1916,6 +1946,89 @@ export default function AdminUsersClient({
                   <span>💡</span>
                   <span>
                     <b>Cách lấy Cookie (1 lần duy nhất):</b> Đăng nhập <b>affiliate.shopee.vn</b> &rarr; nhấn <code>F12</code> &rarr; tab <code>Application</code> (hoặc <code>Storage</code>) &rarr; <code>Cookies</code> &rarr; copy giá trị <code>SPC_EC</code> hoặc toàn bộ chuỗi cookie dán vào đây.
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* AccessTrade & TikTok Shop Config Card */}
+            <div className="admin-settings-card border-stone-200 bg-stone-50/40">
+              <div className="admin-settings-header mb-3">
+                <div>
+                  <h3 className="text-stone-900 flex items-center gap-2">
+                    <span className="text-xl">🎵</span> TikTok Shop & AccessTrade Integration (Real-time Webhook)
+                  </h3>
+                  <p>
+                    Kết nối AccessTrade API để tự động bọc link TikTok Shop gắn mã thành viên (<code>Sub_ID</code>) và nhận webhook nạp tiền hoàn thời gian thực khi khách mua hàng.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
+                      accesstradeToken.trim()
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                        : "bg-amber-100 text-amber-800 border-amber-300"
+                    }`}
+                  >
+                    <span>{accesstradeToken.trim() ? "🟢 TikTok Shop: ĐÃ CẮM TOKEN" : "⚪ Chưa có AccessTrade Token"}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
+                  <input
+                    type="password"
+                    placeholder="Dán mã AccessTrade API Token (Lấy tại: Công cụ -> AccessTrade API)..."
+                    value={accesstradeToken}
+                    onChange={(e) => setAccesstradeToken(e.target.value)}
+                    className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-stone-800 bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveAccesstradeToken}
+                    disabled={isSavingAtToken || !accesstradeToken.trim()}
+                    className="admin-btn-primary bg-stone-900 hover:bg-black text-white whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
+                  >
+                    {isSavingAtToken ? "Đang lưu..." : "💾 Lưu AccessTrade Token"}
+                  </button>
+                </div>
+
+                {atTokenResult && (
+                  <div
+                    className={`p-3 rounded-lg text-xs font-medium ${
+                      atTokenResult.success
+                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                        : "bg-red-100 text-red-900 border border-red-300"
+                    }`}
+                  >
+                    {atTokenResult.message}
+                  </div>
+                )}
+
+                <div className="bg-white p-3 rounded-xl border border-stone-200 text-xs flex flex-col gap-1.5">
+                  <div className="font-semibold text-stone-800 flex items-center gap-1.5">
+                    <span>🔗</span> URL Postback / Webhook nhận đơn TikTok tự động:
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 p-2 bg-stone-100 rounded text-[11.5px] font-mono text-stone-700 select-all overflow-x-auto">
+                      {typeof window !== "undefined" ? `${window.location.origin}/api/affiliate/webhook` : "https://deal-hoan.vercel.app/api/affiliate/webhook"}
+                    </code>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = typeof window !== "undefined" ? `${window.location.origin}/api/affiliate/webhook` : "https://deal-hoan.vercel.app/api/affiliate/webhook";
+                        navigator.clipboard.writeText(url);
+                        setToastMsg("📋 Đã copy link Postback Webhook!");
+                        setTimeout(() => setToastMsg(null), 3000);
+                      }}
+                      className="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded text-xs transition-colors"
+                    >
+                      Copy URL
+                    </button>
+                  </div>
+                  <span className="text-[11px] text-stone-500">
+                    Dán URL này vào mục <b>Công cụ &rarr; Postback</b> trên trang <b>pub.accesstrade.vn</b> để nhận thông báo đơn hàng theo thời gian thực (Real-time).
                   </span>
                 </div>
               </div>

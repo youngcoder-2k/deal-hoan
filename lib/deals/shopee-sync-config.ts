@@ -3,6 +3,7 @@ import path from "path";
 
 export interface ShopeeSyncConfig {
   shopeeCookie: string;
+  accesstradeToken?: string;
   autoSyncEnabled: boolean;
   syncIntervalMinutes: number;
   lastSyncAt: string | null;
@@ -13,6 +14,7 @@ export interface ShopeeSyncConfig {
 
 const DEFAULT_CONFIG: ShopeeSyncConfig = {
   shopeeCookie: process.env.SHOPEE_AFFILIATE_COOKIE || "",
+  accesstradeToken: process.env.ACCESSTRADE_TOKEN || "",
   autoSyncEnabled: true,
   syncIntervalMinutes: 15,
   lastSyncAt: null,
@@ -22,6 +24,11 @@ const DEFAULT_CONFIG: ShopeeSyncConfig = {
 };
 
 const CONFIG_FILE_PATH = path.join(process.cwd(), "data", "shopee-sync-config.json");
+
+export function getAccessTradeToken(): string {
+  const config = getShopeeSyncConfig();
+  return (config.accesstradeToken || process.env.ACCESSTRADE_TOKEN || "").trim();
+}
 
 export function getShopeeSyncConfig(): ShopeeSyncConfig {
   try {

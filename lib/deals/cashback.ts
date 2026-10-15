@@ -23,7 +23,7 @@ export interface CashbackOrderRecord {
 }
 
 // In-memory demo orders for local testing when Supabase is not connected
-let demoCashbackOrders: CashbackOrderRecord[] = [
+const demoCashbackOrders: CashbackOrderRecord[] = [
   {
     id: "co-demo-1",
     user_id: "demo-user-123",
@@ -306,7 +306,7 @@ export async function recordCashbackOrder(params: RecordCashbackOrderParams): Pr
  * Điều chỉnh số dư kép (user_wallets + user_metadata) theo thay đổi trạng thái đơn
  */
 async function applyCashbackToUserWallet(
-  supabaseAdmin: any,
+  supabaseAdmin: NonNullable<ReturnType<typeof getSupabaseAdminClient>>,
   userId: string,
   newStatus: "pending" | "completed" | "rejected",
   newCashback: number,
