@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { WalletIcon } from "@phosphor-icons/react/dist/csr/Wallet";
 import { EyeIcon } from "@phosphor-icons/react/dist/csr/Eye";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
-import { ShareNetworkIcon } from "@phosphor-icons/react/dist/csr/ShareNetwork";
-import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
@@ -16,14 +14,13 @@ import s from "./home-discovery.module.css";
 import linkArtwork from "@/public/home-art/link-v2.webp";
 import shoppingArtwork from "@/public/home-art/shopping-v2.webp";
 import walletArtwork from "@/public/home-art/wallet-v2.webp";
-import sharingArtwork from "@/public/home-art/sharing-v2.webp";
 import helpArtwork from "@/public/home-art/help-v2.webp";
 import journeyPhone from "@/public/home-art/journey/phone.webp";
 import journeyShopping from "@/public/home-art/journey/shopping.webp";
 import journeyWallet from "@/public/home-art/journey/wallet.webp";
 import journeyUnderline from "@/public/home-art/journey/underline.webp";
 
-const artworks = { link: linkArtwork, shopping: shoppingArtwork, wallet: walletArtwork, sharing: sharingArtwork, help: helpArtwork, journeyPhone, journeyShopping, journeyWallet };
+const artworks = { link: linkArtwork, shopping: shoppingArtwork, wallet: walletArtwork, help: helpArtwork, journeyPhone, journeyShopping, journeyWallet };
 
 function Artwork({ name, className, sizes }: { name: keyof typeof artworks; className?: string; sizes: string }) {
   const [failed, setFailed] = useState(false);
@@ -60,21 +57,6 @@ const questions = [
 type Props = { onStart: () => void; onAccount: () => void; signedIn: boolean; accountPending: boolean };
 
 export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPending }: Props) {
-  const [shareStatus, setShareStatus] = useState<"idle" | "copied" | "error">("idle");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-
-  async function shareHome() {
-    try {
-      await navigator.clipboard.writeText(`${window.location.origin}/`);
-      setShareStatus("copied");
-    } catch {
-      setShareStatus("error");
-    }
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setShareStatus("idle"), 1500);
-  }
-
   return (
     <div className={s.discovery}>
       <section className={s.journeyScene} id="how" aria-labelledby="journey-title">
@@ -119,12 +101,6 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
         </div>
       </section>
 
-      <section className={`${s.section} ${s.shareSection}`} id="referral" aria-labelledby="share-title">
-        <Artwork name="sharing" className={s.shareArtwork} sizes="(max-width: 480px) 190px, (max-width: 760px) 124px, (max-width: 1000px) 140px, 170px" />
-        <div><span className={s.eyebrow}>MẸO HAY, CHIA SẺ NGAY</span><h2 id="share-title">Mua khéo cùng bạn bè</h2><p>Gửi DealHoàn cho người bạn hay săn deal cùng bạn.</p></div>
-        <div className={s.shareActions}><button className={s.secondary} onClick={shareHome}>{shareStatus === "copied" ? <CheckIcon aria-hidden="true" /> : <ShareNetworkIcon aria-hidden="true" />}{shareStatus === "copied" ? "Đã copy" : "Copy link chia sẻ"}</button><span role="status" className={s.shareStatus}>{shareStatus === "error" ? "Chưa copy được. Hãy sao chép địa chỉ trang trên trình duyệt." : ""}</span></div>
-      </section>
-
       <section className={s.section} id="guides" aria-labelledby="guides-title">
         <header className={`${s.heading} ${s.headingLeft}`}><span className={s.eyebrow}>CẨM NANG MUA KHÉO</span><h2 id="guides-title">Mẹo nhỏ. <em>Tiết kiệm hơn.</em></h2><p>Hiểu cách dùng trước khi chốt đơn đầu tiên.</p></header>
         <div className={s.guides}>
@@ -149,7 +125,7 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
       </section>
 
       <footer className={s.footer} id="contact">
-        <div className={s.footerInner}><div className={s.footerBrand}><b>Deal<span>Hoàn</span></b><p>Săn món bạn thích.<br />Giữ lại nhiều hơn cho mình.</p><span>Shopee · TikTok Shop · Lazada</span></div><nav aria-label="Khám phá DealHoàn"><h3>Khám phá</h3><a href="#flash">Deal đang có</a><a href="#how">Cách nhận hoàn</a><a href="#guides">Cẩm nang mua khéo</a><a href="#referral">Chia sẻ cùng bạn bè</a></nav><nav aria-label="Tài khoản và hỗ trợ"><h3>Đồng hành cùng bạn</h3><button disabled={accountPending} onClick={onAccount}>{signedIn ? "Tài khoản & ví tiền" : "Đăng nhập tài khoản"}</button><a href="#faq">Câu hỏi thường gặp</a><Link href="/terms">Điều khoản sử dụng</Link><Link href="/privacy">Chính sách bảo mật</Link></nav></div>
+        <div className={s.footerInner}><div className={s.footerBrand}><b>Deal<span>Hoàn</span></b><p>Săn món bạn thích.<br />Giữ lại nhiều hơn cho mình.</p><span>Shopee · TikTok Shop · Lazada</span></div><nav aria-label="Khám phá DealHoàn"><h3>Khám phá</h3><a href="#flash">Deal đang có</a><a href="#how">Cách nhận hoàn</a><a href="#guides">Cẩm nang mua khéo</a></nav><nav aria-label="Tài khoản và hỗ trợ"><h3>Đồng hành cùng bạn</h3><button disabled={accountPending} onClick={onAccount}>{signedIn ? "Tài khoản & ví tiền" : "Đăng nhập tài khoản"}</button><a href="#faq">Câu hỏi thường gặp</a><Link href="/terms">Điều khoản sử dụng</Link><Link href="/privacy">Chính sách bảo mật</Link></nav></div>
         <div className={s.footerBottom}><span>© 2026 DealHoàn</span><span>Khoản hoàn dự kiến phụ thuộc điều kiện và đối soát của sàn.</span></div>
       </footer>
     </div>
