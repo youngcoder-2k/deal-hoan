@@ -1,66 +1,56 @@
-# Compact cashback card — design QA
-
-Result: **passed** for the scoped right-card refinement.
-
-## References and scope
-- Empty reference: /Users/wei/.codex/generated_images/01a04954-d620-7ff1-bf0a-01809dd0a54f/exec-c808896d-28fa-4496-aa39-82dd1bd4faf0.png
-- Result reference: /Users/wei/.codex/generated_images/01a04954-d620-7ff1-bf0a-01809dd0a54f/exec-f9339a46-eab0-4d7e-9c55-2d9fd97a50ef.png
-- Preserved existing header, left hero, artwork and functional calculation flows. One white calculator surface, compact controls and typography, pale peach reward block with orange cashback emphasis.
-
-## Visual comparison
-Compared native browser screenshots at 1558×1009 against the selected designs (empty reference has a 1px taller canvas).
-- /Users/wei/Code/me/deal-hoan/design-evidence/compact-empty-comparison-detail.jpg
-- /Users/wei/Code/me/deal-hoan/design-evidence/compact-result-comparison-detail.jpg
-- /Users/wei/Code/me/deal-hoan/design-evidence/compact-empty-desktop.png
-- /Users/wei/Code/me/deal-hoan/design-evidence/compact-result-desktop.png
-Reference and implementation panel dimensions: 570×610. Implementation horizontal position differs by approximately 15px because the existing hero grid is preserved. Artwork, icon shapes and real product content differ slightly; no claim of pixel-perfect fidelity.
-
-## Responsive and state checks
-Measured empty and result at viewport widths 360, 390, 768, 1024, 1366, 1558, 1920. Desktop/tablet panel: 570×610; 390 mobile: 362×650; 360 mobile: 332×650. Empty/loading/error/result preserve the reserved panel dimensions. All measured states have no document horizontal overflow; normal empty/result content and reward have zero internal overflow. Extremely long content can scroll inside the fixed receipt.
-
-## Interactions and accessibility
-Observed real product calculation, Enter submission, empty-input validation, loading, reset, copy success and return to Copy link, purchase notice opening and closing. Existing clipboard/confetti/auth behavior remains unchanged. Focus styles, hover rules, reduced-motion rules and semantic buttons reviewed. OS reduced-motion and screen-reader announcements were not interactively tested.
-
-## Findings resolved
-- Shared CSS selector regression corrected before final screenshots.
-- Small receipt overflow corrected by reducing financial-row padding.
-- No remaining P0–P2 findings in the scoped card. P3: illustration/brand-button color and icon geometry remain the existing implementation assets.
-
-## Engineering checks
-Production build passed (exit 0). ESLint: 0 errors, 9 existing home-client warnings. Browser error/warning logs returned an empty list. git diff --check passed. Browser measurement evidence: /Users/wei/.codex/artifacts/deal-hoan-compact-card/browser-metrics.json.
-
-## Follow-up: vertical centering
-Passed: removed 70px desktop offset and equalized hero vertical padding. Native DOM measurements show top/bottom gaps 160.164/160.172px at 1558px and 79.102/79.109px at 1024px (subpixel rounding only). Empty and result remain 570×610; 390px stacked card remains 362×650 without horizontal overflow. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/centered-card-desktop.png. Production build passed.
-
-## Follow-up: form emphasis
-Passed: desktop input/submit increased from 42px to 48px, mobile input 50px and submit 48px. Warm input surface, orange border and stronger button shadow; hover/focus/loading rules retained. Reduced surrounding spacing preserves the fixed panel dimensions and reserved state space. Native browser checks: desktop 570×610, mobile 362×650; no horizontal overflow. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/emphasized-input-desktop.png. Production build passed.
-
-## Mobile compact layout follow-up
-Passed visual review against the supplied mobile screenshot: illustration reduced from160×145 to108×82; input and submit now share one50px row. Card reduced650→600px with fixed empty/result geometry. Native browser: empty390px has no overflow; results360/390px have no internal/horizontal overflow; desktop remains570×610 with48px controls. Step icons and whitespace reduced. Screenshot: /Users/wei/Code/me/deal-hoan/design-evidence/mobile-compact-empty.png. Build and component lint passed. Existing hover, focus and reduced-motion rules retained.
-
-## 2026-10-10 — Icon-led horizontal guide (latest selected design)
+# Homepage duotone artwork QA
 
 final result: passed
 
-### Scope and visual comparison
-- Exact selected reference: `/var/folders/sj/jwhymxt53b11fm81tn5k24rw0000gn/T/codex-clipboard-564ca4f7-d828-4197-82a7-be98f5518ed1.png`.
-- Replaced the old large empty illustration/card with a transparent three-step guide. The input remains on its own white surface. Icons dominate small light numbered corner badges; the coin animates gently. Receipt/data-fetch behavior is unchanged.
-- Viewed the reference beside the empty implementation at logical 390×844: `/Users/wei/Code/me/deal-hoan/design-evidence/horizontal-steps-comparison.png`.
-- IAB captures include a device-scale blank right/bottom margin at DPR1.1. The comparison removes only that margin and normalizes the content to390×844; raw capture is retained as `horizontal-steps-mobile.png`.
-- Also opened and inspected `horizontal-steps-tablet.png` (768×1100) and `horizontal-steps-desktop.png` (1440×1100), under `/Users/wei/Code/me/deal-hoan/design-evidence/`.
-- P3 differences: reused existing brand/bag/coin/background assets; solid curved Phosphor arrows instead of dotted arrows; mobile guide is approximately40px lower than the mock. No pixel-perfect claim. Existing fixed600px mobile/610px desktop state frame is retained to avoid a layout jump on submit.
+## Target, implementation and state
+- Selected source: `/Users/wei/Code/me/deal-hoan/design-evidence/home-icon-duotone/approved-reference.png` (user-selected attachment, 1310 × 1201).
+- Local production build: http://localhost:3001/#how.
+- Actual desktop: `/Users/wei/Code/me/deal-hoan/design-evidence/home-icon-duotone/modified-desktop.png` (1440 × 5707; CSS viewport 1440 × 1000; DPR 1).
+- Reference normalized to 1440 × 1320; implementation crop starts at the journey section, y=1682, 1440 × 1320. Reference scaling is 1.099×; rounded one-pixel height difference is immaterial. No browser chrome.
+- Full comparison: `/Users/wei/Code/me/deal-hoan/design-evidence/home-icon-duotone/reference-comparison.png` (reference left, implementation right).
+- Focused comparison: `/Users/wei/Code/me/deal-hoan/design-evidence/home-icon-duotone/focused-art-comparison.png` (reference top, implementation bottom).
+- Same route, light theme, signed-out state, collapsed guide/FAQ, no copy-success feedback in comparison. Reference contains a scroll-to-top control that lies outside the implementation full-page crop; this is a capture-state difference, not a removed control.
+- Scope: replace only five large image assets. Preserve UI structure, CSS, typography, copy, functional Phosphor icons, heroGrid, socialProof, flash section and behavior.
 
-### Responsive and interaction evidence
-- Measured actual viewport widths320,375,390,600,601,768,900,901,1023,1440,1920. No horizontal document overflow, all three steps share one row, guide fits the panel and is not clipped by the hero.
-- Empty/result at390px:362×600. Empty/result at768/1440px:570×610. Tested normal receipt has no internal vertical overflow at768/1440px.
-- Empty submission: aria-invalid=true observed. Enter submission of built-in Sony fixture: busy=true, button100%, width82px unchanged, loading heading visible; then receipt appears. This fixture does not verify real Shopee cashback data.
-- Copy link: success label appears; later returns to Copy link. Reset: closing animation, empty input, input focus and original guide restored. Clearing while calculation is pending prevents a stale result.
-- Long clipboard paste: selectionStart0 and scrollLeft0 observed. Keyboard Tab reaches Tính with visible outline. Guide link navigates to#how. Hover rules retained; reduced-motion CSS statically reviewed, not OS-emulated.
-- Contrast fix: eyebrow5.09:1, badges4.97:1; guide5.41:1 and supporting text6.20:1 against the peach fallback. Bright decorative icons remain orange.
-- Browser logs after final reload (since09:15:36UTC): no errors/warnings. Older transient FAQ Fast Refresh error predates the final reload; concurrent FAQ fix is preserved.
-- Existing generic resolver fallback can return a receipt for invalid text; backend validation/cashback sourcing is unchanged and is not certified by this visual QA.
+## Findings
+No actionable P0/P1/P2 findings. Independent second visual review agrees.
 
-### Checks and preservation
-- Baseline and modified production builds passed. Targeted ESLint:0 errors,12 existing warnings. git diff --check passed.
-- Unrelated concurrent FAQ, API route, and cashback-booster changes were not edited or reverted.
-- Machine-readable measurements and exact test/rollback commands: `/Users/wei/.codex/artifacts/deal-hoan-horizontal-steps/VERIFICATION.txt`.
+### Required fidelity surfaces
+- Fonts/typography: existing family, weights, sizes, line heights, letter spacing and responsive wrapping unchanged. Reference heading/body hierarchy preserved. Text remains real selectable HTML.
+- Spacing/layout: desktop before/after section x/y/width/height arrays match exactly, including the protected sections. Three-column journey and guides remain at desktop/tablet; narrow-screen stacked layout remains intact. No new clipping or horizontal document overflow at 1440, 768, 390, 320 or default 1280px.
+- Colors/tokens: existing cream, mint, navy, coral UI tokens unchanged. Artwork uses navy contours, cream/orange fill and mint approval check. Orange appears slightly more muted than the selected generated mock (P3), not a contrast or semantic issue.
+- Image quality: five generated raster assets, each 720 × 480 transparent WebP. Phone/chain, shopping bag/ticket, wallet/card/check follow the selected silhouettes. Sharing/help extend the same language. Proportionate resize; no stretch, gloss, coins, background rectangles or visible alpha halos. Opaque cream phone surfaces remain readable against navy. Large wallet/help outlines are marginally heavier than phone/bag (P3). Existing optical slots intentionally retained rather than resizing the UI. All ten image placements load successfully on desktop.
+- Copy/content: normalized component equals baseline byte-for-byte after reverting the five import suffixes. All visible titles, descriptions, disclosure text and functional icon imports remain unchanged.
+
+## Responsive and interaction evidence
+- Desktop: `design-evidence/home-icon-duotone/modified-desktop.png`, `modified-selected-view.png`, `desktop-faq-cta.png`.
+- Mobile 390 × 844: `modified-mobile.png`, `mobile-how.png`, `mobile-supporting.png`, `mobile-faq-cta.png`.
+- Small mobile 320 × 740: `modified-small.png`, `small-how.png`.
+- Tablet 768 × 1024: `modified-tablet.png`, `tablet-how.png`.
+- FAQ: click opens answer, Enter closes it, keyboard focus remains on summary; 3px orange focus outline verified. Mobile FAQ also opens and closes without overflow.
+- Guide: click opens guidance, Enter closes it. Hover state verified with expected border color rgb(230,173,135); existing image transform transition remains 0.25s.
+- Sharing: button shows “Đã copy” and clipboard equals http://localhost:3001/. Prior empty browser clipboard restored. `sharing-success.png` records feedback.
+- Journey CTA: focuses the product-link field (aria-label “Link sản phẩm”), preserves empty value and existing empty-state guidance.
+- Loading: initially deferred images were observed unloaded, then all ten loaded with nonzero naturalWidth; lazy-loading and blur placeholder code unchanged.
+- Error state: no image errors observed. Existing image onError handler and share failure feedback remain byte-identical; no artificial failure was injected.
+- Reduced-motion / forced-colors styles, disabled-account styling and all existing transitions remain unchanged (source inspection; OS modes not toggled).
+- Browser console: zero warnings/errors observed (`browser-console.json`).
+
+## Verification
+- Baseline production build exit 0.
+- Modified ESLint (changed TSX), TypeScript and production build exit 0.
+- Protected SHA-256 files: 16/16 unchanged; exactly five artwork imports changed; README append-only.
+- Rollback tested on an isolated copy: restored three original file hashes (component, artwork README and QA report), retained 16/16 protected files, removed five v2 assets, restored v1 imports and preserved unrelated sentinel. Working project remains modified.
+
+## Comparison history
+1. First full and focused reference/implementation comparison passed. No P0/P1/P2 visual correction iteration was needed. The app was not redesigned while packaging the artwork.
+
+## Follow-up polish
+- Optional only: tighten contour weight uniformity and match the mock's brighter orange in a later art pass. These are P3 refinements, not blockers, and were not used to broaden this change.
+
+## Implementation checklist
+- [x] Five transparent assets generated and placed.
+- [x] Original assets retained; only five import paths updated.
+- [x] Desktop and responsive browser verification completed.
+- [x] Baseline/build/type/lint/scope/rollback checks passed.
+- [x] Existing layout and functionality preserved.
