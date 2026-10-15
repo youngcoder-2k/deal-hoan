@@ -11,11 +11,11 @@ import { ShareNetworkIcon } from "@phosphor-icons/react/dist/csr/ShareNetwork";
 import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import s from "./home-discovery.module.css";
-import linkArtwork from "@/public/home-art/link-v1.webp";
-import shoppingArtwork from "@/public/home-art/shopping-v1.webp";
-import walletArtwork from "@/public/home-art/wallet-v1.webp";
-import sharingArtwork from "@/public/home-art/sharing-v1.webp";
-import helpArtwork from "@/public/home-art/help-v1.webp";
+import linkArtwork from "@/public/home-art/link-v2.webp";
+import shoppingArtwork from "@/public/home-art/shopping-v2.webp";
+import walletArtwork from "@/public/home-art/wallet-v2.webp";
+import sharingArtwork from "@/public/home-art/sharing-v2.webp";
+import helpArtwork from "@/public/home-art/help-v2.webp";
 
 const artworks = { link: linkArtwork, shopping: shoppingArtwork, wallet: walletArtwork, sharing: sharingArtwork, help: helpArtwork };
 

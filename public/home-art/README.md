@@ -26,3 +26,19 @@ Subjects:
 - Help: ivory speech bubble with orange question mark, smaller orange speech bubble with cream check mark and gold coin.
 
 Packaging: proportionate resize to 720 × 480 and WebP quality 84 via Sharp; generated composition and alpha preserved. Full prompts in design-evidence/home-art-refresh/art-prompts.json (local evidence).
+
+## Current artwork: refined duotone line (v2)
+
+The five `*-v2.webp` assets replace the large discovery illustrations, following the user-selected reference: navy outlines, restrained coral-orange and cream fills, with a mint approval accent. No glossy 3D treatment, coins, typography, logos, or baked-in UI. The v1 files remain available for rollback.
+
+| Asset | Dimensions | Subject / placement |
+| --- | --- | --- |
+| link-v2.webp | 720 × 480 | Cream phone and orange chain; journey step 1, guide 1 |
+| shopping-v2.webp | 720 × 480 | Orange shopping bag and discount ticket; journey step 2, guide 2, closing CTA |
+| wallet-v2.webp | 720 × 480 | Orange wallet, cream card and mint check; journey step 3, benefits, guide 3 |
+| sharing-v2.webp | 720 × 480 | Two cream phones joined by an orange chain; share-link section |
+| help-v2.webp | 720 × 480 | Cream question bubble and orange check bubble; FAQ |
+
+Generated individually with built-in Image Gen and `transparent_background=true`. Shared direction: clean 2D duotone editorial illustration, slim navy contour, flat warm fills, no gloss, bevels, coins, shadows, branding, or text. The selected screenshot grounds the phone, bag, and wallet; sharing and help extend that same visual language.
+
+Packaging: alpha-aware crop with a small antialiasing margin, proportional resize into the original occupied bounds, centered on a transparent 720 × 480 canvas; WebP quality 90, alpha quality 100. Original layouts, copy, CSS, small functional Phosphor icons, blur/lazy-loading/error behavior, hero, social proof, and flash section are unchanged. Local generation and verification evidence: `design-evidence/home-icon-duotone/`.
