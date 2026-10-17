@@ -96,7 +96,7 @@ async function fetchBundle(): Promise<DealBundle> {
  * Cached entry point for the homepage. Revalidates every
  * `REVALIDATE_SECONDS`, so a page view never blocks on the marketplaces.
  */
-export const getDeals = unstable_cache(fetchBundle, ["deals-bundle-purchasable-xtra-v4"], {
+export const getDeals = unstable_cache(fetchBundle, ["deals-bundle-purchasable-xtra-v5"], {
   revalidate: REVALIDATE_SECONDS,
   tags: ["deals"],
 });

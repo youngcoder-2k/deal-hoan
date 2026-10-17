@@ -44,15 +44,22 @@ export const curatedXtraProvider: DealProvider = {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (url && key) {
-      const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+      const db = createClient(url, key, {
+        auth: { persistSession: false, autoRefreshToken: false },
+        // Only getDeals owns the cache lifetime; do not cache private PostgREST responses separately.
+        global: { fetch: (input, init) => fetch(input, { ...init, cache: "no-store" }) },
+      });
       const { data, error } = await db.from("xtra_feed").select("deals,checked_at")
         .eq("id", "current").gt("expires_at", new Date().toISOString()).maybeSingle();
       if (!error && data && Array.isArray(data.deals)) {
         const checkedAt = Date.parse(data.checked_at);
-        return pickFlash(data.deals.map(deal => ({ ...deal,
+        const selected = pickFlash(data.deals.map(deal => ({ ...deal,
           affiliateOffer: { ...deal.affiliateOffer, checkedAt },
         })));
+        console.info("[xtra-feed]", { total: data.deals.length, eligible: selected.length });
+        return selected;
       }
+      if (error) console.warn("[xtra-feed] read failed", { code: error.code });
       // Production does not silently revive stale bundled JSON after DB/import failure.
       if (process.env.NODE_ENV === "production") return [];
     }
