@@ -4309,8 +4309,15 @@ select.account-input.select-bank-field:focus {
     display: block;
     min-height: 0;
     font-weight: 400;
+    font-size: 12px;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+  .flash-grid em {
+    font-size: 15px;
+  }
+  .flash-grid small b {
+    font-size: 12px;
   }
 
   /* Hot Deals Section */
