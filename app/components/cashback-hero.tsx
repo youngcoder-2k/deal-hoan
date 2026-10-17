@@ -140,7 +140,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   onBuy?: () => void;
   onClear: () => void;
 }) {
-  const { price, originalPrice, cashback } = product;
+  const { price, cashback } = product;
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
   const hasPrice = price > 0;
@@ -159,11 +159,8 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
         )}
         <div>
           <h3 title={product.name}>{product.name}</h3>
-          <p title={product.seller}>{product.platform}{product.seller ? ` · ${product.seller}` : ""}</p>
           <div className={styles.productPrice}>
-            <span>Thanh toán</span>
             <strong>{hasPrice ? formatPrice(price) : "Chưa có giá"}</strong>
-            {hasPrice && originalPrice > price && <s>{formatPrice(originalPrice)}</s>}
           </div>
         </div>
         <span className={styles.platformBadge}><MarketplaceBrand platform={product.platform} /></span>
@@ -178,9 +175,9 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
           <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
             <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}</strong>
-            {hasPrice && <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}%</span>}
+            {hasPrice && <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng</span>}
           </div>
-          <span className={styles.rewardTiming}>{hasPrice ? "Nhận sau 14–15 ngày · Hoàn chuẩn theo giá thực trả" : "Chưa có giá và tiền hoàn từ sàn cho sản phẩm này."}</span>
+          {!hasPrice && <span className={styles.rewardTiming}>Chưa có giá và tiền hoàn từ sàn cho sản phẩm này.</span>}
         </div>
       </div>
       {trackedLink && (
