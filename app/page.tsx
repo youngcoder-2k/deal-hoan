@@ -10,7 +10,7 @@ export default async function Home() {
 
   return (
     <HomeClient
-      flashDeals={deals.flash}
+      flashDeals={deals.flash.filter((d) => d.price <= 1_500_000)}
       hotDeals={deals.hot}
       vouchers={vouchers}
       source={deals.source}

@@ -45,6 +45,8 @@ type CacheFile = { scrapedAt: string; products: ScrapedProduct[] };
 
 function normalise(p: ScrapedProduct): Deal | null {
   if (!p.itemId || !p.name || !p.price) return null;
+  // Tuyệt đối loại bỏ các sản phẩm đắt tiền (tivi, điện thoại, máy hút bụi mấy triệu/mấy chục triệu)
+  if (p.price > 1_500_000) return null;
 
   const originalPrice = p.priceBeforeDiscount > p.price ? p.priceBeforeDiscount : p.price;
   const discountPercent =

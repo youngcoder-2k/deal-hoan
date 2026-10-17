@@ -887,7 +887,7 @@ export default function HomeClient({
             }}
           >
             <div className="flash-grid">
-              {flashDeals.map((deal) => (
+              {flashDeals.filter((deal) => deal.price > 0 && deal.price <= 1_500_000).map((deal) => (
                 <article key={deal.id}>
                   <div className="placeholder">
                     {formatCashbackPercent(deal.cashback, deal.price) !== null && (
