@@ -974,7 +974,6 @@ export default function HomeClient({
                     )}
                   </div>
                   <small>
-                    {formatSold(deal.sold) && <>Đã bán {formatSold(deal.sold)} · </>}
                     hoàn <b>{formatPrice(deal.cashback)}</b>
                   </small>
                 </article>

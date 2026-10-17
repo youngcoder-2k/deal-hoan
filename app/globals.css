@@ -4313,11 +4313,37 @@ select.account-input.select-bank-field:focus {
     white-space: nowrap;
     text-overflow: ellipsis;
   }
+  .flash-grid article {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 4px;
+    align-content: start;
+  }
+  .flash-grid article > .placeholder,
+  .flash-grid article > strong {
+    grid-column: 1 / -1;
+  }
+  .flash-grid article > div:not(.placeholder) {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+  }
   .flash-grid em {
-    font-size: 15px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .flash-grid s {
+    margin-left: 0;
+    font-size: 10px;
+  }
+  .flash-grid small {
+    align-self: start;
+    line-height: 1.35;
+    white-space: nowrap;
+    font-size: 10px;
   }
   .flash-grid small b {
-    font-size: 12px;
+    font-size: 13px;
   }
 
   /* Hot Deals Section */
@@ -5035,6 +5061,12 @@ select.account-input.select-bank-field:focus {
     width: 24px;
     height: 24px;
     font-size: 13px;
+  }
+  .flash-grid em {
+    font-size: 11px;
+  }
+  .flash-grid small b {
+    font-size: 12.5px;
   }
   .flash-grid .placeholder {
     height: 110px;
