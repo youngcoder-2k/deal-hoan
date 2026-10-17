@@ -1,9 +1,9 @@
+import { xtraExpiresAt } from "../../supabase/functions/_shared/xtra-slots.mjs";
 import { FLASH_COUNT } from "./config";
 import type { Deal } from "./types";
 
 export const MIN_FLASH_CASHBACK_RATE = 0.10;
 const MAX_PRICE = 1_500_000;
-const MAX_OFFER_AGE_MS = 30 * 60 * 1000;
 
 function eligible(deal: Deal, now: number): boolean {
   if (!deal || typeof deal !== "object") return false;
@@ -12,7 +12,7 @@ function eligible(deal: Deal, now: number): boolean {
   if (![deal.price, deal.cashback, offer.commissionRate, offer.checkedAt].every(Number.isFinite)) return false;
   if (deal.price <= 0 || deal.price > MAX_PRICE || deal.cashback <= 0 || deal.cashback > deal.price) return false;
   if (offer.commissionRate < MIN_FLASH_CASHBACK_RATE || offer.commissionRate > 1) return false;
-  if (offer.checkedAt > now || now - offer.checkedAt > MAX_OFFER_AGE_MS) return false;
+  if (offer.checkedAt > now || now > xtraExpiresAt(offer.checkedAt)) return false;
   if (deal.cashback / deal.price < MIN_FLASH_CASHBACK_RATE) return false;
   try {
     const url = new URL(deal.productUrl);

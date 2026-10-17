@@ -1,4 +1,5 @@
 import fs from "fs";
+import { createClient } from "@supabase/supabase-js";
 import path from "path";
 import type { Deal, DealProvider } from "../types";
 import { pickFlash } from "../select-flash";
@@ -36,11 +37,25 @@ export const curatedXtraProvider: DealProvider = {
   id: "shopee", // Use shopee provider label so it displays as Shopee
 
   isConfigured: () => {
-    const deals = getCuratedXtraDeals();
-    return deals.length > 0;
+    return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) || getCuratedXtraDeals().length > 0;
   },
 
   async fetchDeals(): Promise<Deal[]> {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (url && key) {
+      const db = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+      const { data, error } = await db.from("xtra_feed").select("deals,checked_at")
+        .eq("id", "current").gt("expires_at", new Date().toISOString()).maybeSingle();
+      if (!error && data && Array.isArray(data.deals)) {
+        const checkedAt = Date.parse(data.checked_at);
+        return pickFlash(data.deals.map(deal => ({ ...deal,
+          affiliateOffer: { ...deal.affiliateOffer, checkedAt },
+        })));
+      }
+      // Production does not silently revive stale bundled JSON after DB/import failure.
+      if (process.env.NODE_ENV === "production") return [];
+    }
     return getCuratedXtraDeals();
   },
 };

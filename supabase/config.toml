@@ -1,0 +1,3 @@
+[functions.sync-xtra]
+# Function validates XTRA_CRON_SECRET itself. No public write access is granted.
+verify_jwt = false
