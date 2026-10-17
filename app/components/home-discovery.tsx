@@ -71,7 +71,7 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
               <li key={title}>
                 <span className={s.journeyNumber}>0{i + 1}</span>
                 <h3>{title}</h3><p>{text}</p>
-                <Artwork name={artwork} className={s.journeyObject} sizes="(max-width: 700px) 360px, (max-width: 1100px) 30vw, 340px" />
+                <Artwork name={artwork} className={s.journeyObject} sizes="(max-width: 700px) 32vw, (max-width: 1100px) 30vw, 340px" />
                 {i < journey.length - 1 && <CaretRightIcon className={s.journeyConnector} weight="bold" aria-hidden="true" />}
               </li>
             ))}
