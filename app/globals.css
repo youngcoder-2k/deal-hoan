@@ -4295,7 +4295,7 @@ select.account-input.select-bank-field:focus {
     padding: 0 1px;
   }
   .flash-grid {
-    grid-auto-columns: 82%;
+    grid-auto-columns: 64%;
   }
   .flash-grid article {
     padding: 14px;
