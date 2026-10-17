@@ -28,9 +28,9 @@ function Artwork({ name, className, sizes }: { name: keyof typeof artworks; clas
 }
 
 const journey = [
-  { artwork: "journeyPhone", title: "Xem tiền hoàn", text: "Dán link để xem giá và tiền hoàn dự kiến." },
-  { artwork: "journeyShopping", title: "Mua qua link mới", text: "Đặt hàng, thanh toán trên sàn qua link DealHoàn." },
-  { artwork: "journeyWallet", title: "Nhận tiền hoàn", text: "Theo dõi đơn, rút tiền về ngân hàng khi được duyệt." },
+  { artwork: "journeyPhone", title: "Xem tiền hoàn", text: "Dán link, xem khoản hoàn dự kiến." },
+  { artwork: "journeyShopping", title: "Mua qua link mới", text: "Đặt hàng, thanh toán trên sàn." },
+  { artwork: "journeyWallet", title: "Nhận tiền hoàn", text: "Tiền duyệt, rút về ngân hàng." },
 ] as const;
 
 const benefits = [
@@ -64,7 +64,7 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
           <header className={s.journeyIntro}>
             <span className={s.journeyEyebrow}><span><LinkIcon weight="bold" aria-hidden="true" /></span>TỪ LINK ĐẾN TIỀN HOÀN</span>
             <h2 id="journey-title">Mua món bạn mê.<br /><em>Đón tiền hoàn về.<Image src={journeyUnderline} alt="" className={s.journeyUnderline} sizes="(max-width: 700px) 300px, 500px" /></em></h2>
-            <p>Dán link trước khi mua, nhận thêm tiền hoàn.</p>
+            <p>Dán link. Mua sắm. Nhận hoàn.</p>
           </header>
           <ol className={s.journeySteps}>
             {journey.map(({ artwork, title, text }, i) => (
