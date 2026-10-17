@@ -12,6 +12,7 @@ import { CurrencyCircleDollarIcon } from "@phosphor-icons/react/dist/csr/Currenc
 import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
+import { PercentIcon } from "@phosphor-icons/react/dist/csr/Percent";
 import { formatPrice } from "@/lib/deals/format";
 import type { CalculatedProduct } from "@/lib/deals/resolve";
 import styles from "../home-redesign.module.css";
@@ -144,7 +145,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
   const hasPrice = price > 0;
-  const reward = hasPrice ? formatPrice(cashback) : "Chưa xác định";
+  const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : "Chưa xác định";
   const targetUrl = product.trackedLink || trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
@@ -171,14 +172,21 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
         onPointerLeave={(event) => resetGlassLight(event, event.currentTarget)}
         onPointerCancel={(event) => resetGlassLight(event, event.currentTarget)}
       >
+        {hasPrice && <>
+          <PercentIcon className={styles.rewardPercent} weight="bold" aria-hidden="true" />
+          <PercentIcon className={`${styles.rewardPercent} ${styles.rewardPercentRight}`} weight="bold" aria-hidden="true" />
+        </>}
         <div className={styles.rewardContent}>
           <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
-            <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}</strong>
-            {hasPrice && <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng</span>}
+            {hasPrice && <Image className={styles.rewardCoin} src="/hero/cashback-coin-stack.webp" width={272} height={216} alt="" sizes="(max-width: 600px) 28px, 34px" />}
+            <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}{hasPrice && <span className={styles.rewardCurrency}> đồng</span>}</strong>
           </div>
           {!hasPrice && <span className={styles.rewardTiming}>Chưa có giá và tiền hoàn từ sàn cho sản phẩm này.</span>}
         </div>
+        {hasPrice && <div className={styles.rewardRate}>
+          <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng</span>
+        </div>}
       </div>
       {trackedLink && (
         <div className={styles.linkSection}>
