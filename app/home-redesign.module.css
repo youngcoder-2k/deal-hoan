@@ -438,3 +438,22 @@
   .stepArrow { width: 25px; right: -18px; top: 20px; }
   .stepSparkle { left: calc(50% + 30px); }
 }
+
+/* Balance the two supported brands without changing result platform badges. */
+.story .marketplaces {
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  min-height: 48px;
+  margin: 16px 0;
+  padding: 8px 12px;
+}
+.story .marketplaces > span:first-child { flex-basis: auto; }
+@media (max-width: 600px) {
+  .story .marketplaces {
+    gap: 12px;
+    min-height: 40px;
+    margin: 12px 0;
+    padding: 8px 0;
+  }
+}

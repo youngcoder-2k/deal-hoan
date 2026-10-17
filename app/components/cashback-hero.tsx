@@ -45,11 +45,10 @@ export function CashbackStory() {
         Dán link, xem tiền hoàn.<br />
         Mua món bạn thích, nhận lại một phần tiền.
       </p>
-      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, ShopeeFood và TikTok Shop">
+      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee và ShopeeFood">
         <span>Hỗ trợ:</span>
         <MarketplaceBrand platform="Shopee" />
         <MarketplaceBrand platform="ShopeeFood" />
-        <MarketplaceBrand platform="TikTok Shop" />
       </div>
       <div className={styles.heroIllustration} aria-hidden="true">
         <Image className={styles.shoppingBag} src="/hero/deal-hoan-shopping-bag.webp" width={640} height={520} alt="" preload sizes="(max-width: 900px) 220px, 520px" />

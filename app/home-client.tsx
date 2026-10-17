@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
 import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
@@ -819,56 +818,6 @@ export default function HomeClient({
               </div>
             </div>
           </div>
-        </div>
-        <div className="container platforms">
-          {[
-            {
-              name: "Shopee",
-              deals: "8.240",
-              maxRate: "12%",
-              bg: "orange",
-              icon: "/brand/shopee.svg",
-              width: 24,
-              height: 24,
-            },
-            {
-              name: "TikTok Shop",
-              deals: "5.130",
-              maxRate: "10%",
-              bg: "dark",
-              icon: "/brand/tiktok-white.svg",
-              width: 21,
-              height: 21,
-            },
-            {
-              name: "Lazada",
-              deals: "3.960",
-              maxRate: "9%",
-              bg: "blue",
-              icon: "/brand/lazada-icon.png",
-              width: 26,
-              height: 26,
-            },
-          ].map((p) => (
-            <a
-              className="platform"
-              key={p.name}
-              href="#flash"
-              onClick={() => {
-                setSearchQuery(p.name);
-                document.getElementById("flash")?.scrollIntoView({ behavior: "smooth" });
-              }}
-            >
-              <i className={p.bg}>
-                <Image src={p.icon} width={p.width} height={p.height} alt={p.name} />
-              </i>
-              <span>
-                <b>{p.name}</b>
-                <small>{p.deals} deal đang mở</small>
-              </span>
-              <em>Hoàn đến {p.maxRate}</em>
-            </a>
-          ))}
         </div>
       </section>
       <section className="container flash-section" id="flash">
