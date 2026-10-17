@@ -10,3 +10,13 @@ export function formatSold(value: number | null) {
   const k = value / 1000;
   return `${k.toFixed(k < 10 ? 1 : 0).replace(".", ",")}k`;
 }
+
+/** Effective percentage of the displayed, rounded cashback — not a commission rate. */
+export function formatCashbackPercent(cashback: number, price: number): string | null {
+  if (!Number.isFinite(cashback) || !Number.isFinite(price) || cashback < 0 || price <= 0) return null;
+  if (cashback === 0) return "0%";
+  const percent = (cashback / price) * 100;
+  if (!Number.isFinite(percent)) return null;
+  if (percent < 0.1) return "<0,1%";
+  return `≈${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(percent)}%`;
+}

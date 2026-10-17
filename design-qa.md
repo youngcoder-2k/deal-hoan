@@ -45,3 +45,39 @@ Generated object pose/material details, mock font glyph proportions and CTA glos
 - [x] Desktop full and focused source comparison completed.
 - [x] Responsive, focus, hover, keyboard CTA and console checked.
 - [x] P1/P2 findings fixed and recaptured.
+
+## Flash cashback percentage — selected desktop/mobile design
+
+### Findings and resolution
+- P2 resolved: the recently added platform label caused the price/cashback footer to overlap for large prices at 320px. Hide the old price/platform label in flash cards, matching the approved preview; retain their data and other product grids. Give mobile rail tracks a 206px minimum (64% still applies at390px) so values remain readable on the smallest viewport.
+- Accepted data difference: live products/photos, countdown and existing “Top hoàn tiền cao” subtitle remain production-driven rather than replacing them with generated demo products. The latter header subtitle is an existing committed feature, not part of this scoped badge change.
+- Accepted copy difference: live badges show “Hoàn ≈4,9%” etc., not a hard-coded5%. Deal data exposes rounded cashback money, not the contractual rate, so this is explicitly an approximate effective percentage. Zero shows0%, positive tiny values show<0,1%; invalid inputs omit the badge.
+
+### Comparison evidence
+- Desktop source: user-selected screenshot `codex-clipboard-68f4aaf3-fba9-4945-b358-5218514afdfc.png` (2172×724).
+- Mobile source: approved generated mobile `exec-5f97be31-ba6c-4def-96c5-9ac945b88603.png` (1240×1269).
+- Implementation screenshots: `design-evidence/flash-rate-implementation/desktop-full.jpg` (1707CSS px viewport), `mobile-full.jpg` (390CSS px viewport).
+- Source/implementation panels normalized to equal widths for review in `compare-desktop.png` (source above, implementation below,1449px panel width) and `compare-mobile.png` (source left, implementation right,358px panel width). Full-page captures are native browser pixels; Sharp only crops/resamples them for density-normalized comparison.
+
+### Required fidelity surfaces
+- Typography: same compact one-line product names, sale-price/cashback sizes retained; green rate label11px/700, no uppercase shouting or decorative icons.
+- Spacing/layout: rate pill stays8px from photo top/left without increasing card height; preserved image slots and same-row footer; one full card plus next-card preview on mobile, multi-card desktop rail.
+- Colors/tokens: pale-green #e8f8ec, dark-green #15803d, white hairline border and8px radius; existing orange header/countdown/amount colors untouched.
+- Image quality: use actual live catalog image URLs, no generated replacement product photos. First visible image verified loaded. Overlay does not distort images or intercept product links.
+- Copy/content: explicit “Hoàn” prevents confusion with sale discounts; footer amount preserved; approx marker and native title explain the derived rate. Preview-only illustrative caption is intentionally absent from production.
+
+### Behavior and responsive validation
+- Production Webpack build passed; targeted ESLint exit0 (11 existing warnings,0 errors).
+- Nine formatter cases passed: exact/fractional/zero/tiny amounts, zero/negative/nonfinite price, negative/nonfinite cashback. Existing price/sold formatters preserved.
+- At320/390/768/1440/1707px: all18 badges fit their images, no footer overlap, no document horizontal overflow, old price hidden.
+- Keyboard carousel navigation moved scrollLeft to3417.5; product image link accepts keyboard focus and retains affiliate href. Rate overlay pointer-events none; no warning/error browser logs.
+- Loading/empty/error: no new network request, state or interactive control added. Existing image lazy loading, empty list rendering and calculation error/loading behavior unchanged; formatter rejects invalid data rather than showing NaN/Infinity.
+
+### Implementation checklist
+- [x] Approved top-left rate badge on desktop/mobile.
+- [x] Actual derived percentages; no hard-coded mock5%.
+- [x] Live data, affiliate behavior and existing unrelated sections preserved.
+- [x] Source/implementation combined comparison inspected.
+- [x] Production build, responsive and keyboard checks passed.
+
+final result: passed

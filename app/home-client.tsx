@@ -14,7 +14,7 @@ import confetti from "canvas-confetti";
 import type { User } from "@supabase/supabase-js";
 import AccountModal from "@/app/components/account-modal";
 import { isAdminUser } from "@/lib/auth/admin";
-import { formatPrice, formatSold } from "@/lib/deals/format";
+import { formatPrice, formatSold, formatCashbackPercent } from "@/lib/deals/format";
 import type { Deal, DealBundle, Coupon, CouponCategory, Platform } from "@/lib/deals/types";
 import { getDailyShopeeCoupons } from "@/lib/deals/coupons-static";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -891,12 +891,13 @@ export default function HomeClient({
               {flashDeals.map((deal) => (
                 <article key={deal.id}>
                   <div className="placeholder">
-                    {deal.cashback >= 50000 ? (
-                      <b className="badge-high-cashback">🔥 Hoàn {formatPrice(deal.cashback)}</b>
-                    ) : deal.discountPercent > 0 ? (
-                      <b>-{deal.discountPercent}%</b>
-                    ) : (
-                      <b>Hoàn {formatPrice(deal.cashback)}</b>
+                    {formatCashbackPercent(deal.cashback, deal.price) !== null && (
+                      <b
+                        className="flash-cashback-rate"
+                        title="Tỷ lệ quy đổi từ khoản hoàn dự kiến và giá bán; có làm tròn."
+                      >
+                        Hoàn {formatCashbackPercent(deal.cashback, deal.price)}
+                      </b>
                     )}
                     <a
                       href={getAffiliateUrl(deal.productUrl)}

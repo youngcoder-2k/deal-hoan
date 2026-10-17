@@ -1416,6 +1416,22 @@ h2,
   font-weight: 800;
   box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35);
 }
+/* Keep the approved card footer to sale price and cashback only. */
+.flash-grid s,
+.flash-grid .flash-platform-pill { display: none; }
+/* Cashback rate, distinct from marketplace discounts and the amount below. */
+.flash-grid .placeholder b.flash-cashback-rate {
+  background: #e8f8ec;
+  color: #15803d;
+  border: 1px solid #ffffff;
+  border-radius: 8px;
+  padding: 4px 7px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px #16532d12;
+}
 .flash-platform-pill {
   display: inline-block;
   margin-left: 6px;
@@ -4371,7 +4387,7 @@ select.account-input.select-bank-field:focus {
     padding: 0 1px;
   }
   .flash-grid {
-    grid-auto-columns: 64%;
+    grid-auto-columns: max(64%, 206px);
   }
   .flash-grid article {
     padding: 10px;
