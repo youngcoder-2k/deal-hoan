@@ -16,6 +16,8 @@ export type Deal = {
   discountPercent: number;
   /** Cash returned to the buyer, in đồng. See `cashback.ts` for how this is derived. */
   cashback: number;
+  /** Present only when the affiliate feed supplies a per-offer commission. */
+  affiliateOffer?: { source: "shopee" | "accesstrade" | "shopee-xtra"; commissionRate: number; checkedAt: number };
   /** 0-100. Computed from real signals — see `score.ts`. */
   dealScore: number;
   /** Units sold as reported by the marketplace, or null when unknown. */

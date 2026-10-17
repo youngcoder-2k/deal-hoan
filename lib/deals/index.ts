@@ -1,11 +1,12 @@
+import { pickFlash } from "./select-flash";
 import { unstable_cache } from "next/cache";
-import { FLASH_COUNT, HOT_COUNT, REVALIDATE_SECONDS } from "./config";
+import { HOT_COUNT, REVALIDATE_SECONDS } from "./config";
 import { shopeeProvider } from "./providers/shopee";
 import { curatedXtraProvider } from "./providers/curated-xtra";
 import { accessTradeProvider } from "./providers/accesstrade";
 import { lazadaProvider } from "./providers/lazada";
 import { shopeeScrapeProvider } from "./providers/shopee-scrape";
-import { SEED_FLASH, SEED_HOT } from "./seed";
+import { SEED_HOT } from "./seed";
 import type { Deal, DealBundle, DealProvider } from "./types";
 
 /**
@@ -24,44 +25,6 @@ const PROVIDERS: DealProvider[] = [
   ...(process.env.ENABLE_LAZADA_FALLBACK === "true" ? [lazadaProvider] : []),
 ];
 
-
-/** Giá tối đa cho sản phẩm Deal chớp nhoáng — loại bỏ hoàn toàn đồ đắt tiền (tivi, điện thoại mấy chục triệu) */
-const MAX_FLASH_PRICE = 1_500_000;
-
-/** "Deal chớp nhoáng" — chỉ nhận sản phẩm vừa túi tiền (< 1.5 triệu) và ưu tiên TỶ LỆ HOÀN TIỀN KHỦNG (Hoa hồng Xtra 30% - 87%) */
-function pickFlash(deals: Deal[]) {
-  // 1. Loại bỏ hoàn toàn các sản phẩm không có hoàn tiền, hoặc giá > 1.500.000đ (như tivi, điện thoại)
-  const affordableDeals = deals.filter(
-    (d) => d.cashback > 0 && d.price > 0 && d.price <= MAX_FLASH_PRICE
-  );
-
-  // Nếu không đủ sản phẩm dưới 1.5tr thì mới mở rộng lên tối đa 2.5tr (vẫn tuyệt đối chặn hàng chục triệu)
-  const pool =
-    affordableDeals.length >= 6
-      ? affordableDeals
-      : deals.filter((d) => d.cashback > 0 && d.price > 0 && d.price <= 2_500_000);
-
-  return [...pool]
-    .sort((a, b) => {
-      const rateA = a.price > 0 ? a.cashback / a.price : 0;
-      const rateB = b.price > 0 ? b.cashback / b.price : 0;
-
-      // 1. Ưu tiên số 1: Tỷ lệ hoàn tiền khủng (sản phẩm vừa rẻ vừa hoàn nhiều %)
-      // Ví dụ: Hoàn 87%, 82%, 58% luôn đứng trước các deal chỉ hoàn 1-2%
-      if (Math.abs(rateB - rateA) >= 0.05) {
-        return rateB - rateA;
-      }
-
-      // 2. Nếu tỷ lệ hoàn xấp xỉ nhau, ưu tiên số tiền hoàn tuyệt đối lớn hơn
-      if (Math.abs(b.cashback - a.cashback) >= 5000) {
-        return b.cashback - a.cashback;
-      }
-
-      // 3. Cuối cùng xếp theo điểm đánh giá dealScore & giảm giá
-      return b.dealScore - a.dealScore || b.discountPercent - a.discountPercent;
-    })
-    .slice(0, FLASH_COUNT);
-}
 
 /** "Deal hot hôm nay" — highest Deal Score, preferring deals flash is not already showing. */
 function pickHot(deals: Deal[], exclude: Deal[]) {
@@ -110,7 +73,7 @@ async function fetchBundle(): Promise<DealBundle> {
     const flash = pickFlash(allDeals);
     const hot = pickHot(allDeals, flash);
 
-    if (flash.length && hot.length) {
+    if (hot.length) {
       return {
         flash,
         hot,
@@ -121,9 +84,8 @@ async function fetchBundle(): Promise<DealBundle> {
   }
 
   console.warn("[deals] every provider failed — serving seed data");
-  const seedFlash = pickFlash(SEED_FLASH);
   return {
-    flash: seedFlash.length ? seedFlash : SEED_FLASH.slice(0, FLASH_COUNT),
+    flash: [],
     hot: SEED_HOT,
     source: "seed",
     fetchedAt: new Date().toISOString(),
@@ -134,7 +96,7 @@ async function fetchBundle(): Promise<DealBundle> {
  * Cached entry point for the homepage. Revalidates every
  * `REVALIDATE_SECONDS`, so a page view never blocks on the marketplaces.
  */
-export const getDeals = unstable_cache(fetchBundle, ["deals-bundle"], {
+export const getDeals = unstable_cache(fetchBundle, ["deals-bundle-shopee-xtra-only-v2"], {
   revalidate: REVALIDATE_SECONDS,
   tags: ["deals"],
 });

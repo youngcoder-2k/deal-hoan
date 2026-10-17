@@ -886,6 +886,7 @@ export default function HomeClient({
               pauseFlash(6000);
             }}
           >
+            {flashDeals.length === 0 && <p role="status" style={{ padding: "24px", margin: 0, textAlign: "center", color: "#677182" }}>Đang cập nhật sản phẩm hoàn từ 10%. Bạn có thể dán link để kiểm tra khoản hoàn.</p>}
             <div className="flash-grid">
               {flashDeals.filter((deal) => deal.price > 0 && deal.price <= 1_500_000).map((deal) => (
                 <article key={deal.id}>

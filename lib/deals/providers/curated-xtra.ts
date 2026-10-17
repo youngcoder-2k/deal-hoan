@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import type { Deal, DealProvider } from "../types";
-import { dealScore } from "../score";
+import { pickFlash } from "../select-flash";
 
 const XTRA_FILE_PATH = path.join(process.cwd(), "data", "shopee-xtra-deals.json");
 
@@ -11,7 +11,7 @@ export function getCuratedXtraDeals(): Deal[] {
       const raw = fs.readFileSync(XTRA_FILE_PATH, "utf-8");
       const list = JSON.parse(raw);
       if (Array.isArray(list)) {
-        return list;
+        return pickFlash(list);
       }
     }
   } catch (err) {
