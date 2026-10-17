@@ -9,7 +9,6 @@ import { EyeIcon } from "@phosphor-icons/react/dist/csr/Eye";
 import { ShieldCheckIcon } from "@phosphor-icons/react/dist/csr/ShieldCheck";
 import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
-import { CaretRightIcon } from "@phosphor-icons/react/dist/csr/CaretRight";
 import s from "./home-discovery.module.css";
 import linkArtwork from "@/public/home-art/link-v2.webp";
 import shoppingArtwork from "@/public/home-art/shopping-v2.webp";
@@ -28,9 +27,9 @@ function Artwork({ name, className, sizes }: { name: keyof typeof artworks; clas
 }
 
 const journey = [
-  { artwork: "journeyPhone", title: "Xem tiền hoàn", text: "Dán link, xem khoản hoàn dự kiến." },
-  { artwork: "journeyShopping", title: "Mua qua link mới", text: "Đặt hàng, thanh toán trên sàn." },
-  { artwork: "journeyWallet", title: "Nhận tiền hoàn", text: "Tiền duyệt, rút về ngân hàng." },
+  { artwork: "journeyPhone", title: "Xem tiền hoàn", text: "Dán link, xem\nhoàn dự kiến." },
+  { artwork: "journeyShopping", title: "Mua qua link mới", text: "Thanh toán\ntrên sàn." },
+  { artwork: "journeyWallet", title: "Nhận tiền hoàn", text: "Tiền duyệt,\nrút ngân hàng." },
 ] as const;
 
 const benefits = [
@@ -72,7 +71,7 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
                 <span className={s.journeyNumber}>0{i + 1}</span>
                 <h3>{title}</h3><p>{text}</p>
                 <Artwork name={artwork} className={s.journeyObject} sizes="(max-width: 700px) 32vw, (max-width: 1100px) 30vw, 340px" />
-                {i < journey.length - 1 && <CaretRightIcon className={s.journeyConnector} weight="bold" aria-hidden="true" />}
+                {i < journey.length - 1 && <ArrowRightIcon className={s.journeyConnector} weight="bold" aria-hidden="true" />}
               </li>
             ))}
           </ol>
