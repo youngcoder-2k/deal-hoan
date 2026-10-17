@@ -2,6 +2,7 @@
 // Import product-level prices and Xtra badges from the authenticated, rendered Affiliate UI.
 // Empty/unknown responses fail without fabricating or overwriting cached offers.
 
+import { inspectShopeeProduct } from "../supabase/functions/_shared/xtra-availability.mjs";
 import { normalizeXtraProduct } from "./shopee-xtra-normalize.mjs";
 import { chromium } from "playwright";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -126,7 +127,16 @@ try {
   }
   await detail.close();
   if (!capturedItems.length) throw new Error("No verified product-specific Xtra offers captured; existing data not overwritten.");
-  const finalDeals = capturedItems.sort((a, b) => b.cashback / b.price - a.cashback / a.price || b.cashback - a.cashback);
+  const candidates = capturedItems.sort((a, b) => b.cashback / b.price - a.cashback / a.price || b.cashback - a.cashback);
+  const verificationPage = await context.newPage();
+  const finalDeals = [];
+  for (const deal of candidates.slice(0, 60)) {
+    const availability = await inspectShopeeProduct(verificationPage, deal.productUrl);
+    if (availability.status === "available") finalDeals.push({ ...deal, availability });
+    if (finalDeals.length >= 18) break;
+  }
+  await verificationPage.close();
+  if (!finalDeals.length) throw new Error("No purchasable storefront products verified; cache not overwritten.");
 
   writeFileSync(OUT_FILE, JSON.stringify(finalDeals, null, 2), "utf-8");
 

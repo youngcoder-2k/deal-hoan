@@ -1,5 +1,6 @@
 import { chromium } from "npm:playwright-core@1.62.1";
 import { createClient } from "npm:@supabase/supabase-js@2.112.4";
+import { inspectShopeeProduct } from "../_shared/xtra-availability.mjs";
 import { normalizeXtraProduct } from "../_shared/xtra-normalize.mjs";
 import { xtraExpiresAt } from "../_shared/xtra-slots.mjs";
 
@@ -43,7 +44,7 @@ Deno.serve(async request => {
     const deals = new Map();
     phase = "no_verified_products";
     for (const href of shops) {
-      if (Date.now() >= deadline) break;
+      if (Date.now() >= deadline - 45000) break;
       const url = new URL(href);
       if (url.origin !== "https://affiliate.shopee.vn" || !/^\/offer\/brand_offer\/\d+$/.test(url.pathname)) continue;
       try {
@@ -64,15 +65,27 @@ Deno.serve(async request => {
       } catch { /* One unavailable shop does not manufacture a replacement. */ }
     }
     if (!deals.size) throw Error("empty");
+    phase = "no_purchasable_products";
+    const verificationPage = await context.newPage();
+    const verified = [];
+    const candidates = [...deals.values()].sort((a,b) => b.cashback/b.price - a.cashback/a.price || b.cashback-a.cashback);
+    for (const deal of candidates) {
+      if (Date.now() >= deadline) break;
+      const availability = await inspectShopeeProduct(verificationPage, deal.productUrl);
+      if (availability.status === "available") verified.push({ ...deal, availability });
+      if (verified.length >= 18) break;
+    }
+    await verificationPage.close();
+    if (!verified.length) throw Error("empty");
     phase = "publish_failed";
     const now = Date.now();
     // One atomic RPC swaps the full batch only while this invocation owns the lease.
     const { error } = await db.rpc("publish_xtra_import", {
-      token: lease, products: [...deals.values()], checked: new Date(now).toISOString(),
+      token: lease, products: verified, checked: new Date(now).toISOString(),
       expiry: new Date(xtraExpiresAt(now)).toISOString(),
     });
     if (error) throw Error("db");
-    return reply({ status: "published", count: deals.size, checkedAt: new Date(now).toISOString() });
+    return reply({ status: "published", count: verified.length, checkedAt: new Date(now).toISOString() });
   } catch {
     return reply({ status: phase }, 502);
   } finally {

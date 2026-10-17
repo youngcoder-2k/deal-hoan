@@ -7,6 +7,8 @@ const MAX_PRICE = 1_500_000;
 
 function eligible(deal: Deal, now: number): boolean {
   if (!deal || typeof deal !== "object") return false;
+  const check = deal.availability;
+  if (!check || check.status !== "available" || !Number.isFinite(check.checkedAt) || check.checkedAt > now || now > xtraExpiresAt(check.checkedAt)) return false;
   const offer = deal.affiliateOffer;
   if (!offer || offer.source !== "shopee-xtra") return false;
   if (![deal.price, deal.cashback, offer.commissionRate, offer.checkedAt].every(Number.isFinite)) return false;
