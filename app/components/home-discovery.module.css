@@ -5,7 +5,7 @@
   --line: #e9e1d8;
   color: var(--ink);
   background: #fffcf7;
-  padding-top: 12px;
+  padding-top: 0;
 }
 
 .discovery h2, .discovery h3, .discovery p { margin: 0; }
@@ -172,7 +172,7 @@
 }
 
 @media (max-width: 760px) {
-  .discovery { padding-top: 4px; }
+  .discovery { padding-top: 0; }
   .section { width: calc(100% - 40px); padding-block: 48px; }
   .heading { margin-bottom: 28px; }
   .heading h2, .benefitIntro h2 { font-size: 32px; letter-spacing: -1px; }
