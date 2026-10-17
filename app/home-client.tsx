@@ -969,12 +969,9 @@ export default function HomeClient({
                   </strong>
                   <div>
                     <em>{formatPrice(deal.price)}</em>
-                    {deal.originalPrice > deal.price && (
-                      <s>{formatPrice(deal.originalPrice)}</s>
-                    )}
                   </div>
                   <small>
-                    hoàn <b>{formatPrice(deal.cashback)}</b>
+                    Hoàn <b>{formatPrice(deal.cashback)}</b>
                   </small>
                 </article>
               ))}
