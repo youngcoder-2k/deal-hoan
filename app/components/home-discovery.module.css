@@ -361,11 +361,11 @@
   .journeyUnderline { height: 12px; }
   .journeyIntro > p { margin-top: 16px; font-size: 16px; line-height: 1.55; letter-spacing: -.3px; }
   .journeySteps { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; width: 100%; margin-inline: 0; }
-  .journeySteps > li { display: flex; flex-direction: column; align-items: center; height: auto; min-height: 330px; padding: 16px 6px 0; border-radius: 80px 80px 16px 16px; }
+  .journeySteps > li { display: flex; flex-direction: column; align-items: center; height: auto; min-height: 0; padding: 16px 6px 0; border-radius: 80px 80px 16px 16px; }
   .journeyNumber { flex-shrink: 0; width: 34px; height: 34px; margin-bottom: 12px; font-size: 16px; }
-  .journeySteps h3 { width: 100%; font-size: clamp(12px, 3.2vw, 17px); line-height: 1.35; letter-spacing: -.3px; white-space: normal; overflow-wrap: break-word; }
+  .journeySteps h3 { width: 100%; font-size: clamp(9px, 2.65vw, 16px); line-height: 1.35; letter-spacing: -.3px; white-space: nowrap; }
   .journeySteps p { max-width: 100%; margin-top: 8px; font-size: clamp(11px, 2.7vw, 13px); line-height: 1.45; letter-spacing: 0; overflow-wrap: break-word; }
-  .journeyObject { position: relative; flex-shrink: 0; bottom: auto; left: auto; width: calc(100% + 12px); height: clamp(105px, 25vw, 180px); margin: auto -6px -2px; padding-top: 10px; }
+  .journeyObject { position: relative; flex-shrink: 0; bottom: auto; left: auto; width: calc(100% + 12px); height: clamp(105px, 25vw, 180px); margin: auto -6px -2px; padding-top: 12px; }
   .journeyConnector { top: 54%; right: -14px; bottom: auto; width: 14px; height: 20px; transform: none; }
   .journeyScene .journeyCta { width: min(100%, 360px); min-width: 0; min-height: 60px; padding-inline: 18px; gap: 12px; font-size: 19px; }
   .journeyCta svg { width: 24px; height: 24px; }
