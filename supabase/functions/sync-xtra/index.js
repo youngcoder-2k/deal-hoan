@@ -68,15 +68,24 @@ Deno.serve(async request => {
     phase = "no_purchasable_products";
     const verificationPage = await context.newPage();
     const verified = [];
+    const missingByShop = new Map();
     const candidates = [...deals.values()].sort((a,b) => b.cashback/b.price - a.cashback/a.price || b.cashback-a.cashback);
     for (const deal of candidates) {
       if (Date.now() >= deadline) break;
+      const shop = new URL(deal.productUrl).pathname.split("/")[2];
+      // Skip remaining candidates from a shop after three explicit missing pages.
+      // Unchecked candidates remain unverified, not falsely classified as missing.
+      if ((missingByShop.get(shop) ?? 0) >= 3) continue;
       const availability = await inspectShopeeProduct(verificationPage, deal.productUrl);
+      if (availability.status === "missing") missingByShop.set(shop, (missingByShop.get(shop) ?? 0) + 1);
       if (availability.status === "available") verified.push({ ...deal, availability });
       if (verified.length >= 18) break;
     }
     await verificationPage.close();
-    if (!verified.length) throw Error("empty");
+    if (verified.length < 18) {
+      phase = "insufficient_purchasable_products";
+      throw Error("incomplete");
+    }
     phase = "publish_failed";
     const now = Date.now();
     // One atomic RPC swaps the full batch only while this invocation owns the lease.
