@@ -893,9 +893,9 @@ export default function HomeClient({
                     {formatCashbackPercent(deal.cashback, deal.price) !== null && (
                       <b
                         className="flash-cashback-rate"
-                        title="Tỷ lệ quy đổi từ khoản hoàn dự kiến và giá bán; có làm tròn."
+                        title="Tỷ lệ quy đổi từ khoản hoàn dự kiến và giá bán, làm tròn lên số nguyên."
                       >
-                        Hoàn {formatCashbackPercent(deal.cashback, deal.price)}
+                        Hoàn <span className="flash-cashback-percent">{formatCashbackPercent(deal.cashback, deal.price)}</span>
                       </b>
                     )}
                     <a

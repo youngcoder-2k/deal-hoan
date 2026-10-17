@@ -17,6 +17,5 @@ export function formatCashbackPercent(cashback: number, price: number): string |
   if (cashback === 0) return "0%";
   const percent = (cashback / price) * 100;
   if (!Number.isFinite(percent)) return null;
-  if (percent < 0.1) return "<0,1%";
-  return `≈${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 1 }).format(percent)}%`;
+  return `${Math.ceil(percent)}%`;
 }

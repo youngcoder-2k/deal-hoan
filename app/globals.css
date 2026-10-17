@@ -7396,3 +7396,5 @@ select.account-input.select-bank-field:focus {
   transform: none;
 }
 
+
+.flash-grid .flash-cashback-rate .flash-cashback-percent { font-size:15px; font-weight:800; line-height:1.2; }
