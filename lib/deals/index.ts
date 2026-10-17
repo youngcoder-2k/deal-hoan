@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { FLASH_COUNT, HOT_COUNT, REVALIDATE_SECONDS } from "./config";
 import { shopeeProvider } from "./providers/shopee";
+import { curatedXtraProvider } from "./providers/curated-xtra";
 import { accessTradeProvider } from "./providers/accesstrade";
 import { lazadaProvider } from "./providers/lazada";
 import { shopeeScrapeProvider } from "./providers/shopee-scrape";
@@ -9,16 +10,14 @@ import type { Deal, DealBundle, DealProvider } from "./types";
 
 /**
  * Priority order.
- *  1. Shopee's own affiliate API — real product + real commission, when configured.
- *  2. Locally-scraped Shopee data (`scripts/shopee-scrape.mjs`) — real product
- *     data from an authenticated session, but `productUrl` is a plain Shopee
- *     link and `cashback` is only estimated (see `providers/shopee-scrape.ts`).
- *  3. AccessTrade — real product + real commission for Shopee/Lazada/TikTok Shop, when configured.
- *  4. Lazada's public catalog search — real product data, no credentials needed,
- *     estimated cashback like the scraper above.
- * TikTok Shop has no browsable web catalog to read at all.
+ *  1. Curated Shopee Hoa hồng Xtra deals — high commission manually or bulk-imported products.
+ *  2. Shopee's own affiliate Open API — real product + real commission, when configured.
+ *  3. Locally-scraped Shopee data (`scripts/shopee-scrape.mjs`) — real flash sale products.
+ *  4. AccessTrade — real product + real commission for Shopee/TikTok Shop.
+ *  5. Lazada fallback.
  */
 const PROVIDERS: DealProvider[] = [
+  curatedXtraProvider,
   shopeeProvider,
   shopeeScrapeProvider,
   accessTradeProvider,

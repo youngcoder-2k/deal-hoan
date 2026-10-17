@@ -198,6 +198,11 @@ export default function AdminUsersClient({
   const [isSavingOpenApi, setIsSavingOpenApi] = useState(false);
   const [hasShopeeOpenApi, setHasShopeeOpenApi] = useState(false);
   const [openApiResult, setOpenApiResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [xtraUrls, setXtraUrls] = useState("");
+  const [xtraCommission, setXtraCommission] = useState("70");
+  const [isImportingXtra, setIsImportingXtra] = useState(false);
+  const [curatedXtraList, setCuratedXtraList] = useState<any[]>([]);
+  const [xtraImportResult, setXtraImportResult] = useState<{ success: boolean; message: string } | null>(null);
   const [shopeeSyncResult, setShopeeSyncResult] = useState<{
     success: boolean;
     message: string;
@@ -397,9 +402,80 @@ export default function AdminUsersClient({
     }
   };
 
+  const loadCuratedXtraDeals = async () => {
+    try {
+      const res = await fetch("/api/admin/deals/curate", {
+        headers: getAdminFetchHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.deals)) {
+          setCuratedXtraList(data.deals);
+        }
+      }
+    } catch {}
+  };
+
+  const handleImportXtraDeals = async () => {
+    if (!xtraUrls.trim()) {
+      setXtraImportResult({ success: false, message: "Vui lòng dán ít nhất 1 link Shopee" });
+      return;
+    }
+    setIsImportingXtra(true);
+    setXtraImportResult(null);
+    try {
+      const res = await fetch("/api/admin/deals/curate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+        body: JSON.stringify({
+          urls: xtraUrls.trim(),
+          commissionPercent: Number(xtraCommission) || 70,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setXtraImportResult({ success: true, message: data.message });
+        setXtraUrls("");
+        if (Array.isArray(data.deals)) {
+          setCuratedXtraList(data.deals);
+        }
+        setToastMsg("✅ Đã nạp sản phẩm Hoa hồng Xtra vào Deal chớp nhoáng!");
+        setTimeout(() => setToastMsg(null), 3000);
+      } else {
+        setXtraImportResult({ success: false, message: data.error || "Lỗi khi nhập deal" });
+      }
+    } catch {
+      setXtraImportResult({ success: false, message: "Lỗi kết nối máy chủ" });
+    } finally {
+      setIsImportingXtra(false);
+    }
+  };
+
+  const handleDeleteXtraDeal = async (id: string) => {
+    try {
+      const res = await fetch(`/api/admin/deals/curate?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: getAdminFetchHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (id === "all") {
+          setCuratedXtraList([]);
+        } else if (Array.isArray(data.deals)) {
+          setCuratedXtraList(data.deals);
+        } else {
+          setCuratedXtraList((prev) => prev.filter((d) => d.id !== id));
+        }
+        setToastMsg("🗑️ Đã xóa deal Hoa hồng Xtra");
+        setTimeout(() => setToastMsg(null), 2500);
+      }
+    } catch {}
+  };
+
   // Tự động chạy ngầm định kỳ 15 phút mà không cần ai bấm nút
   useEffect(() => {
     loadShopeeSyncConfig();
+    loadCuratedXtraDeals();
     const interval = setInterval(() => {
       if (autoSyncEnabled && shopeeCookie) {
         handleSyncShopee(true);
@@ -2074,6 +2150,111 @@ export default function AdminUsersClient({
                     }`}
                   >
                     {openApiResult.message}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Nhập hàng loạt sản phẩm Hoa hồng Xtra (1-Click) */}
+            <div className="admin-settings-card border-rose-200 bg-rose-50/30">
+              <div className="admin-settings-header mb-3">
+                <div>
+                  <h3 className="text-stone-900 flex items-center gap-2">
+                    <span className="text-xl">⚡</span> Nhập hàng loạt sản phẩm Hoa hồng Xtra lên Deal chớp nhoáng
+                  </h3>
+                  <p>
+                    Giải pháp bán tự động nhanh nhất khi chưa có Open API: Tích chọn các shop hoa hồng 70% - 87% &rarr; bấm nút <b>&quot;Lấy link hàng loạt&quot;</b> trên Shopee Affiliate &rarr; Dán vào đây để đưa thẳng lên trang chủ.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold px-3 py-1.5 rounded-full border bg-rose-100 text-rose-800 border-rose-300">
+                    Đang ghim: {curatedXtraList.length} deal Xtra
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-700 mb-1">
+                    Danh sách link Shopee (Mỗi dòng 1 link - Copy từ nút &quot;Lấy link hàng loạt&quot; hoặc link sản phẩm):
+                  </label>
+                  <textarea
+                    rows={4}
+                    placeholder={`https://shopee.vn/product/1547687617/43120673024\nhttps://shopee.vn/product/1660251166/43975778650\nhttps://s.shopee.vn/xyz...`}
+                    value={xtraUrls}
+                    onChange={(e) => setXtraUrls(e.target.value)}
+                    className="w-full p-3 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-rose-500 bg-white"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <label className="text-[11px] font-bold text-stone-700 whitespace-nowrap">% Hoa hồng Xtra:</label>
+                    <input
+                      type="number"
+                      min={10}
+                      max={95}
+                      value={xtraCommission}
+                      onChange={(e) => setXtraCommission(e.target.value)}
+                      className="w-20 px-2.5 py-1.5 text-xs font-bold text-center rounded-lg border border-stone-300 bg-white focus:outline-none focus:border-rose-500"
+                    />
+                    <span className="text-xs text-stone-500">% (Mặc định 70% từ các Shop Xtra)</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {curatedXtraList.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteXtraDeal("all")}
+                        className="px-3 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                      >
+                        🗑️ Xóa tất cả ({curatedXtraList.length})
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleImportXtraDeals}
+                      disabled={isImportingXtra || !xtraUrls.trim()}
+                      className="admin-btn-primary bg-rose-600 hover:bg-rose-700 text-white whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
+                    >
+                      {isImportingXtra ? "Đang xử lý nạp..." : "🚀 Nạp ngay lên Deal chớp nhoáng"}
+                    </button>
+                  </div>
+                </div>
+
+                {xtraImportResult && (
+                  <div
+                    className={`p-3 rounded-lg text-xs font-medium ${
+                      xtraImportResult.success
+                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                        : "bg-red-100 text-red-900 border border-red-300"
+                    }`}
+                  >
+                    {xtraImportResult.message}
+                  </div>
+                )}
+
+                {curatedXtraList.length > 0 && (
+                  <div className="mt-2 bg-white rounded-xl border border-stone-200 p-3 max-h-56 overflow-y-auto">
+                    <div className="text-[11px] font-bold text-stone-600 uppercase mb-2">Các sản phẩm Hoa hồng Xtra đang hiển thị ({curatedXtraList.length}):</div>
+                    <div className="space-y-1.5">
+                      {curatedXtraList.slice(0, 10).map((deal: any) => (
+                        <div key={deal.id} className="flex items-center justify-between text-xs py-1 border-b border-stone-100 last:border-none">
+                          <div className="truncate flex-1 pr-2">
+                            <span className="font-semibold text-stone-800">{deal.name}</span>
+                            <span className="text-stone-500 ml-2">({Number(deal.price).toLocaleString("vi-VN")}đ · Hoàn {Number(deal.cashback).toLocaleString("vi-VN")}đ)</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteXtraDeal(deal.id)}
+                            className="text-stone-400 hover:text-red-500 text-xs px-1"
+                            title="Xóa deal này"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
