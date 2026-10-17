@@ -109,8 +109,16 @@ a.card:hover { transform:translateY(-6px); border-color:#fff0eb; box-shadow:0 12
  .benefitHeading .icon { flex-basis:30px; width:30px; height:30px; }
 }
 
-/* Benefits use the site navy/cream palette, not multicolor solid badges. */
-.benefitIcon { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; margin:0; border:1px solid #f0dfd1; border-radius:9px; color:#123047; background:#fff5ec; }
+/* Filled white icons on blue tiles match the guide icon family. */
+.benefitIcon { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; margin:0; border:0; border-radius:9px; color:#fff; background:linear-gradient(135deg,#1a94ff,#5baeff); }
 @media (forced-colors:active) { .benefitIcon { border-color:CanvasText; color:CanvasText; background:Canvas; } }
 
 @media(max-width:768px) { .benefitIcon { flex-basis:30px; width:30px; height:30px; } }
+
+@media(min-width:1100px) {
+ .benefitGrid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; }
+ .benefitGrid .card { padding:24px 18px; }
+ .benefitGrid .benefitHeading { gap:8px; }
+ .benefitGrid .benefitHeading h3 { font-size:14px; }
+ .benefitGrid .card p { font-size:14px; line-height:1.65; }
+}
