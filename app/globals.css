@@ -4304,6 +4304,14 @@ select.account-input.select-bank-field:focus {
   .flash-grid .placeholder {
     height: 120px;
   }
+  .flash-grid article > strong,
+  .flash-grid article > strong a {
+    display: block;
+    min-height: 0;
+    font-weight: 400;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
 
   /* Hot Deals Section */
   .block {
