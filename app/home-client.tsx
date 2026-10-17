@@ -825,7 +825,6 @@ export default function HomeClient({
           <div className="flash-top">
             <div className="flash-top-left">
               <h2>⚡ Deal chớp nhoáng</h2>
-              <span className="flash-top-subtitle">🔥 Top hoàn tiền cao</span>
               <div className="flash-countdown-group">
                 <div className="timer">
                   {/* The live clock can tick between server render and hydration. */}

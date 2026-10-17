@@ -25,16 +25,29 @@ const PROVIDERS: DealProvider[] = [
 ];
 
 
-/** "Deal chớp nhoáng" — tuyển chọn và xếp ưu tiên các sản phẩm vừa rẻ mà TỶ LỆ HOÀN TIỀN KHỦNG (Hoa hồng Xtra 30% - 87%) lên đầu */
+/** Giá tối đa cho sản phẩm Deal chớp nhoáng — loại bỏ hoàn toàn đồ đắt tiền (tivi, điện thoại mấy chục triệu) */
+const MAX_FLASH_PRICE = 1_500_000;
+
+/** "Deal chớp nhoáng" — chỉ nhận sản phẩm vừa túi tiền (< 1.5 triệu) và ưu tiên TỶ LỆ HOÀN TIỀN KHỦNG (Hoa hồng Xtra 30% - 87%) */
 function pickFlash(deals: Deal[]) {
-  return [...deals]
-    .filter((d) => d.cashback > 0)
+  // 1. Loại bỏ hoàn toàn các sản phẩm không có hoàn tiền, hoặc giá > 1.500.000đ (như tivi, điện thoại)
+  const affordableDeals = deals.filter(
+    (d) => d.cashback > 0 && d.price > 0 && d.price <= MAX_FLASH_PRICE
+  );
+
+  // Nếu không đủ sản phẩm dưới 1.5tr thì mới mở rộng lên tối đa 2.5tr (vẫn tuyệt đối chặn hàng chục triệu)
+  const pool =
+    affordableDeals.length >= 6
+      ? affordableDeals
+      : deals.filter((d) => d.cashback > 0 && d.price > 0 && d.price <= 2_500_000);
+
+  return [...pool]
     .sort((a, b) => {
       const rateA = a.price > 0 ? a.cashback / a.price : 0;
       const rateB = b.price > 0 ? b.cashback / b.price : 0;
 
       // 1. Ưu tiên số 1: Tỷ lệ hoàn tiền khủng (sản phẩm vừa rẻ vừa hoàn nhiều %)
-      // Ví dụ: Hoàn 87%, 82%, 58% luôn đứng trước các deal tiền to nhưng chỉ hoàn 1-2%
+      // Ví dụ: Hoàn 87%, 82%, 58% luôn đứng trước các deal chỉ hoàn 1-2%
       if (Math.abs(rateB - rateA) >= 0.05) {
         return rateB - rateA;
       }

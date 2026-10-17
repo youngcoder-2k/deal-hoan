@@ -24,5 +24,6 @@ export async function GET() {
       flash: bundle.flash[0] ?? null,
       hot: bundle.hot[0] ?? null,
     },
+    flash: bundle.flash,
   });
 }
