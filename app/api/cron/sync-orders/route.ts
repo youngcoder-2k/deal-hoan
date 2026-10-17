@@ -1,3 +1,4 @@
+import { isAuthorizedCron } from "@/lib/cron/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { recordCashbackOrder } from "@/lib/deals/cashback";
 import { parseShopeeMoney } from "@/lib/deals/shopee-import";
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 
 /**
  * Endpoint chạy ngầm 24/7 tự động kéo đơn hàng từ Shopee về DealHoàn
- * Hỗ trợ Vercel Cron, GitHub Actions, hoặc Server Interval
+ * Hỗ trợ Supabase Cron hoặc Background Runner
  */
 export async function GET(request: NextRequest) {
   return handleAutomatedSync(request);
@@ -22,13 +23,8 @@ export async function POST(request: NextRequest) {
 async function handleAutomatedSync(request: NextRequest) {
   try {
     // Kiểm tra cron secret nếu có cấu hình
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET?.trim();
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      const urlSecret = request.nextUrl.searchParams.get("secret");
-      if (urlSecret !== cronSecret) {
-        return NextResponse.json({ error: "Unauthorized cron execution" }, { status: 401 });
-      }
+    if (!isAuthorizedCron(request)) {
+      return NextResponse.json({ error: "Unauthorized cron execution" }, { status: 401 });
     }
 
     const config = getShopeeSyncConfig();
