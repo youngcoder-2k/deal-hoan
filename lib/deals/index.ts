@@ -25,16 +25,28 @@ const PROVIDERS: DealProvider[] = [
 ];
 
 
-/** "Deal chớp nhoáng" — tuyển chọn và xếp ưu tiên các sản phẩm HOÀN TIỀN NHIỀU NHẤT lên đầu */
+/** "Deal chớp nhoáng" — tuyển chọn và xếp ưu tiên các sản phẩm vừa rẻ mà TỶ LỆ HOÀN TIỀN KHỦNG (Hoa hồng Xtra 30% - 87%) lên đầu */
 function pickFlash(deals: Deal[]) {
   return [...deals]
     .filter((d) => d.cashback > 0)
-    .sort(
-      (a, b) =>
-        b.cashback - a.cashback ||
-        b.dealScore - a.dealScore ||
-        b.discountPercent - a.discountPercent
-    )
+    .sort((a, b) => {
+      const rateA = a.price > 0 ? a.cashback / a.price : 0;
+      const rateB = b.price > 0 ? b.cashback / b.price : 0;
+
+      // 1. Ưu tiên số 1: Tỷ lệ hoàn tiền khủng (sản phẩm vừa rẻ vừa hoàn nhiều %)
+      // Ví dụ: Hoàn 87%, 82%, 58% luôn đứng trước các deal tiền to nhưng chỉ hoàn 1-2%
+      if (Math.abs(rateB - rateA) >= 0.05) {
+        return rateB - rateA;
+      }
+
+      // 2. Nếu tỷ lệ hoàn xấp xỉ nhau, ưu tiên số tiền hoàn tuyệt đối lớn hơn
+      if (Math.abs(b.cashback - a.cashback) >= 5000) {
+        return b.cashback - a.cashback;
+      }
+
+      // 3. Cuối cùng xếp theo điểm đánh giá dealScore & giảm giá
+      return b.dealScore - a.dealScore || b.discountPercent - a.discountPercent;
+    })
     .slice(0, FLASH_COUNT);
 }
 

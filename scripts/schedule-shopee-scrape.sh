@@ -35,7 +35,7 @@ case "${1:-}" in
   <key>ProgramArguments</key>
   <array>
     <string>${NODE_BIN}</string>
-    <string>${PROJECT_DIR}/scripts/shopee-scrape.mjs</string>
+    <string>${PROJECT_DIR}/scripts/auto-sync-all.mjs</string>
   </array>
   <key>WorkingDirectory</key>
   <string>${PROJECT_DIR}</string>
