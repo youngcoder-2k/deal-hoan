@@ -26,11 +26,16 @@ const PROVIDERS: DealProvider[] = [
 ];
 
 
-/** "Deal chớp nhoáng" — the steepest markdowns, deepest first. */
+/** "Deal chớp nhoáng" — tuyển chọn và xếp ưu tiên các sản phẩm HOÀN TIỀN NHIỀU NHẤT lên đầu */
 function pickFlash(deals: Deal[]) {
   return [...deals]
-    .filter((d) => d.discountPercent > 0)
-    .sort((a, b) => b.discountPercent - a.discountPercent || b.dealScore - a.dealScore)
+    .filter((d) => d.cashback > 0)
+    .sort(
+      (a, b) =>
+        b.cashback - a.cashback ||
+        b.dealScore - a.dealScore ||
+        b.discountPercent - a.discountPercent
+    )
     .slice(0, FLASH_COUNT);
 }
 
@@ -49,31 +54,52 @@ function pickHot(deals: Deal[], exclude: Deal[]) {
 }
 
 async function fetchBundle(): Promise<DealBundle> {
-  for (const provider of PROVIDERS) {
-    if (!provider.isConfigured()) continue;
+  const activeProviders = PROVIDERS.filter((p) => p.isConfigured());
 
-    try {
+  // Lấy deal song song từ tất cả các provider đã cấu hình (Shopee Scrape, AccessTrade TikTok Shop / Lazada)
+  const results = await Promise.allSettled(
+    activeProviders.map(async (provider) => {
       const deals = await provider.fetchDeals();
-      const flash = pickFlash(deals);
-      const hot = pickHot(deals, flash);
+      return { id: provider.id, deals };
+    })
+  );
 
-      if (flash.length && hot.length) {
-        return {
-          flash,
-          hot,
-          source: provider.id,
-          fetchedAt: new Date().toISOString(),
-        };
+  const allDeals: Deal[] = [];
+  const seen = new Set<string>();
+  let primarySource: DealBundle["source"] = "seed";
+
+  for (const res of results) {
+    if (res.status === "fulfilled" && res.value.deals.length > 0) {
+      if (primarySource === "seed") primarySource = res.value.id;
+      for (const d of res.value.deals) {
+        if (!seen.has(d.id)) {
+          seen.add(d.id);
+          allDeals.push(d);
+        }
       }
-      console.warn(`[deals] ${provider.id} returned too few usable deals; trying next provider`);
-    } catch (error) {
-      console.warn(`[deals] ${provider.id} failed:`, error);
+    } else if (res.status === "rejected") {
+      console.warn("[deals] a provider failed:", res.reason);
+    }
+  }
+
+  if (allDeals.length > 0) {
+    const flash = pickFlash(allDeals);
+    const hot = pickHot(allDeals, flash);
+
+    if (flash.length && hot.length) {
+      return {
+        flash,
+        hot,
+        source: primarySource,
+        fetchedAt: new Date().toISOString(),
+      };
     }
   }
 
   console.warn("[deals] every provider failed — serving seed data");
+  const seedFlash = pickFlash(SEED_FLASH);
   return {
-    flash: SEED_FLASH,
+    flash: seedFlash.length ? seedFlash : SEED_FLASH.slice(0, FLASH_COUNT),
     hot: SEED_HOT,
     source: "seed",
     fetchedAt: new Date().toISOString(),

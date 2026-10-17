@@ -130,6 +130,81 @@ function normalise(item: FeedItem): Deal | null {
   };
 }
 
+interface TikTokFeedItem {
+  id: string;
+  title?: string;
+  sales_price?: { minimum_amount?: string | number; maximum_amount?: string | number };
+  original_price?: { minimum_amount?: string | number; maximum_amount?: string | number };
+  commission?: { amount?: string | number; rate?: string | number };
+  commission_rate?: string | number;
+  shop?: { name?: string };
+  main_image_url?: string;
+  detail_link?: string;
+  units_sold?: number;
+}
+
+async function fetchTikTokProducts(authToken: string): Promise<Deal[]> {
+  try {
+    const url = "https://api.accesstrade.vn/v2/tiktokshop_product_feeds?limit=50";
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Token ${authToken}`,
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      cache: "no-store",
+    });
+
+    if (!res.ok) return [];
+    const json = await res.json();
+    const products: TikTokFeedItem[] = json.data?.products || [];
+
+    return products
+      .map((p): Deal | null => {
+        const price = num(p.sales_price?.minimum_amount || p.sales_price?.maximum_amount);
+        const originalPrice = num(p.original_price?.maximum_amount || p.original_price?.minimum_amount) || price;
+        const discountPercent =
+          originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+        const rawCommission = num(p.commission?.amount);
+        const cashback =
+          rawCommission > 0
+            ? Math.round(rawCommission / 1000) * 1000
+            : cashbackFor(price, "TikTok Shop");
+        const productUrl = p.detail_link || "";
+
+        if (!p.title || !price || !productUrl) return null;
+
+        return {
+          id: `at-tiktok-${p.id}`,
+          name: p.title.trim(),
+          platform: "TikTok Shop",
+          seller: p.shop?.name || "TikTok Shop",
+          price,
+          originalPrice,
+          discountPercent,
+          cashback,
+          dealScore: dealScore({
+            discountPercent,
+            price,
+            cashback,
+            ratingAverage: 4.8,
+            reviewCount: p.units_sold || 100,
+            sold: p.units_sold || null,
+          }),
+          sold: p.units_sold || null,
+          ratingAverage: 4.8,
+          reviewCount: p.units_sold || 0,
+          imageUrl: p.main_image_url || null,
+          productUrl,
+        };
+      })
+      .filter((d): d is Deal => d !== null);
+  } catch (err) {
+    console.warn("[deals] failed to fetch TikTok Shop product feeds:", err);
+    return [];
+  }
+}
+
 export const accessTradeProvider: DealProvider = {
   id: "accesstrade",
 
@@ -139,23 +214,27 @@ export const accessTradeProvider: DealProvider = {
     const authToken = token();
     if (!authToken) throw new Error("AccessTrade token is not configured");
 
-    const batches = await Promise.allSettled(
-      merchants().map((m) => fetchMerchant(m, authToken)),
-    );
+    const [merchantResults, tikTokDeals] = await Promise.all([
+      Promise.allSettled(merchants().map((m) => fetchMerchant(m, authToken))),
+      fetchTikTokProducts(authToken),
+    ]);
 
     const items: FeedItem[] = [];
-    for (const batch of batches) {
+    for (const batch of merchantResults) {
       if (batch.status === "fulfilled") items.push(...batch.value);
       else console.warn("[deals] accesstrade merchant failed:", batch.reason);
     }
-
-    if (items.length === 0) throw new Error("AccessTrade returned no products");
 
     const byId = new Map<string, Deal>();
     for (const item of items) {
       const deal = normalise(item);
       if (deal) byId.set(deal.id, deal);
     }
+    for (const deal of tikTokDeals) {
+      byId.set(deal.id, deal);
+    }
+
+    if (byId.size === 0) throw new Error("AccessTrade returned no products");
 
     return [...byId.values()];
   },

@@ -825,6 +825,7 @@ export default function HomeClient({
           <div className="flash-top">
             <div className="flash-top-left">
               <h2>⚡ Deal chớp nhoáng</h2>
+              <span className="flash-top-subtitle">🔥 Top hoàn tiền cao</span>
               <div className="flash-countdown-group">
                 <div className="timer">
                   {/* The live clock can tick between server render and hydration. */}
@@ -890,6 +891,13 @@ export default function HomeClient({
               {flashDeals.map((deal) => (
                 <article key={deal.id}>
                   <div className="placeholder">
+                    {deal.cashback >= 50000 ? (
+                      <b className="badge-high-cashback">🔥 Hoàn {formatPrice(deal.cashback)}</b>
+                    ) : deal.discountPercent > 0 ? (
+                      <b>-{deal.discountPercent}%</b>
+                    ) : (
+                      <b>Hoàn {formatPrice(deal.cashback)}</b>
+                    )}
                     <a
                       href={getAffiliateUrl(deal.productUrl)}
                       target="_blank"
@@ -918,9 +926,15 @@ export default function HomeClient({
                   </strong>
                   <div>
                     <em>{formatPrice(deal.price)}</em>
+                    {deal.originalPrice > deal.price && (
+                      <s>{formatPrice(deal.originalPrice)}</s>
+                    )}
                   </div>
                   <small>
                     Hoàn <b>{formatPrice(deal.cashback)}</b>
+                    {deal.platform && (
+                      <span className="flash-platform-pill">{deal.platform}</span>
+                    )}
                   </small>
                 </article>
               ))}

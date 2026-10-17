@@ -23,7 +23,7 @@ export const CASHBACK_RATE: Record<Platform, number> = {
 export const CASHBACK_CAP = 500_000;
 
 /** How many cards each section renders. */
-export const FLASH_COUNT = 10;
+export const FLASH_COUNT = 18;
 export const HOT_COUNT = 24;
 
 /** Cache lifetime for a fetched bundle, in seconds. */
