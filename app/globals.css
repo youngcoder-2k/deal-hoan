@@ -4236,10 +4236,10 @@ select.account-input.select-bank-field:focus {
   .flash-top {
     display: grid;
     grid-template-columns: 1fr auto;
-    row-gap: 10px;
+    row-gap: 6px;
     column-gap: 8px;
     align-items: center;
-    padding: 18px 18px;
+    padding: 10px 14px;
   }
   .flash-top-left {
     display: contents;
@@ -4298,11 +4298,11 @@ select.account-input.select-bank-field:focus {
     grid-auto-columns: 64%;
   }
   .flash-grid article {
-    padding: 14px;
-    gap: 8px;
+    padding: 10px;
+    gap: 6px;
   }
   .flash-grid .placeholder {
-    height: 150px;
+    height: 120px;
   }
 
   /* Hot Deals Section */
@@ -4999,8 +4999,8 @@ select.account-input.select-bank-field:focus {
     height: 28px;
   }
   .flash-top {
-    padding: 16px 14px;
-    row-gap: 8px;
+    padding: 10px 12px;
+    row-gap: 6px;
   }
   .flash-top-left h2 {
     font-size: 15px;
@@ -5022,7 +5022,7 @@ select.account-input.select-bank-field:focus {
     font-size: 13px;
   }
   .flash-grid .placeholder {
-    height: 135px;
+    height: 110px;
   }
   .deal-grid > .deal,
   .deal {
