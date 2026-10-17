@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { FETCH_TIMEOUT_MS } from "../config";
 import { cashbackFor, dealScore } from "../score";
 import type { Deal, DealProvider } from "../types";
+import { getShopeeOpenApiCreds } from "../shopee-sync-config";
 
 /**
  * Shopee Affiliate Open API — the official, sanctioned way to read Shopee offers.
@@ -62,6 +63,8 @@ const num = (v: unknown, fallback = 0) => {
 };
 
 function credentials() {
+  const openApi = getShopeeOpenApiCreds();
+  if (openApi) return openApi;
   const appId = process.env.SHOPEE_AFFILIATE_APP_ID;
   const secret = process.env.SHOPEE_AFFILIATE_SECRET;
   return appId && secret ? { appId, secret } : null;

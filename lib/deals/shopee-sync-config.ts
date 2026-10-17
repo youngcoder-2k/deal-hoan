@@ -4,6 +4,8 @@ import path from "path";
 export interface ShopeeSyncConfig {
   shopeeCookie: string;
   accesstradeToken?: string;
+  shopeeAppId?: string;
+  shopeeSecret?: string;
   autoSyncEnabled: boolean;
   syncIntervalMinutes: number;
   lastSyncAt: string | null;
@@ -15,6 +17,8 @@ export interface ShopeeSyncConfig {
 const DEFAULT_CONFIG: ShopeeSyncConfig = {
   shopeeCookie: process.env.SHOPEE_AFFILIATE_COOKIE || "",
   accesstradeToken: process.env.ACCESSTRADE_TOKEN || "",
+  shopeeAppId: process.env.SHOPEE_AFFILIATE_APP_ID || "",
+  shopeeSecret: process.env.SHOPEE_AFFILIATE_SECRET || "",
   autoSyncEnabled: true,
   syncIntervalMinutes: 15,
   lastSyncAt: null,
@@ -24,6 +28,13 @@ const DEFAULT_CONFIG: ShopeeSyncConfig = {
 };
 
 const CONFIG_FILE_PATH = path.join(process.cwd(), "data", "shopee-sync-config.json");
+
+export function getShopeeOpenApiCreds(): { appId: string; secret: string } | null {
+  const config = getShopeeSyncConfig();
+  const appId = (config.shopeeAppId || process.env.SHOPEE_AFFILIATE_APP_ID || "").trim();
+  const secret = (config.shopeeSecret || process.env.SHOPEE_AFFILIATE_SECRET || "").trim();
+  return appId && secret ? { appId, secret } : null;
+}
 
 export function getAccessTradeToken(): string {
   const config = getShopeeSyncConfig();

@@ -5,7 +5,7 @@ import { recordCashbackOrder } from "@/lib/deals/cashback";
 import { parseShopeeMoney } from "@/lib/deals/shopee-import";
 import { parseUserIdFromSubId } from "@/lib/deals/affiliate";
 import { getBoosterSettingsSync } from "@/lib/deals/cashback-booster";
-import { getShopeeSyncConfig, saveShopeeSyncConfig } from "@/lib/deals/shopee-sync-config";
+import { getShopeeSyncConfig, saveShopeeSyncConfig, type ShopeeSyncConfig } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +45,13 @@ export async function GET(request: NextRequest) {
           ? config.accesstradeToken.slice(0, 8) + "..." + config.accesstradeToken.slice(-6)
           : "",
         hasAccessTradeToken: Boolean(config.accesstradeToken || process.env.ACCESSTRADE_TOKEN),
+        shopeeAppIdMasked: config.shopeeAppId
+          ? config.shopeeAppId.slice(0, 4) + "..." + config.shopeeAppId.slice(-4)
+          : (process.env.SHOPEE_AFFILIATE_APP_ID ? "Đã có từ ENV" : ""),
+        hasShopeeOpenApi: Boolean(
+          (config.shopeeAppId && config.shopeeSecret) ||
+          (process.env.SHOPEE_AFFILIATE_APP_ID && process.env.SHOPEE_AFFILIATE_SECRET)
+        ),
       },
       recentOrders,
     });
@@ -72,6 +79,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         message: "Đã lưu mã AccessTrade API Token cho TikTok Shop / Lazada thành công!",
+        config: updated,
+      });
+    }
+
+    // Cập nhật Shopee Open API (Hoa hồng Xtra & Báo cáo chuyển đổi)
+    if (typeof body.shopeeAppId === "string" || typeof body.shopeeSecret === "string") {
+      const updateData: Partial<ShopeeSyncConfig> = {};
+      if (typeof body.shopeeAppId === "string") updateData.shopeeAppId = body.shopeeAppId.trim();
+      if (typeof body.shopeeSecret === "string") updateData.shopeeSecret = body.shopeeSecret.trim();
+
+      const updated = saveShopeeSyncConfig(updateData);
+      return NextResponse.json({
+        success: true,
+        message: "Đã lưu Shopee Open API (App ID & Secret Key) thành công! Hệ thống sẽ tự động quét sản phẩm Hoa hồng Xtra.",
         config: updated,
       });
     }

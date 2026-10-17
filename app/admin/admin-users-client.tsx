@@ -193,6 +193,11 @@ export default function AdminUsersClient({
   const [accesstradeToken, setAccesstradeToken] = useState("");
   const [isSavingAtToken, setIsSavingAtToken] = useState(false);
   const [atTokenResult, setAtTokenResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [shopeeAppId, setShopeeAppId] = useState("");
+  const [shopeeSecret, setShopeeSecret] = useState("");
+  const [isSavingOpenApi, setIsSavingOpenApi] = useState(false);
+  const [hasShopeeOpenApi, setHasShopeeOpenApi] = useState(false);
+  const [openApiResult, setOpenApiResult] = useState<{ success: boolean; message: string } | null>(null);
   const [shopeeSyncResult, setShopeeSyncResult] = useState<{
     success: boolean;
     message: string;
@@ -238,6 +243,10 @@ export default function AdminUsersClient({
           if (data.config.accesstradeToken && !accesstradeToken) {
             setAccesstradeToken(data.config.accesstradeToken);
           }
+          if (data.config.shopeeAppId && !shopeeAppId) {
+            setShopeeAppId(data.config.shopeeAppId);
+          }
+          setHasShopeeOpenApi(Boolean(data.config.hasShopeeOpenApi));
           setAutoSyncEnabled(data.config.autoSyncEnabled ?? true);
           setLastSyncAt(data.config.lastSyncAt || null);
           setLastSyncResult(data.config.lastSyncResult || null);
@@ -350,6 +359,41 @@ export default function AdminUsersClient({
       setAtTokenResult({ success: false, message: "Lỗi kết nối máy chủ" });
     } finally {
       setIsSavingAtToken(false);
+    }
+  };
+
+  const handleSaveShopeeOpenApi = async () => {
+    if (!shopeeAppId.trim()) {
+      setOpenApiResult({ success: false, message: "Vui lòng nhập Shopee App ID" });
+      return;
+    }
+    setIsSavingOpenApi(true);
+    setOpenApiResult(null);
+    try {
+      const res = await fetch("/api/admin/shopee/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+        body: JSON.stringify({
+          shopeeAppId: shopeeAppId.trim(),
+          shopeeSecret: shopeeSecret.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setHasShopeeOpenApi(true);
+        setOpenApiResult({
+          success: true,
+          message: data.message || "🎉 Đã kết nối Shopee Open API thành công! Hệ thống sẽ tự động quét và đưa sản phẩm Hoa hồng Xtra lên Deal chớp nhoáng.",
+        });
+        setToastMsg("✅ Đã lưu cấu hình Shopee Open API!");
+        setTimeout(() => setToastMsg(null), 3000);
+      } else {
+        setOpenApiResult({ success: false, message: data.error || "Không thể lưu thông tin Open API" });
+      }
+    } catch {
+      setOpenApiResult({ success: false, message: "Lỗi kết nối máy chủ" });
+    } finally {
+      setIsSavingOpenApi(false);
     }
   };
 
@@ -1948,6 +1992,90 @@ export default function AdminUsersClient({
                     <b>Cách lấy Cookie (1 lần duy nhất):</b> Đăng nhập <b>affiliate.shopee.vn</b> &rarr; nhấn <code>F12</code> &rarr; tab <code>Application</code> (hoặc <code>Storage</code>) &rarr; <code>Cookies</code> &rarr; copy giá trị <code>SPC_EC</code> hoặc toàn bộ chuỗi cookie dán vào đây.
                   </span>
                 </div>
+              </div>
+            </div>
+
+            {/* Shopee Open API & Hoa hồng Xtra Card */}
+            <div className="admin-settings-card border-orange-200 bg-orange-50/30">
+              <div className="admin-settings-header mb-3">
+                <div>
+                  <h3 className="text-stone-900 flex items-center gap-2">
+                    <span className="text-xl">🎁</span> Shopee Open API & Hoa hồng Xtra (Hoàn tới 87%)
+                  </h3>
+                  <p>
+                    Tự động kéo hàng loạt sản phẩm <b>Hoa hồng Xtra</b> (mức hoàn tiền khủng từ 30% đến 87%) trực tiếp từ sàn Shopee về hiển thị ưu tiên tại mục <b>Deal chớp nhoáng</b> trên trang chủ.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
+                      hasShopeeOpenApi
+                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                        : "bg-amber-100 text-amber-800 border-amber-300"
+                    }`}
+                  >
+                    <span>{hasShopeeOpenApi ? "🟢 Open API: ĐÃ KẾT NỐI (Tự động kéo Xtra)" : "⚪ Chưa cắm Shopee Open API"}</span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <div className="p-3 bg-white rounded-xl border border-orange-200 text-xs text-stone-700 flex flex-col gap-1.5">
+                  <span className="font-semibold text-orange-950 flex items-center gap-1.5">
+                    <span>💡</span> <b>Cách lấy App ID và Secret Key (1 phút):</b>
+                  </span>
+                  <ol className="list-decimal pl-4 space-y-1 text-stone-600">
+                    <li>Đăng nhập <b>affiliate.shopee.vn</b> (trang Tiếp thị liên kết Shopee).</li>
+                    <li>Ở thanh menu bên trái, cuộn xuống dưới cùng và click vào mục <b>Open API</b>.</li>
+                    <li>Copy mã <b>App ID</b> và <b>Secret</b> dán vào 2 ô bên dưới rồi nhấn <b>Lưu & Kích hoạt</b>.</li>
+                  </ol>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-stone-700 mb-1">Shopee App ID:</label>
+                    <input
+                      type="text"
+                      placeholder="Dán App ID (ví dụ: 17351320644)..."
+                      value={shopeeAppId}
+                      onChange={(e) => setShopeeAppId(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-stone-700 mb-1">Shopee Secret Key:</label>
+                    <input
+                      type="password"
+                      placeholder="Dán Secret Key..."
+                      value={shopeeSecret}
+                      onChange={(e) => setShopeeSecret(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={handleSaveShopeeOpenApi}
+                    disabled={isSavingOpenApi || !shopeeAppId.trim()}
+                    className="admin-btn-primary bg-orange-600 hover:bg-orange-700 text-white whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
+                  >
+                    {isSavingOpenApi ? "Đang lưu..." : "💾 Lưu & Kích hoạt Hoa hồng Xtra"}
+                  </button>
+                </div>
+
+                {openApiResult && (
+                  <div
+                    className={`p-3 rounded-lg text-xs font-medium ${
+                      openApiResult.success
+                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                        : "bg-red-100 text-red-900 border border-red-300"
+                    }`}
+                  >
+                    {openApiResult.message}
+                  </div>
+                )}
               </div>
             </div>
 
