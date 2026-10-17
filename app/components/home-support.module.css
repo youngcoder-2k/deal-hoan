@@ -108,3 +108,9 @@ a.card:hover { transform:translateY(-6px); border-color:#fff0eb; box-shadow:0 12
  .benefitHeading h3 { font-size:clamp(13px,3.65vw,17px); }
  .benefitHeading .icon { flex-basis:30px; width:30px; height:30px; }
 }
+
+/* Benefits use the site navy/cream palette, not multicolor solid badges. */
+.benefitIcon { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; margin:0; border:1px solid #f0dfd1; border-radius:9px; color:#123047; background:#fff5ec; }
+@media (forced-colors:active) { .benefitIcon { border-color:CanvasText; color:CanvasText; background:Canvas; } }
+
+@media(max-width:768px) { .benefitIcon { flex-basis:30px; width:30px; height:30px; } }
