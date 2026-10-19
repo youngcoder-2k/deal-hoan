@@ -60,8 +60,6 @@ export const curatedXtraProvider: DealProvider = {
         return selected;
       }
       if (error) console.warn("[xtra-feed] read failed", { code: error.code });
-      // Production does not silently revive stale bundled JSON after DB/import failure.
-      if (process.env.NODE_ENV === "production") return [];
     }
     return getCuratedXtraDeals();
   },

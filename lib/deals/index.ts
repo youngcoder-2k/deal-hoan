@@ -1,12 +1,12 @@
 import { pickFlash } from "./select-flash";
 import { unstable_cache } from "next/cache";
-import { HOT_COUNT, REVALIDATE_SECONDS } from "./config";
+import { FLASH_COUNT, HOT_COUNT, REVALIDATE_SECONDS } from "./config";
 import { shopeeProvider } from "./providers/shopee";
 import { curatedXtraProvider } from "./providers/curated-xtra";
 import { accessTradeProvider } from "./providers/accesstrade";
 import { lazadaProvider } from "./providers/lazada";
 import { shopeeScrapeProvider } from "./providers/shopee-scrape";
-import { SEED_HOT } from "./seed";
+import { SEED_FLASH, SEED_HOT } from "./seed";
 import type { Deal, DealBundle, DealProvider } from "./types";
 
 /**
@@ -70,22 +70,34 @@ async function fetchBundle(): Promise<DealBundle> {
   }
 
   if (allDeals.length > 0) {
-    const flash = pickFlash(allDeals);
+    let flash = pickFlash(allDeals);
+
+    // Đảm bảo Deal chớp nhoáng LUÔN ĐẦY ĐỦ: nếu ít hơn FLASH_COUNT, tự động đệm thêm để hiển thị liên tục
+    if (flash.length < FLASH_COUNT) {
+      const fallbackFlash = pickFlash(SEED_FLASH);
+      const seenIds = new Set(flash.map((d) => d.id));
+      for (const d of fallbackFlash) {
+        if (!seenIds.has(d.id)) {
+          seenIds.add(d.id);
+          flash.push(d);
+          if (flash.length >= FLASH_COUNT) break;
+        }
+      }
+    }
+
     const hot = pickHot(allDeals, flash);
 
-    if (hot.length) {
-      return {
-        flash,
-        hot,
-        source: primarySource,
-        fetchedAt: new Date().toISOString(),
-      };
-    }
+    return {
+      flash,
+      hot: hot.length ? hot : SEED_HOT,
+      source: primarySource,
+      fetchedAt: new Date().toISOString(),
+    };
   }
 
   console.warn("[deals] every provider failed — serving seed data");
   return {
-    flash: [],
+    flash: pickFlash(SEED_FLASH),
     hot: SEED_HOT,
     source: "seed",
     fetchedAt: new Date().toISOString(),

@@ -238,6 +238,10 @@ export default function HomeClient({
   const [link, setLink] = useState("");
   const [result, setResult] = useState("");
   const [resultClosing, setResultClosing] = useState(false);
+  const visibleFlashDeals = useMemo(
+    () => flashDeals.filter((deal) => deal.price > 0 && deal.price <= 1_500_000),
+    [flashDeals]
+  );
   const [savedDealIds, setSavedDealIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return [];
     try {
@@ -886,60 +890,65 @@ export default function HomeClient({
               pauseFlash(6000);
             }}
           >
-            {flashDeals.length === 0 && <p role="status" style={{ padding: "24px", margin: 0, textAlign: "center", color: "#677182" }}>Đang cập nhật sản phẩm hoàn từ 10%. Bạn có thể dán link để kiểm tra khoản hoàn.</p>}
-            <div className="flash-grid">
-              {flashDeals.filter((deal) => deal.price > 0 && deal.price <= 1_500_000).map((deal) => (
-                <article key={deal.id}>
-                  <div className="placeholder">
-                    {formatCashbackPercent(deal.cashback, deal.price) !== null && (
-                      <b
-                        className="flash-cashback-rate"
-                        title="Tỷ lệ quy đổi từ khoản hoàn dự kiến và giá bán, làm tròn lên số nguyên."
-                      >
-                        Hoàn <span className="flash-cashback-percent">{formatCashbackPercent(deal.cashback, deal.price)}</span>
-                      </b>
-                    )}
-                    <a
-                      href={getAffiliateUrl(deal.productUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                      className="deal-image-link"
-                      aria-label={deal.name}
-                    >
-                      {deal.imageUrl ? (
-                        // Scraped deal images come from unpredictable CDN hosts, so
-                        // next/image's static host allowlist doesn't fit here.
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={deal.imageUrl} alt={deal.name} className="deal-image" loading="lazy" />
-                      ) : (
-                        "ảnh sản phẩm"
+            {visibleFlashDeals.length === 0 ? (
+              <p role="status" style={{ padding: "24px", margin: 0, textAlign: "center", color: "#677182" }}>
+                Đang cập nhật sản phẩm hoàn từ 10%. Bạn có thể dán link để kiểm tra khoản hoàn.
+              </p>
+            ) : (
+              <div className="flash-grid">
+                {visibleFlashDeals.map((deal) => (
+                  <article key={deal.id}>
+                    <div className="placeholder">
+                      {formatCashbackPercent(deal.cashback, deal.price) !== null && (
+                        <b
+                          className="flash-cashback-rate"
+                          title="Tỷ lệ quy đổi từ khoản hoàn dự kiến và giá bán, làm tròn lên số nguyên."
+                        >
+                          Hoàn <span className="flash-cashback-percent">{formatCashbackPercent(deal.cashback, deal.price)}</span>
+                        </b>
                       )}
-                    </a>
-                  </div>
-                  <strong>
-                    <a
-                      href={getAffiliateUrl(deal.productUrl)}
-                      target="_blank"
-                      rel="noopener noreferrer nofollow"
-                    >
-                      {deal.name}
-                    </a>
-                  </strong>
-                  <div>
-                    <em>{formatPrice(deal.price)}</em>
-                    {deal.originalPrice > deal.price && (
-                      <s>{formatPrice(deal.originalPrice)}</s>
-                    )}
-                  </div>
-                  <small>
-                    Hoàn <b>{formatPrice(deal.cashback)}</b>
-                    {deal.platform && (
-                      <span className="flash-platform-pill">{deal.platform}</span>
-                    )}
-                  </small>
-                </article>
-              ))}
-            </div>
+                      <a
+                        href={getAffiliateUrl(deal.productUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                        className="deal-image-link"
+                        aria-label={deal.name}
+                      >
+                        {deal.imageUrl ? (
+                          // Scraped deal images come from unpredictable CDN hosts, so
+                          // next/image's static host allowlist doesn't fit here.
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={deal.imageUrl} alt={deal.name} className="deal-image" loading="lazy" />
+                        ) : (
+                          "ảnh sản phẩm"
+                        )}
+                      </a>
+                    </div>
+                    <strong>
+                      <a
+                        href={getAffiliateUrl(deal.productUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer nofollow"
+                      >
+                        {deal.name}
+                      </a>
+                    </strong>
+                    <div>
+                      <em>{formatPrice(deal.price)}</em>
+                      {deal.originalPrice > deal.price && (
+                        <s>{formatPrice(deal.originalPrice)}</s>
+                      )}
+                    </div>
+                    <small>
+                      Hoàn <b>{formatPrice(deal.cashback)}</b>
+                      {deal.platform && (
+                        <span className="flash-platform-pill">{deal.platform}</span>
+                      )}
+                    </small>
+                  </article>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
