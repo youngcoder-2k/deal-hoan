@@ -40,7 +40,16 @@ export default function HomeSupport({ onStart, onAccount, signedIn, accountPendi
           <Link className={s.secondary} href="/how-to">Cách nhận tiền hoàn <ArrowRightIcon size={18} aria-hidden="true" /></Link>
         </div>
       </div>
-      <div className={s.storyVisual}><Image src={`${art}phone.webp`} alt="Minh hoạ DealHoàn trên điện thoại và ví tiền với hai trạng thái chờ xác nhận, đã duyệt" width={1046} height={1100} sizes="(max-width: 767px) 92vw, 52vw" className={s.phone} /></div>
+      <div className={s.storyVisual}>
+        <svg className={s.phone} viewBox="0 0 1046 1100" width={1046} height={1100} role="img" aria-label="Minh hoạ DealHoàn: Mua trên sàn quen thuộc, theo dõi tiền chờ xác nhận và đã duyệt">
+          <image href={`${art}phone-card-blank-v3.webp`} width={1046} height={1100} />
+          {/* Real Unicode text keeps Vietnamese diacritics exact at every screen size. */}
+          <text transform="translate(921 463) rotate(10)" textAnchor="middle" fill="#10182d" fontFamily="Arial, sans-serif" fontSize={25} fontWeight={700}>
+            <tspan x={0} y={0}>Mua trên sàn</tspan>
+            <tspan x={0} y={33}>quen thuộc</tspan>
+          </text>
+        </svg>
+      </div>
     </section>
 
     <section id="guides" aria-labelledby="guides-title" className={s.guides}>
