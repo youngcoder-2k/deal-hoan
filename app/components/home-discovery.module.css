@@ -1,5 +1,5 @@
 .discovery {
-  --home-content-width: min(1540px, calc(100% - 96px));
+  --home-content-width: calc(100% - 32px);
   --ink: #142c40;
   --muted: #60717f;
   --orange: #df431d;
@@ -400,10 +400,16 @@
   .journeySteps > li { height: calc(34.6vw + 32px); }
 }
 
-/* Shared homepage content rail: journey, editorial sections and footer. */
-@media (max-width: 1100px) {
-  .discovery { --home-content-width: calc(100% - 64px); }
+/* Match the visible .flash card edges, including .container's responsive padding. */
+@media (min-width: 1441px) {
+  .discovery { --home-content-width: min(1448px, calc(100% - 32px)); }
 }
-@media (max-width: 700px) {
-  .discovery { --home-content-width: calc(100% - 32px); }
+@media (min-width: 1024px) and (max-width: 1440px) {
+  .discovery { --home-content-width: min(1328px, calc(100% - 32px)); }
+}
+@media (min-width: 641px) and (max-width: 1023px) {
+  .discovery { --home-content-width: calc(100% - 40px); }
+}
+@media (max-width: 380px) {
+  .discovery { --home-content-width: calc(100% - 24px); }
 }
