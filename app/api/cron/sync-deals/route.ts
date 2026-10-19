@@ -2,13 +2,17 @@ import { isAuthorizedCron } from '@/lib/cron/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
-import { launchXtraBrowser } from '@/lib/deals/xtra-browser';
 import { syncXtra } from '@/lib/deals/xtra-sync.mjs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 // Under the database's 180-second lease; leaves time for cleanup after collection.
 export const maxDuration = 150;
+// Load Chromium only after authentication/config checks, never at module startup.
+async function launchXtraBrowser() {
+  const browser = await import('@/lib/deals/xtra-browser');
+  return browser.launchXtraBrowser();
+}
 export async function GET(request: NextRequest) { return handleSyncDeals(request); }
 export async function POST(request: NextRequest) { return handleSyncDeals(request); }
 
