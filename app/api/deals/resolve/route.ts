@@ -1,3 +1,4 @@
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildShopeeAffiliateUrl,
@@ -10,6 +11,7 @@ import {
   generateAccessTradeTikTokLink,
   buildCustomShortUrl,
   extractUrlFromText,
+  formatSubIdForUser,
 } from "@/lib/deals/affiliate";
 import { cashbackFor } from "@/lib/deals/score";
 import type { Platform } from "@/lib/deals/types";
@@ -41,7 +43,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const rawInput = body.url ? String(body.url).trim() : "";
     const rawUrl = extractUrlFromText(rawInput);
-    const subId = body.subId ? String(body.subId).trim() : "dealhoan";
+    const auth = await createSupabaseServerClient();
+    const session = auth ? await auth.auth.getUser() : null;
+    const subId = formatSubIdForUser(session?.data.user?.id);
 
     if (!rawUrl) {
       return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });

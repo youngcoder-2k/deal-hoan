@@ -22,7 +22,9 @@ import { getDailyShopeeCoupons } from "@/lib/deals/coupons-static";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   buildShopeeAffiliateUrl,
+  buildShopeeFoodAffiliateUrl,
   isShopeeUrl,
+  isShopeeFoodUrl,
   buildCustomShortUrl,
   extractUrlFromText,
   formatSubIdForUser,
@@ -586,7 +588,9 @@ export default function HomeClient({
       // Fallback only if server request completely fails
       resolvedProduct = resolveProductLocally(trimmed, allAvailableDeals);
       const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
-      resolvedTracked = isShopeeUrl(trimmed)
+      resolvedTracked = isShopeeFoodUrl(trimmed)
+        ? buildShopeeFoodAffiliateUrl(trimmed, { affiliateId: "17351320644", subId })
+        : isShopeeUrl(trimmed)
         ? buildShopeeAffiliateUrl(trimmed, { affiliateId: "17351320644", subId })
         : buildCustomShortUrl(trimmed, { baseUrl, subId });
     } finally {
@@ -632,10 +636,21 @@ export default function HomeClient({
       linkInputRef.current?.focus({ preventScroll: true });
     }
   };
+  // A calculation made before login must not keep an anonymous sub_id after login.
+  const currentTrackedLink = useMemo(() => {
+    if (!trackedLink) return trackedLink;
+    if (isShopeeFoodUrl(trackedLink)) {
+      return buildShopeeFoodAffiliateUrl(trackedLink, { subId: formatSubIdForUser(user?.id) });
+    }
+    if (!isShopeeUrl(trackedLink)) return trackedLink;
+    return buildShopeeAffiliateUrl(trackedLink, { subId: formatSubIdForUser(user?.id) });
+  }, [trackedLink, user?.id]);
+
   const copyTrackedLink = async () => {
+    if (!user) { void signInWithGoogle(); return; }
     const calculationId = calculationIdRef.current;
     try {
-      await navigator.clipboard.writeText(trackedLink);
+      await navigator.clipboard.writeText(currentTrackedLink);
       if (calculationId !== calculationIdRef.current) return;
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       setCopiedTracked(true);
@@ -784,10 +799,11 @@ export default function HomeClient({
                 <div className={`${styles.resultState} ${resultClosing ? styles.resultClosing : ""}`}>
                   <CashbackReceipt
                     product={calculatedProduct}
-                    trackedLink={trackedLink}
+                    trackedLink={currentTrackedLink}
                     copied={copiedTracked}
                     onCopy={copyTrackedLink}
                     onBuy={() => {
+                      if (!user) { void signInWithGoogle(); return false; }
                       notify(`Đang chuyển tới ${result || "Shopee"} để nhận hoàn tiền!`);
                     }}
                     onClear={() => resetCalculation()}
@@ -1257,7 +1273,7 @@ export default function HomeClient({
                   onClick={() => {
                     setBuyOpen(false);
                     window.open(
-                      trackedLink || (link ? getAffiliateUrl(link) : "https://shopee.vn"),
+                      currentTrackedLink || (link ? getAffiliateUrl(link) : "https://shopee.vn"),
                       "_blank",
                       "noopener",
                     );

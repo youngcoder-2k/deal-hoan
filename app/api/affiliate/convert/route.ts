@@ -1,3 +1,4 @@
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildShopeeAffiliateUrl,
@@ -19,7 +20,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const rawUrl = body.url ? String(body.url).trim() : "";
-    const subId = formatSubIdForUser(body.subId);
+    const auth = await createSupabaseServerClient();
+    const session = auth ? await auth.auth.getUser() : null;
+    const subId = formatSubIdForUser(session?.data.user?.id);
 
     if (!rawUrl) {
       return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });

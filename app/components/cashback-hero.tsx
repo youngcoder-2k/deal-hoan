@@ -138,7 +138,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   trackedLink: string;
   copied: boolean;
   onCopy: () => void;
-  onBuy?: () => void;
+  onBuy?: () => boolean | void;
   onClear: () => void;
 }) {
   const { price, cashback } = product;
@@ -146,7 +146,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
   const hasPrice = price > 0;
   const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : "Chưa xác định";
-  const targetUrl = product.trackedLink || trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
+  const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.vn");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>
@@ -205,13 +205,18 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
         target="_blank"
         rel="noopener noreferrer nofollow"
         className={styles.buyButton}
-        onClick={() => {
-          if (onBuy) onBuy();
+        onClick={(event) => {
+          if (onBuy?.() === false) event.preventDefault();
         }}
       >
         <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" />
         {product.platform?.toLowerCase().includes("food") ? "Đặt món ngay" : "Mua ngay"}
       </a>
+      {product.platform?.toLowerCase().includes("food") && (
+        <p className={styles.foodAppNote}>
+          💡 Món ăn được đặt qua ShopeeFood (bên trong app Shopee) để tự động ghi nhận hoàn tiền.
+        </p>
+      )}
       <div className={styles.receiptFooter}>
         <span>Ghi nhận trong 24 giờ · <a href="#how">điều kiện</a></span>
         <button type="button" onClick={onClear}>Tính link khác <ArrowClockwiseIcon size={21} aria-hidden="true" /></button>

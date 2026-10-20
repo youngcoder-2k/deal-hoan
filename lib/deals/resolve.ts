@@ -124,7 +124,7 @@ export const CATEGORY_FALLBACKS: Array<{
     defaultOriginalPrice: 2190000,
   },
   {
-    keywords: ["nồi chiên", "noi chien", "nồi", "noi", "bếp", "bep", "philips"],
+    keywords: ["nồi chiên", "noi chien", "nồi cơm", "noi com", "nồi áp suất", "noi ap suat", "bếp", "bep", "philips"],
     imageUrl: "https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=800&q=80",
     nameFallback: "Nồi chiên không dầu điện tử",
     defaultPrice: 1890000,
@@ -210,7 +210,16 @@ export function parseSlugFromUrl(rawUrl: string): string | null {
     const parts = pathname.split("/").filter(Boolean);
     if (!parts.length) return null;
     let s = parts[0];
-    if (s === "product" && parts.length > 2) {
+    if (u.hostname.includes("shopeefood") || u.pathname.startsWith("/now-food")) {
+      const foodParts = parts.filter((p) => p !== "now-food");
+      if (foodParts.length > 1) {
+        s = foodParts[foodParts.length - 1];
+      } else if (foodParts.length === 1 && !["ha-noi", "ho-chi-minh", "da-nang", "hai-phong", "can-tho", "now-food"].includes(foodParts[0])) {
+        s = foodParts[0];
+      } else {
+        return "Quán ngon ShopeeFood";
+      }
+    } else if (s === "product" && parts.length > 2) {
       return `Sản phẩm Shopee #${parts[2]}`;
     } else if (s === "product" && parts.length > 1) {
       return `Sản phẩm #${parts[1]}`;
@@ -299,18 +308,23 @@ export function resolveProductLocally(
           : "Shopee";
 
   const slug = parseSlugFromUrl(trimmed);
-  const name = titleHint?.trim() || (slug
+  const rawName = titleHint?.trim() || (slug
     ? slug.charAt(0).toUpperCase() + slug.slice(1)
-    : "Sản phẩm được hoàn tiền");
+    : isFood ? "Quán ngon ShopeeFood" : "Sản phẩm được hoàn tiền");
+  const name = isFood && rawName.toLowerCase() === "now food" ? "Quán ngon ShopeeFood" : rawName;
 
   const searchTarget = `${name} ${trimmed}`.toLowerCase();
-  const categoryMatch = CATEGORY_FALLBACKS.find((cat) =>
-    cat.keywords.some((k) => searchTarget.includes(k.toLowerCase())),
-  );
+  const categoryMatch = isFood
+    ? CATEGORY_FALLBACKS.find((cat) => cat.keywords.includes("shopeefood"))
+    : CATEGORY_FALLBACKS.find((cat) =>
+        cat.keywords.some((k) => searchTarget.includes(k.toLowerCase())),
+      );
 
   const imageUrl =
-    categoryMatch?.imageUrl ||
-    "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80";
+    isFood
+      ? "/brand/shopeefood-logo.png"
+      : categoryMatch?.imageUrl ||
+        "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80";
 
   const price = categoryMatch?.defaultPrice || 189000;
   const originalPrice = categoryMatch?.defaultOriginalPrice || Math.round((price * 1.35) / 1000) * 1000;

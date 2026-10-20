@@ -237,6 +237,7 @@
 .linkRow button:hover { background: #ffede2; border-color: #ffd3ba; color: #c33c16; }
 .linkRow button.copied { background: #19212c; color: #fff; border-color: #19212c; }
 .buyButton { width: 100%; min-height: 46px; flex-shrink: 0; padding: 9px 12px; margin: 12px 0 8px; font-size: 15px; cursor: pointer; text-decoration: none; }
+.foodAppNote { margin: 0 0 8px; font-size: 11.5px; color: #764b38; background: #fff5ee; border: 1px solid #ffd8c4; border-radius: 8px; padding: 6px 10px; line-height: 1.45; text-align: center; }
 .receiptFooter { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 18px; margin-top: auto; padding-top: 0; }
 .receiptFooter > span { color: #7a828e; font-size: 11px; line-height: 1.6; }
 .receiptFooter a { text-decoration: underline; white-space: nowrap; text-underline-offset: 2px; }
