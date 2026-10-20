@@ -22,3 +22,8 @@ no competitor branding. Artwork is isolated from functional controls and real co
 - Source rectangles (left, top, width, height): (359,283,383,371), (767,283,383,371), (1175,283,383,371).
 - No regeneration, retouching, sharpening or invented detail. PNG preserves the supplied pixels exactly; source corner rounding remains part of the artwork.
 - Render at 383:371 aspect ratio on desktop and mobile. Files are unoptimized to prevent a second lossy conversion. Existing article titles, descriptions and destinations are retained.
+
+## Sharper first guide image (2026-10-20)
+- guide-start-sharp-v2.webp: 1274×1234, WebP quality95, 316518 bytes. Built-in imagegen restoration/reconstruction based on guide-start-reference.png; original low-resolution PNG is retained unchanged for rollback.
+- Preserves the hand-held phone, orange DealHoàn/pale-green result composition. AI-reconstructed fine detail and small lettering are illustrative, not a pixel-exact recovery or live transaction evidence. No invented percentage from the rejected first restoration is used.
+- First card uses this asset directly (unoptimized) so the image source exceeds2× its approximately465px desktop render width. Other two guide images, article content and layout stay unchanged.

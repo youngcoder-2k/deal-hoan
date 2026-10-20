@@ -1,34 +1,36 @@
-# Exact guide artwork — scoped QA
+# First guide image clarity QA
 
 final result: passed
 
-## Source and scope
-- Source truth: /var/folders/sj/jwhymxt53b11fm81tn5k24rw0000gn/T/codex-clipboard-d7373e24-be02-426d-98f0-2f3b419b2ad1.png, 1918×941.
-- Scope requested: use the three exact images from this design, not regenerate similar pictures. Existing typography, card/grid layout, copy and destinations intentionally preserved.
-- Implementation: http://localhost:3012/#guides, production build. Browser viewport 1918×941 desktop and 390×844 mobile, density1.
-- Evidence: design-evidence/guide-reference/desktop.png (1918×1029 section), mobile.png (390×1983 section), baseline.png, rendered-images.png.
-- Combined full view: design-evidence/guide-reference/comparison.png. Source left at959×471, final right at959×515; different section heights reflect preserved current layout, not an overall clone claim.
-- Focused required-image comparison: design-evidence/guide-reference/focused-comparison.png. Top: three original383×371 crops; bottom: browser-rendered images normalized back to383×371. Opened together and reviewed.
+## Source, scope and evidence
+- User screenshot: /var/folders/sj/jwhymxt53b11fm81tn5k24rw0000gn/T/codex-clipboard-0c3ab571-d126-4495-b8da-cf44fe43d9e9.png (667×740, scaled card).
+- Original card image: public/home-art/support-refresh/guide-start-reference.png (383×371). Its original hash is preserved and unchanged.
+- Scope: improve clarity of this one image; preserve surrounding layout, article copy, routes, other two images and previous work.
+- New image: public/home-art/support-refresh/guide-start-sharp-v2.webp (1274×1234, quality95,316518 bytes), AI restoration/reconstruction from original. Not a claim of exact recovery of missing original detail or of a real transaction.
+- Runtime: http://localhost:3013/#guides. Desktop1918×941 and mobile390×844, density1.
+- Desktop image rendered464.664×450.102 CSSpx, native1274px:2.742 source pixels per CSSpx. Mobile rendered356px wide, same full1274px source. Images loaded successfully without a second optimizer conversion.
+- Evidence: design-evidence/guide-sharp/desktop.png, desktop-card-image.png, mobile-card-image.png.
+- Combined comparison: design-evidence/guide-sharp/comparison.png. Before left, browser-rendered after right, equal465×450 image boxes. Both viewed together.
+- Focused comparison: design-evidence/guide-sharp/focused-comparison.png, normalized1000px-wide assets then corresponding550×350 crops, before left/after right. Opened and reviewed phone edges, screen lettering, skin details and halos.
 
-## Findings / history
-- Baseline used three generated substitutes, not the supplied source images. Replaced only three source paths and changed image containers from1.22 desktop/1.4 mobile to383/371 (P1/P2 corrected).
-- Exact equality test compares decoded RGB bytes of all three shipped PNGs against the three source crop rectangles: passed. No fabricated detail, regeneration or recompression.
-- Final review: phone/hand, gold piggybank, woman/blue shopping composition and embedded text preserved. No actionable P0/P1/P2 findings within image-replacement scope.
+## Findings / iterations
+1. Baseline source383px was being enlarged for desktop and high-density phones. Enlarged comparison shows pixelated/slurred edges and lettering (P1 clarity issue).
+2. First AI restoration was sharper but added an unsupported43.3% value, irrelevant platform and incorrect URL. Rejected; not integrated.
+3. Second restoration removed those additions, retained orange/cream phone and green129.250 example composition. Integrated1274×1234 asset under a new filename; original retained. Browser and focused comparison show cleaner phone outline, headline, input and hand detail.
+4. Final: no actionableP0/P1/P2 issues for the clarity-improvement scope. Overall pose/hand/lettering fine detail is reconstructed, not pixel-identical; this is an illustrative marketing photo, not factual transaction evidence.
 
-## Required surfaces
-- Typography: surrounding HTML text, Be Vietnam Pro and hierarchy unchanged. All lettering within source images remains raster source content.
-- Spacing/layout: existing homepage gutters, desktop3-column grid and mobile1-column preserved. Image boxes now preserve source aspect383:371 at each breakpoint; no document horizontal overflow at390 or1918.
-- Colors/tokens: surrounding styles unchanged; lossless PNG exact RGB confirmed. Browser screenshot rendering/interpolation may visually differ slightly.
-- Imagery: original383×371 pixels extracted from source positions (359,283),(767,283),(1175,283). No up-resolution detail claims; desktop display approximately465×450 involves scaling. Large originals, if later supplied, could sharpen desktop presentation (P3).
-- Copy: original article titles/descriptions/categories and all destination links remain. Repeated placeholder text from design intentionally not copied, per scope.
+## Fidelity surfaces
+- Typography: article fonts and text unchanged. Raster headline and principal number are clearer. Tiny illustrative UI text remains reconstructed; not claimed accurate to live UI.
+- Spacing/layout: no CSS/layout edits; existing383:371 box accommodates new near-identical ratio. Full phone remains within photo. No horizontal overflow at1918/390.
+- Colors: warm natural hand/background, orange headline/bag, pale-green result retained. No claim of exact source-color matching for regenerated microdetails.
+- Image quality:1274px native source replaces383px; no artificial enlargement of a low-res image alone. Sharper skin/phone/screen observed in matched comparison. No visible oversharpen halos at card scale.
+- Copy/content: HTML copy, category, title, description and routes unchanged; other two source images untouched. Raster amount remains an illustration, not a current cashback promise.
 
-## Functional checks
-- Browser naturalWidth383 and complete=true for all3 images.
-- Clicked cards navigate to /how-to, /cach-san-sale-shopee, /cashback-shopee-la-gi respectively.
-- Console errors: [].
-- Focus-visible, hover and reduced-motion rules preserved. No new controls, loading logic, empty/error API states introduced; forced asset failure not tested.
-- ESLint and production build passed. Isolated rollback restored baseline component/styles byte-for-byte; main workspace keeps new images and ratios.
-- No push or deployment performed for this request.
-
-## Follow-up polish
-- Full-resolution original photos could improve sharpness when displayed larger than383px. No invented replacement or artificial sharpening applied.
+## Checks
+- npx eslint app/components/home-support.tsx: exit0.
+- npm run build -- --webpack: exit0.
+- Custom image/component checks: pass.
+- Card click navigated to /how-to. Browser console errors:[].
+- Existing keyboard, focus, hover, lazy-loading and reduced-motion behavior retained; no new control/state logic. Forced network error not tested.
+- Independent-copy rollback restores old source path and original image byte-for-byte; actual workspace keeps new asset.
+- Not pushed/deployed in this request.
