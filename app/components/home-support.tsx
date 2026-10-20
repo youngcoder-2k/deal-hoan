@@ -27,7 +27,7 @@ const questions = [
 export default function HomeSupport({ onStart, onAccount, signedIn, accountPending }: Props) {
   return <div className={s.refresh}>
     <section id="benefits" aria-labelledby="benefits-title" className={s.story}>
-      <div className={s.storyCopy}>
+      <div className={s.storyCopy} data-motion="left">
         <span className={s.eyebrow}>MUA SẮM CHỦ ĐỘNG HƠN</span>
         <h2 id="benefits-title">Tiền hoàn rõ ràng<span>Mua sắm nhẹ nhàng</span></h2>
         <p className={s.lead}>Điều quan trọng không chỉ là hoàn bao nhiêu,<br className={s.desktopBreak} /> mà còn là bạn hiểu khoản hoàn của mình.</p>
@@ -40,8 +40,8 @@ export default function HomeSupport({ onStart, onAccount, signedIn, accountPendi
           <Link className={s.secondary} href="/how-to">Cách nhận tiền hoàn <ArrowRightIcon size={18} aria-hidden="true" /></Link>
         </div>
       </div>
-      <div className={s.storyVisual}>
-        <svg className={s.phone} viewBox="0 0 1046 1100" width={1046} height={1100} role="img" aria-label="Minh hoạ DealHoàn: Mua trên sàn quen thuộc, theo dõi tiền chờ xác nhận và đã duyệt">
+      <div className={s.storyVisual} data-motion="right" data-motion-delay="120">
+        <svg data-motion-art className={s.phone} viewBox="0 0 1046 1100" width={1046} height={1100} role="img" aria-label="Minh hoạ DealHoàn: Mua trên sàn quen thuộc, theo dõi tiền chờ xác nhận và đã duyệt">
           <image href={`${art}phone-card-blank-v3.webp`} width={1046} height={1100} />
           {/* Real Unicode text keeps Vietnamese diacritics exact at every screen size. */}
           <text transform="translate(921 463) rotate(10)" textAnchor="middle" fill="#10182d" fontFamily="Arial, sans-serif" fontSize={25} fontWeight={700}>
@@ -53,20 +53,20 @@ export default function HomeSupport({ onStart, onAccount, signedIn, accountPendi
     </section>
 
     <section id="guides" aria-labelledby="guides-title" className={s.guides}>
-      <header className={s.guideHeading}><div><span className={s.eyebrow}>CẨM NANG MUA KHÉO</span><h2 id="guides-title">Mẹo nhỏ<span>Tiết kiệm hơn</span></h2></div><Link href="/docs" className={s.secondary}>Tất cả cẩm nang <ArrowRightIcon size={18} aria-hidden="true" /></Link></header>
-      <div className={s.guideGrid}>{guides.map(guide => <Link key={guide.href} href={guide.href} className={s.guideCard}>
+      <header className={s.guideHeading} data-motion="rise"><div><span className={s.eyebrow}>CẨM NANG MUA KHÉO</span><h2 id="guides-title">Mẹo nhỏ<span>Tiết kiệm hơn</span></h2></div><Link href="/docs" className={s.secondary}>Tất cả cẩm nang <ArrowRightIcon size={18} aria-hidden="true" /></Link></header>
+      <div className={s.guideGrid}>{guides.map((guide, index) => <Link data-motion="rise" data-motion-delay={index * 90} key={guide.href} href={guide.href} className={s.guideCard}>
         <div className={s.guideImage}><Image src={`${art}${guide.image}`} alt={guide.alt} fill sizes="(max-width: 600px) 90vw, (max-width: 1000px) 45vw, 30vw" /></div>
         <div className={s.guideBody}><span className={s.category}>{guide.category}</span><h3>{guide.title}</h3><p>{guide.description}</p><span className={s.readMore}>Đọc hướng dẫn <ArrowRightIcon size={20} aria-hidden="true" /></span></div>
       </Link>)}</div>
     </section>
 
     <section id="faq" aria-labelledby="faq-title" className={s.faq}>
-      <div className={s.faqIntro}><span className={s.eyebrow}>GIẢI ĐÁP NHANH</span><h2 id="faq-title">Bạn hỏi,<span>DealHoàn trả lời</span></h2><p className={s.lead}>Những điều nên biết để mua sắm chủ động hơn.</p><Image src={`${art}faq-chat.webp`} alt="" width={480} height={480} sizes="(max-width: 767px) 130px, 280px" className={s.chatArt} /><Link href="/terms" className={s.termsLink}>Xem điều khoản <ArrowRightIcon size={24} aria-hidden="true" /></Link></div>
-      <div className={s.faqList}>{questions.map(([question, answer]) => <details key={question}><summary>{question}<PlusIcon size={22} weight="bold" aria-hidden="true" /></summary><div className={s.answer}><p>{answer}</p></div></details>)}<Link href="/help" className={s.helpLink}>Xem trung tâm trợ giúp <ArrowRightIcon size={18} aria-hidden="true" /></Link></div>
+      <div className={s.faqIntro} data-motion="left"><span className={s.eyebrow}>GIẢI ĐÁP NHANH</span><h2 id="faq-title">Bạn hỏi,<span>DealHoàn trả lời</span></h2><p className={s.lead}>Những điều nên biết để mua sắm chủ động hơn.</p><Image src={`${art}faq-chat.webp`} alt="" width={480} height={480} sizes="(max-width: 767px) 130px, 280px" data-motion-art className={s.chatArt} /><Link href="/terms" className={s.termsLink}>Xem điều khoản <ArrowRightIcon size={24} aria-hidden="true" /></Link></div>
+      <div className={s.faqList}>{questions.map(([question, answer], index) => <details data-motion="rise" data-motion-delay={Math.min(index * 55, 165)} key={question}><summary>{question}<PlusIcon size={22} weight="bold" aria-hidden="true" /></summary><div className={s.answer}><p>{answer}</p></div></details>)}<Link href="/help" className={s.helpLink}>Xem trung tâm trợ giúp <ArrowRightIcon size={18} aria-hidden="true" /></Link></div>
     </section>
 
-    <section aria-labelledby="start-title" className={s.cta}>
-      <Image src={`${art}cashback-pouch.webp`} alt="" width={400} height={400} sizes="(max-width: 767px) 140px, 220px" className={s.pouch} />
+    <section data-motion="zoom" aria-labelledby="start-title" className={s.cta}>
+      <Image src={`${art}cashback-pouch.webp`} alt="" width={400} height={400} sizes="(max-width: 767px) 140px, 220px" data-motion-art className={s.pouch} />
       <div className={s.ctaCopy}><span className={s.eyebrow}>MÓN BẠN THÍCH, KHOẢN HOÀN BẠN BIẾT</span><h2 id="start-title">Link đầu tiên của bạn đâu?</h2><p>Dán vào DealHoàn, xem khoản hoàn trước khi mua.</p></div>
       <div className={s.ctaActions}><button type="button" className={s.primary} onClick={onStart}>Tính tiền hoàn <ArrowRightIcon size={20} aria-hidden="true" /></button><button type="button" className={s.accountLink} onClick={onAccount} disabled={accountPending}>{accountPending ? "Đang mở…" : signedIn ? "Theo dõi đơn của tôi" : "Đăng nhập để theo dõi đơn"}</button></div>
     </section>

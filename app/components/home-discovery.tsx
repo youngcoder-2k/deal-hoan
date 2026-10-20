@@ -2,26 +2,24 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
-import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import s from "./home-discovery.module.css";
 import HomeSupport from "./home-support";
-import journeyPhone from "@/public/home-art/journey/phone.webp";
-import journeyShopping from "@/public/home-art/journey/shopping.webp";
-import journeyWallet from "@/public/home-art/journey/wallet.webp";
-import journeyUnderline from "@/public/home-art/journey/underline.webp";
+import journeyPhone from "@/public/home-art/journey-reference/phone.webp";
+import journeyShopping from "@/public/home-art/journey-reference/shopping.webp";
+import journeyWallet from "@/public/home-art/journey-reference/wallet.webp";
+import journeySpark from "@/public/home-art/journey-reference/spark.webp";
 
 const artworks = { journeyPhone, journeyShopping, journeyWallet };
 
 function Artwork({ name, className, sizes }: { name: keyof typeof artworks; className?: string; sizes: string }) {
   const [failed, setFailed] = useState(false);
-  return <Image src={artworks[name]} alt="" className={className} sizes={sizes} placeholder="blur" onError={() => setFailed(true)} style={failed ? { visibility: "hidden" } : undefined} />;
+  return <Image unoptimized src={artworks[name]} alt="" className={className} sizes={sizes} placeholder="blur" onError={() => setFailed(true)} style={failed ? { visibility: "hidden" } : undefined} />;
 }
 
 const journey = [
-  { artwork: "journeyPhone", title: "Xem tiền hoàn", text: "Dán link, xem\nhoàn dự kiến." },
-  { artwork: "journeyShopping", title: "Mua qua link mới", text: "Thanh toán\ntrên sàn." },
-  { artwork: "journeyWallet", title: "Nhận tiền hoàn", text: "Tiền duyệt,\nrút ngân hàng." },
+  { artwork: "journeyPhone", title: "Xem khoản hoàn", text: "Dán link vào DealHoàn, xem tiền hoàn trước khi mua." },
+  { artwork: "journeyShopping", title: "Mua qua link mới", text: "Đặt hàng và thanh toán trên sàn qua link nhận hoàn mới." },
+  { artwork: "journeyWallet", title: "Theo dõi & nhận tiền", text: "Khoản hoàn được duyệt, yêu cầu rút về ngân hàng." },
 ] as const;
 
 type Props = { onStart: () => void; onAccount: () => void; signedIn: boolean; accountPending: boolean };
@@ -29,24 +27,27 @@ type Props = { onStart: () => void; onAccount: () => void; signedIn: boolean; ac
 export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPending }: Props) {
   return (
     <div className={s.discovery}>
-      <section className={s.journeyScene} id="how" aria-labelledby="journey-title">
-        <div className={s.journeyInner}>
-          <header className={s.journeyIntro}>
-            <span className={s.journeyEyebrow}><span><LinkIcon weight="bold" aria-hidden="true" /></span>TỪ LINK ĐẾN TIỀN HOÀN</span>
-            <h2 id="journey-title">Mua món bạn mê.<br /><em>Đón tiền hoàn về.<Image src={journeyUnderline} alt="" className={s.journeyUnderline} sizes="(max-width: 700px) 300px, 500px" /></em></h2>
-            <p>Dán link. Mua sắm. Nhận hoàn.</p>
+      <section className={s.referenceScene} id="how" aria-labelledby="journey-title">
+        <div className={s.referenceInner}>
+          <header className={s.referenceHeading}>
+            <div data-motion="left">
+              <span className={s.referenceEyebrow}>TỪ LINK ĐẾN TIỀN HOÀN</span>
+              <h2 id="journey-title">Mua món bạn mê<br /><em>Đón tiền hoàn về</em></h2>
+            </div>
+            <p data-motion="right">Không đổi cách mua sắm.<br />Chỉ thêm một lần kiểm tra link</p>
           </header>
-          <ol className={s.journeySteps}>
+          <Image unoptimized className={s.referenceSparkLeft} src={journeySpark} alt="" sizes="46px" />
+          <Image unoptimized className={s.referenceSparkRight} src={journeySpark} alt="" sizes="46px" />
+          <ol className={s.referenceSteps}>
             {journey.map(({ artwork, title, text }, i) => (
-              <li key={title}>
-                <span className={s.journeyNumber}>0{i + 1}</span>
-                <h3>{title}</h3><p>{text}</p>
-                <Artwork name={artwork} className={s.journeyObject} sizes="(max-width: 700px) 32vw, (max-width: 1100px) 30vw, 340px" />
-                {i < journey.length - 1 && <ArrowRightIcon className={s.journeyConnector} weight="bold" aria-hidden="true" />}
+              <li key={title} data-motion="rise" data-motion-delay={i * 90}>
+                <span className={s.referenceNumber}>0{i + 1}</span>
+                <Artwork name={artwork} className={s.referenceObject} sizes="(max-width: 600px) 240px, (max-width: 1000px) 25vw, 286px" />
+                <h3>{title}</h3>
+                <p>{text}</p>
               </li>
             ))}
           </ol>
-          <button className={s.journeyCta} onClick={onStart}>Thử với link của bạn <ArrowRightIcon weight="bold" aria-hidden="true" /></button>
         </div>
       </section>
 

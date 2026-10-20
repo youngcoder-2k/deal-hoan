@@ -10,6 +10,8 @@ import HomeDiscovery from "./components/home-discovery";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
 import styles from "./home-redesign.module.css";
+import motionStyles from "./components/home-motion.module.css";
+import { setupHomeMotion, homeScrollBehavior } from "@/lib/ui/home-motion";
 import confetti from "canvas-confetti";
 import type { User } from "@supabase/supabase-js";
 import AccountModal from "@/app/components/account-modal";
@@ -215,6 +217,8 @@ export default function HomeClient({
   flashEndTime?: number;
   flashSlot?: string;
 }) {
+  const pageRef = useRef<HTMLElement>(null);
+  useEffect(() => setupHomeMotion(pageRef.current), []);
   const linkInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -363,7 +367,7 @@ export default function HomeClient({
   }, [flashEndTime]);
   useEffect(() => {
     const timer = setInterval(() => {
-      if (isFlashHoveredRef.current) return;
+      if (isFlashHoveredRef.current || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const el = flashScrollRef.current;
       if (!el) return;
       const max = el.scrollWidth - el.clientWidth;
@@ -371,7 +375,7 @@ export default function HomeClient({
         el.scrollTo({
           left:
             el.scrollLeft >= max - 10 ? 0 : Math.min(el.scrollLeft + 246, max),
-          behavior: "smooth",
+          behavior: homeScrollBehavior(),
         });
     }, 3000);
     return () => {
@@ -658,7 +662,7 @@ export default function HomeClient({
     seconds % 60,
   ].map((x) => String(x).padStart(2, "0"));
   return (
-    <main className={styles.page}>
+    <main ref={pageRef} className={`${styles.page} ${motionStyles.motionPage}`}>
       <div className="utility">
         <div className="container">
           <div className="utility-left">
@@ -681,7 +685,7 @@ export default function HomeClient({
               <img src="/brand/deal-hoan-logo.png" alt="DealHoàn — Săn deal · Hoàn tiền" />
             </span>
           </Link>
-          <form className="search" onSubmit={(e) => { e.preventDefault(); document.getElementById("deals")?.scrollIntoView({ behavior: "smooth" }); }}>
+          <form className="search" onSubmit={(e) => { e.preventDefault(); document.getElementById("deals")?.scrollIntoView({ behavior: homeScrollBehavior() }); }}>
             <MagnifyingGlassIcon size={19} aria-hidden="true" />
             <input aria-label="Tìm sản phẩm, deal, mã giảm giá" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm sản phẩm, deal, mã giảm giá…" />
             <button>Tìm deal</button>
@@ -825,7 +829,7 @@ export default function HomeClient({
         </div>
       </section>
       <section className="container flash-section" id="flash">
-        <div className="flash">
+        <div className="flash" data-motion="rise">
           <div className="flash-top">
             <div className="flash-top-left">
               <h2>⚡ Deal chớp nhoáng</h2>
@@ -849,7 +853,7 @@ export default function HomeClient({
                   onClick={() => {
                     pauseFlash(8000);
                     if (flashScrollRef.current) {
-                      flashScrollRef.current.scrollBy({ left: -260, behavior: "smooth" });
+                      flashScrollRef.current.scrollBy({ left: -260, behavior: homeScrollBehavior() });
                     }
                   }}
                 >
@@ -862,7 +866,7 @@ export default function HomeClient({
                   onClick={() => {
                     pauseFlash(8000);
                     if (flashScrollRef.current) {
-                      flashScrollRef.current.scrollBy({ left: 260, behavior: "smooth" });
+                      flashScrollRef.current.scrollBy({ left: 260, behavior: homeScrollBehavior() });
                     }
                   }}
                 >
@@ -1142,7 +1146,7 @@ export default function HomeClient({
                     type="button"
                     className="preview-cta"
                     onClick={() => {
-                      linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                      linkInputRef.current?.scrollIntoView({ behavior: homeScrollBehavior(), block: "center" });
                       linkInputRef.current?.focus();
                       notify("⚡ Dán link sản phẩm vào ô trên nhé");
                     }}
@@ -1203,7 +1207,7 @@ export default function HomeClient({
         signedIn={Boolean(user)}
         accountPending={authPending}
         onStart={() => {
-          linkInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+          linkInputRef.current?.scrollIntoView({ behavior: homeScrollBehavior(), block: "center" });
           linkInputRef.current?.focus({ preventScroll: true });
         }}
         onAccount={() => {

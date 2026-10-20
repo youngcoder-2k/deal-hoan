@@ -1,36 +1,47 @@
-# DealHoàn support/editorial redesign — 2026-10-18
-
-## Target and scope
-Implement four user-selected desktop reference designs: cashback story/phone, image-led guides, two-column orange FAQ, and horizontal closing banner. Existing header, hero, calculator, journey, backend and shared footer are preserved. User requested improvements rather than an exact clone.
-
-## Comparison evidence
-`design-evidence/support-editorial/{story,guides,faq,cta}-comparison.png` places the supplied source above the implementation. Story captured at 1672px; guides/FAQ/CTA at 1918px. Comparison panels downscaled equally to 900px; section-height differences reflect real copy and responsive content, not an asserted pixel match. Full captures and region coordinates are retained. Mobile has no supplied target: evaluated as responsive adaptation.
-
-## Fidelity surfaces
-- Typography: existing app font retained; two-line black/orange headings, bold editorial hierarchy, smaller explanatory text. Final pass increased display scale and narrowed the guide grid to match source proportions more closely.
-- Spacing/layout: story and FAQ split layouts; three image cards; pouch/text/actions horizontal CTA. Mobile stacks naturally. Legacy global header border/sticky rules neutralized for the guide heading.
-- Color: white/ivory base with orange headings and warm artwork. Controls use darker orange (#c84312) for white-text contrast (~4.92:1) instead of source's low-contrast bright orange. Focus ring uses blue.
-- Images: six original generated raster assets, consistent art direction, transparent phone/chat/pouch, clear subjects, optimized WebP. All six loaded with naturalWidth>0 in production. Phone is explicitly promotional illustration, not functional embedded UI.
-- Copy: repeated placeholder guide titles/questions replaced with distinct useful articles and six real FAQ answers. Current 50,000đ withdrawal policy retained; no guarantees or unsupported native-app availability.
-
-## Interactions/accessibility
-- Native details FAQ expands and collapses with Enter; visible focus outline observed.
-- Closing CTA scrolls to and focuses `Link sản phẩm` input (observed INPUT aria-label).
-- First guide navigates to /how-to; all six linked destinations returned HTTP200.
-- Account button reuses real sign-in/account callbacks; loading label and disabled state retained. No production OAuth or payment action executed.
-- Focus-visible styles and reduced-motion rules included; no automatic animations. Meaningful illustration alt text; decorative artwork has empty alt.
-- 320/390/768/1024/1440/1918px: no horizontal document or scoped-section overflow in recorded checks. All three guide cards remain available. Existing desktop/mobile footer retained.
-- Production browser console: no errors observed after all assets loaded.
-
-## Findings resolved
-P1: two newly generated illustrations initially unavailable because the test server started before files existed — restarted after assets completed; all six images confirmed loaded.
-P2: legacy global header border affected guide heading — explicitly reset locally.
-P2: white text on source-bright orange lacked contrast — darker functional orange used.
-
-## Accepted differences / P3
-No App Store or Google Play badges: no verified native app exists; replaced by real calculate/how-to actions. Illustrations are newly generated, not pixel-identical to reference. Real text changes answer/card heights. Smaller mobile FAQ illustration avoids taking excessive vertical space.
-
-## Validation
-Production webpack build, targeted ESLint, asset/route checks and rollback-copy checks recorded in the evidence folder. Final responsive/interaction pass confirmed the revised UI.
+# Journey reference implementation QA
 
 final result: passed
+
+## Source and scope
+- Source visual truth: /var/folders/sj/jwhymxt53b11fm81tn5k24rw0000gn/T/codex-clipboard-64730399-203e-413f-991e-91e9f7343e39.png
+- Implementation: http://localhost:3004/#how
+- Scope: only the three-step journey section. Existing other sections, calculator, data and scroll controller preserved.
+- Source and desktop screenshot: 1918 × 941 pixels; CSS viewport 1918 × 941. Same section-top state; no density normalization required.
+- Desktop evidence: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/desktop.png
+- Full comparison: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/comparison.png (source above, final below; 1918 × 1882).
+- Focused typography/card-body comparison: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/focused-comparison.png (source left, final right).
+- Mobile: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/mobile.png (390 × 844).
+
+## Comparison history and fixes
+1. V1 screenshot: desktop-v1.png. Initial placement had cards approximately 10px too low and oversized section height; image API density produced 126px natural image width for a 282px source asset (P2).
+2. Fixes: preserve supplied illustration pixels via unoptimized local Image assets; reduce heading gap and card footer spacing; align heading/body sizes to reference. Actual local images now report natural widths 282/282/286px, not 126px.
+3. Final combined and focused comparisons inspected after fixes. Final card top 325.17px, bottom 788.66px vs source approximately 326–787px. White surface, rounded cards, number colors and actual supplied illustrations retained. No actionable P0/P1/P2 differences remain.
+
+## Required fidelity surfaces
+- Typography: existing Be Vietnam Pro retained for Vietnamese accents and brand consistency. Large black heading and orange/red second line; orange card titles. Source font not embedded; minor optical differences remain P3, not an exact-font claim.
+- Spacing/layout: centered 1460px desktop content, three equal columns, 30px gaps, 32px card radii; near-reference vertical alignment. Equal columns intentionally regularize slightly uneven source card widths (P3).
+- Colors/tokens: white background, black text, orange titles, pastel orange/purple/green step numbers and matched heading gradient. Platform screenshot color rendering may differ slightly from reference pixels.
+- Imagery: directly extracted three illustration regions and sparkle from user-provided source, no regenerated or code-drawn substitutes, no placeholder imagery. Source resolution is preserved; no fabricated high-resolution detail.
+- Copy: Lorem ipsum replaced with truthful short Vietnamese instructions. Same three step headings as reference. Copy remains actual HTML, not text baked into a screenshot.
+
+## Interaction and responsive checks
+- 1918px desktop: three aligned cards, no horizontal overflow.
+- 768px tablet: three 224px columns, no horizontal overflow.
+- 390px and 320px mobile: cards stack; no horizontal overflow, no broken loaded images; text fully readable.
+- New cards are informational, not misleading clickable surfaces. Old podium arrows and section CTA removed to match source.
+- Existing nearby primary CTA still focuses the Link sản phẩm input. Input remains empty; no external transaction performed.
+- Scroll reveal data attributes retained; existing controller's 10 regression checks passed, including reduced motion, focus cancellation and cleanup.
+- Illustration loading failure preserves space and hides only decorative image, leaving instructions readable.
+- Existing focus-visible treatment retained. Viewport override reset after responsive tests.
+- Browser error/warning log query returned [] for the tested production page.
+
+## Implementation checklist
+- [x] Reuse exact supplied image assets.
+- [x] Replace placeholder text only with actual guidance.
+- [x] Scope new styles to referenceScene/reference*.
+- [x] Preserve other homepage sections and earlier motion work.
+- [x] Desktop/mobile browser comparison.
+- [x] Targeted lint, source checks, production build.
+
+## Follow-up polish
+- P3: exact source font is unspecified; current brand font and equalized card columns are deliberate implementation choices.

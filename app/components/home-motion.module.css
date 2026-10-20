@@ -1,0 +1,61 @@
+/* Scoped to the homepage. Static markup remains fully visible without JS. */
+.motionPage { position: relative; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Draw the existing orange underline as the journey headline enters. */
+  .motionPage[data-home-motion="on"] [data-motion-state="entered"] [data-motion-underline] {
+    animation: underlineReveal 900ms cubic-bezier(.2, .75, .25, 1) both;
+  }
+  @keyframes underlineReveal {
+    from { clip-path: inset(0 100% 0 0); }
+    to { clip-path: inset(0); }
+  }
+
+  /* Native scroll timelines avoid per-frame JS and gracefully fall back. */
+  @supports (animation-timeline: scroll()) {
+    .motionPage[data-home-motion="on"]::before {
+      content: "";
+      position: fixed;
+      z-index: 110;
+      inset: 0 0 auto;
+      height: 3px;
+      pointer-events: none;
+      background: linear-gradient(90deg, #ffb34e, #fa4b23 65%, #ed6c88);
+      transform-origin: left;
+      animation: readingProgress linear both;
+      animation-timeline: scroll(root block);
+    }
+    @keyframes readingProgress {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+  }
+
+  @media (min-width: 901px) and (hover: hover) {
+    @supports (animation-timeline: view()) {
+      .motionPage[data-home-motion="on"] [data-motion-art] {
+        animation: illustrationDrift linear both;
+        animation-timeline: view();
+        animation-range: entry 0% exit 100%;
+      }
+      @keyframes illustrationDrift {
+        from { transform: translateY(18px) rotate(-1deg); }
+        to { transform: translateY(-18px) rotate(1deg); }
+      }
+    }
+  }
+}
+
+@media (max-width: 767px) {
+  .motionPage[data-home-motion="on"] [data-motion-state="entered"] [data-motion-underline] {
+    animation-duration: 650ms;
+  }
+}
+@media (prefers-reduced-motion: reduce), (forced-colors: active) {
+  .motionPage::before { display: none; }
+  .motionPage [data-motion-art], .motionPage [data-motion-underline] { animation: none !important; transform: none; }
+}
+@media print {
+  .motionPage::before { display: none; }
+  .motionPage [data-motion], .motionPage [data-motion-art], .motionPage [data-motion-underline] { animation: none !important; transform: none !important; opacity: 1 !important; }
+}
