@@ -4,16 +4,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { PlusIcon } from "@phosphor-icons/react/dist/csr/Plus";
-import { CheckCircleIcon } from "@phosphor-icons/react/dist/csr/CheckCircle";
+import storyPhone from "@/public/home-art/support-refresh/phone-reference-v4.webp";
 import { HelpFooter } from "./help/site-chrome";
 import s from "./home-support-refresh.module.css";
 
 type Props = { onStart: () => void; onAccount: () => void; signedIn: boolean; accountPending: boolean };
 const art = "/home-art/support-refresh/";
 const guides = [
-  { image: "guide-start.webp", category: "BẮT ĐẦU", title: "Lấy link đúng, nhận hoàn dễ hơn", description: "Một thao tác nhỏ trước mỗi lần mua.", href: "/how-to", alt: "Kiểm tra tiền hoàn trên điện thoại" },
-  { image: "guide-saving.webp", category: "MẸO TIẾT KIỆM", title: "Săn sale khéo, mua sắm hời hơn", description: "Kết hợp mã giảm giá và khoản hoàn.", href: "/cach-san-sale-shopee", alt: "Ống tiết kiệm và những đồng tiền vàng" },
-  { image: "guide-cashback.webp", category: "HIỂU TIỀN HOÀN", title: "Hiểu khoản hoàn, an tâm chốt đơn", description: "Phân biệt tiền dự kiến và tiền đã duyệt.", href: "/cashback-shopee-la-gi", alt: "Mua sắm thông minh và quản lý khoản hoàn" },
+  { image: "guide-start-reference.png", category: "BẮT ĐẦU", title: "Lấy link đúng, nhận hoàn dễ hơn", description: "Một thao tác nhỏ trước mỗi lần mua.", href: "/how-to", alt: "Kiểm tra tiền hoàn trên điện thoại" },
+  { image: "guide-saving-reference.png", category: "MẸO TIẾT KIỆM", title: "Săn sale khéo, mua sắm hời hơn", description: "Kết hợp mã giảm giá và khoản hoàn.", href: "/cach-san-sale-shopee", alt: "Ống tiết kiệm và những đồng tiền vàng" },
+  { image: "guide-cashback-reference.png", category: "HIỂU TIỀN HOÀN", title: "Hiểu khoản hoàn, an tâm chốt đơn", description: "Phân biệt tiền dự kiến và tiền đã duyệt.", href: "/cashback-shopee-la-gi", alt: "Mua sắm thông minh và quản lý khoản hoàn" },
 ];
 const questions = [
   ["Tiền hoàn của DealHoàn đến từ đâu?", "DealHoàn chia lại một phần hoa hồng tiếp thị từ giao dịch hợp lệ. Khoản được duyệt phụ thuộc kết quả xác nhận của sàn và đối tác."],
@@ -28,34 +28,23 @@ export default function HomeSupport({ onStart, onAccount, signedIn, accountPendi
   return <div className={s.refresh}>
     <section id="benefits" aria-labelledby="benefits-title" className={s.story}>
       <div className={s.storyCopy} data-motion="left">
-        <span className={s.eyebrow}>MUA SẮM CHỦ ĐỘNG HƠN</span>
         <h2 id="benefits-title">Tiền hoàn rõ ràng<span>Mua sắm nhẹ nhàng</span></h2>
         <p className={s.lead}>Điều quan trọng không chỉ là hoàn bao nhiêu,<br className={s.desktopBreak} /> mà còn là bạn hiểu khoản hoàn của mình.</p>
-        <ul className={s.trustList}>
-          <li><CheckCircleIcon weight="fill" aria-hidden="true" />Xem khoản hoàn trước khi mua</li>
-          <li><CheckCircleIcon weight="fill" aria-hidden="true" />Phân biệt tiền chờ và tiền đã duyệt</li>
-        </ul>
         <div className={s.storyActions}>
-          <button type="button" className={s.primary} onClick={onStart}>Thử với link của bạn <ArrowRightIcon size={20} aria-hidden="true" /></button>
-          <Link className={s.secondary} href="/how-to">Cách nhận tiền hoàn <ArrowRightIcon size={18} aria-hidden="true" /></Link>
+          <button type="button" className={s.storyPrimary} onClick={onStart}>Trải nghiệm ngay <ArrowRightIcon size={20} aria-hidden="true" /></button>
+          <Link className={s.storySecondary} href="/how-to">Cách nhận hoàn <ArrowRightIcon size={20} aria-hidden="true" /></Link>
         </div>
+        <p className={s.webNote}>Dùng ngay trên website, không cần cài đặt.</p>
       </div>
       <div className={s.storyVisual} data-motion="right" data-motion-delay="120">
-        <svg data-motion-art className={s.phone} viewBox="0 0 1046 1100" width={1046} height={1100} role="img" aria-label="Minh hoạ DealHoàn: Mua trên sàn quen thuộc, theo dõi tiền chờ xác nhận và đã duyệt">
-          <image href={`${art}phone-card-blank-v3.webp`} width={1046} height={1100} />
-          {/* Real Unicode text keeps Vietnamese diacritics exact at every screen size. */}
-          <text transform="translate(921 463) rotate(10)" textAnchor="middle" fill="#10182d" fontFamily="Arial, sans-serif" fontSize={25} fontWeight={700}>
-            <tspan x={0} y={0}>Mua trên sàn</tspan>
-            <tspan x={0} y={33}>quen thuộc</tspan>
-          </text>
-        </svg>
+        <Image unoptimized src={storyPhone} className={s.phone} alt="Minh hoạ DealHoàn trên điện thoại: biết trước khoản hoàn, mua trên sàn quen thuộc, theo dõi tiền chờ xác nhận và đã duyệt." sizes="(max-width: 767px) 100vw, 55vw" placeholder="blur" />
       </div>
     </section>
 
     <section id="guides" aria-labelledby="guides-title" className={s.guides}>
       <header className={s.guideHeading} data-motion="rise"><div><span className={s.eyebrow}>CẨM NANG MUA KHÉO</span><h2 id="guides-title">Mẹo nhỏ<span>Tiết kiệm hơn</span></h2></div><Link href="/docs" className={s.secondary}>Tất cả cẩm nang <ArrowRightIcon size={18} aria-hidden="true" /></Link></header>
       <div className={s.guideGrid}>{guides.map((guide, index) => <Link data-motion="rise" data-motion-delay={index * 90} key={guide.href} href={guide.href} className={s.guideCard}>
-        <div className={s.guideImage}><Image src={`${art}${guide.image}`} alt={guide.alt} fill sizes="(max-width: 600px) 90vw, (max-width: 1000px) 45vw, 30vw" /></div>
+        <div className={s.guideImage}><Image unoptimized src={`${art}${guide.image}`} alt={guide.alt} fill sizes="(max-width: 600px) 90vw, (max-width: 1000px) 45vw, 30vw" /></div>
         <div className={s.guideBody}><span className={s.category}>{guide.category}</span><h3>{guide.title}</h3><p>{guide.description}</p><span className={s.readMore}>Đọc hướng dẫn <ArrowRightIcon size={20} aria-hidden="true" /></span></div>
       </Link>)}</div>
     </section>

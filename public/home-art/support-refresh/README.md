@@ -14,3 +14,11 @@ phone, chat and pouch. These are decorative/promotional depictions, not live UI.
 
 Prompts specified no app store availability, no numeric cashback guarantees, and
 no competitor branding. Artwork is isolated from functional controls and real copy.
+
+- phone-reference-v4.webp: 1344×1170 promotional phone, floating eye/shield/cart/percentage cards and a pending/approved wallet. Generated from the user-selected reference on 2026-10-20 with built-in imagegen, then lossily encoded as WebP (quality 90). White background; original PNG preserved under the Codex generated_images directory. Used only as a descriptive illustration; all real calls to action remain HTML. No app-store availability is implied.
+
+## Exact guide artwork from the supplied design (2026-10-20)
+- guide-start-reference.png, guide-saving-reference.png, guide-cashback-reference.png: original image regions extracted losslessly from user attachment codex-clipboard-d7373e24-be02-426d-98f0-2f3b419b2ad1.png (1918×941).
+- Source rectangles (left, top, width, height): (359,283,383,371), (767,283,383,371), (1175,283,383,371).
+- No regeneration, retouching, sharpening or invented detail. PNG preserves the supplied pixels exactly; source corner rounding remains part of the artwork.
+- Render at 383:371 aspect ratio on desktop and mobile. Files are unoptimized to prevent a second lossy conversion. Existing article titles, descriptions and destinations are retained.

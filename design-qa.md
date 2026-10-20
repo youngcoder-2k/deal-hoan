@@ -1,47 +1,34 @@
-# Journey reference implementation QA
+# Exact guide artwork — scoped QA
 
 final result: passed
 
 ## Source and scope
-- Source visual truth: /var/folders/sj/jwhymxt53b11fm81tn5k24rw0000gn/T/codex-clipboard-64730399-203e-413f-991e-91e9f7343e39.png
-- Implementation: http://localhost:3004/#how
-- Scope: only the three-step journey section. Existing other sections, calculator, data and scroll controller preserved.
-- Source and desktop screenshot: 1918 × 941 pixels; CSS viewport 1918 × 941. Same section-top state; no density normalization required.
-- Desktop evidence: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/desktop.png
-- Full comparison: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/comparison.png (source above, final below; 1918 × 1882).
-- Focused typography/card-body comparison: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/focused-comparison.png (source left, final right).
-- Mobile: /Users/wei/Code/me/deal-hoan/design-evidence/journey-reference/mobile.png (390 × 844).
+- Source truth: /var/folders/sj/jwhymxt53b11fm81tn5k24rw0000gn/T/codex-clipboard-d7373e24-be02-426d-98f0-2f3b419b2ad1.png, 1918×941.
+- Scope requested: use the three exact images from this design, not regenerate similar pictures. Existing typography, card/grid layout, copy and destinations intentionally preserved.
+- Implementation: http://localhost:3012/#guides, production build. Browser viewport 1918×941 desktop and 390×844 mobile, density1.
+- Evidence: design-evidence/guide-reference/desktop.png (1918×1029 section), mobile.png (390×1983 section), baseline.png, rendered-images.png.
+- Combined full view: design-evidence/guide-reference/comparison.png. Source left at959×471, final right at959×515; different section heights reflect preserved current layout, not an overall clone claim.
+- Focused required-image comparison: design-evidence/guide-reference/focused-comparison.png. Top: three original383×371 crops; bottom: browser-rendered images normalized back to383×371. Opened together and reviewed.
 
-## Comparison history and fixes
-1. V1 screenshot: desktop-v1.png. Initial placement had cards approximately 10px too low and oversized section height; image API density produced 126px natural image width for a 282px source asset (P2).
-2. Fixes: preserve supplied illustration pixels via unoptimized local Image assets; reduce heading gap and card footer spacing; align heading/body sizes to reference. Actual local images now report natural widths 282/282/286px, not 126px.
-3. Final combined and focused comparisons inspected after fixes. Final card top 325.17px, bottom 788.66px vs source approximately 326–787px. White surface, rounded cards, number colors and actual supplied illustrations retained. No actionable P0/P1/P2 differences remain.
+## Findings / history
+- Baseline used three generated substitutes, not the supplied source images. Replaced only three source paths and changed image containers from1.22 desktop/1.4 mobile to383/371 (P1/P2 corrected).
+- Exact equality test compares decoded RGB bytes of all three shipped PNGs against the three source crop rectangles: passed. No fabricated detail, regeneration or recompression.
+- Final review: phone/hand, gold piggybank, woman/blue shopping composition and embedded text preserved. No actionable P0/P1/P2 findings within image-replacement scope.
 
-## Required fidelity surfaces
-- Typography: existing Be Vietnam Pro retained for Vietnamese accents and brand consistency. Large black heading and orange/red second line; orange card titles. Source font not embedded; minor optical differences remain P3, not an exact-font claim.
-- Spacing/layout: centered 1460px desktop content, three equal columns, 30px gaps, 32px card radii; near-reference vertical alignment. Equal columns intentionally regularize slightly uneven source card widths (P3).
-- Colors/tokens: white background, black text, orange titles, pastel orange/purple/green step numbers and matched heading gradient. Platform screenshot color rendering may differ slightly from reference pixels.
-- Imagery: directly extracted three illustration regions and sparkle from user-provided source, no regenerated or code-drawn substitutes, no placeholder imagery. Source resolution is preserved; no fabricated high-resolution detail.
-- Copy: Lorem ipsum replaced with truthful short Vietnamese instructions. Same three step headings as reference. Copy remains actual HTML, not text baked into a screenshot.
+## Required surfaces
+- Typography: surrounding HTML text, Be Vietnam Pro and hierarchy unchanged. All lettering within source images remains raster source content.
+- Spacing/layout: existing homepage gutters, desktop3-column grid and mobile1-column preserved. Image boxes now preserve source aspect383:371 at each breakpoint; no document horizontal overflow at390 or1918.
+- Colors/tokens: surrounding styles unchanged; lossless PNG exact RGB confirmed. Browser screenshot rendering/interpolation may visually differ slightly.
+- Imagery: original383×371 pixels extracted from source positions (359,283),(767,283),(1175,283). No up-resolution detail claims; desktop display approximately465×450 involves scaling. Large originals, if later supplied, could sharpen desktop presentation (P3).
+- Copy: original article titles/descriptions/categories and all destination links remain. Repeated placeholder text from design intentionally not copied, per scope.
 
-## Interaction and responsive checks
-- 1918px desktop: three aligned cards, no horizontal overflow.
-- 768px tablet: three 224px columns, no horizontal overflow.
-- 390px and 320px mobile: cards stack; no horizontal overflow, no broken loaded images; text fully readable.
-- New cards are informational, not misleading clickable surfaces. Old podium arrows and section CTA removed to match source.
-- Existing nearby primary CTA still focuses the Link sản phẩm input. Input remains empty; no external transaction performed.
-- Scroll reveal data attributes retained; existing controller's 10 regression checks passed, including reduced motion, focus cancellation and cleanup.
-- Illustration loading failure preserves space and hides only decorative image, leaving instructions readable.
-- Existing focus-visible treatment retained. Viewport override reset after responsive tests.
-- Browser error/warning log query returned [] for the tested production page.
-
-## Implementation checklist
-- [x] Reuse exact supplied image assets.
-- [x] Replace placeholder text only with actual guidance.
-- [x] Scope new styles to referenceScene/reference*.
-- [x] Preserve other homepage sections and earlier motion work.
-- [x] Desktop/mobile browser comparison.
-- [x] Targeted lint, source checks, production build.
+## Functional checks
+- Browser naturalWidth383 and complete=true for all3 images.
+- Clicked cards navigate to /how-to, /cach-san-sale-shopee, /cashback-shopee-la-gi respectively.
+- Console errors: [].
+- Focus-visible, hover and reduced-motion rules preserved. No new controls, loading logic, empty/error API states introduced; forced asset failure not tested.
+- ESLint and production build passed. Isolated rollback restored baseline component/styles byte-for-byte; main workspace keeps new images and ratios.
+- No push or deployment performed for this request.
 
 ## Follow-up polish
-- P3: exact source font is unspecified; current brand font and equalized card columns are deliberate implementation choices.
+- Full-resolution original photos could improve sharpness when displayed larger than383px. No invented replacement or artificial sharpening applied.
