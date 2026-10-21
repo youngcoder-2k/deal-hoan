@@ -2,10 +2,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
-import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
+import { ClipboardTextIcon } from "@phosphor-icons/react/dist/csr/ClipboardText";
 import HomeDiscovery from "./components/home-discovery";
 import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
@@ -612,6 +612,28 @@ export default function HomeClient({
     }
   };
 
+  const [pasteMessage, setPasteMessage] = useState("");
+  const [readingClipboard, setReadingClipboard] = useState(false);
+  const pasteCopiedLink = async () => {
+    if (busy || readingClipboard) return;
+    setPasteMessage("");
+    setReadingClipboard(true);
+    try {
+      if (!navigator.clipboard?.readText) throw new Error("clipboard_unavailable");
+      const text = await navigator.clipboard.readText();
+      const url = extractUrlFromText(text);
+      if (!/^https?:\/\/[^\s/]+/i.test(url)) {
+        setPasteMessage("Hãy sao chép link sản phẩm rồi bấm Dán ngay.");
+        linkInputRef.current?.focus();
+        return;
+      }
+      setLink(url);
+      await executeCalculation(url);
+    } catch {
+      setPasteMessage("Nhấn giữ ô nhập để dán link, hoặc dùng Ctrl/Cmd + V.");
+      linkInputRef.current?.focus();
+    } finally { setReadingClipboard(false); }
+  };
   const calc = (e: React.FormEvent) => {
     e.preventDefault();
     executeCalculation(link);
@@ -767,6 +789,7 @@ export default function HomeClient({
                   ref={linkInputRef}
                   aria-label="Link sản phẩm"
                   aria-invalid={inputError}
+                  aria-describedby={pasteMessage ? "paste-help" : undefined}
                   type="text"
                   inputMode="url"
                   autoComplete="off"
@@ -780,20 +803,25 @@ export default function HomeClient({
                   onPaste={(e) => {
                     const pasted = e.clipboardData.getData("text");
                     e.preventDefault();
-                    setLink(extractUrlFromText(pasted) || pasted);
+                    const url = extractUrlFromText(pasted);
+                    setLink(url || pasted);
+                    setPasteMessage("");
+                    if (/^https?:\/\/[^\s/]+/i.test(url) && !busy && !readingClipboard) void executeCalculation(url);
                     requestAnimationFrame(() => {
                       linkInputRef.current?.setSelectionRange(0, 0);
                       if (linkInputRef.current) linkInputRef.current.scrollLeft = 0;
                     });
                   }}
-                  placeholder="Dán link sản phẩm…"
+                  placeholder="Link sản phẩm vừa sao chép…"
                 />
                 {link && <button type="button" className={styles.clearInput} aria-label="Xoá link" onClick={() => resetCalculation()}><XIcon size={17} weight="bold" aria-hidden="true" /></button>}
+                <button type="button" className={styles.pasteButton} onClick={() => void pasteCopiedLink()} disabled={busy || readingClipboard} aria-busy={busy || readingClipboard} aria-label="Dán link vừa sao chép và xem tiền hoàn">
+                  <ClipboardTextIcon size={25} weight="bold" aria-hidden="true" />
+                  <span><strong>{busy ? `${calcPercent}%` : readingClipboard ? "Đang dán…" : "Dán ngay"}</strong><small>Dán link vừa sao chép</small></span>
+                </button>
               </div>
-              <button type="submit" className={styles.calculateButton} disabled={busy} aria-busy={busy} aria-label={busy ? `Đang tính ${calcPercent}%` : "Tính"}>
-                {busy ? <span aria-live="polite">{calcPercent}%</span> : <><LightningIcon size={22} weight="fill" aria-hidden="true" /> Tính</>}
-              </button>
             </form>
+            {pasteMessage && <p id="paste-help" className={styles.pasteHelp} role="status">{pasteMessage}</p>}
             <div className={styles.calculatorState}>
               {result && calculatedProduct ? (
                 <div className={`${styles.resultState} ${resultClosing ? styles.resultClosing : ""}`}>
