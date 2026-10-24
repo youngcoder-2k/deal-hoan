@@ -16,7 +16,7 @@ const guides = [
   { image: "guide-cashback-reference.png", category: "HIỂU TIỀN HOÀN", title: "Hiểu khoản hoàn, an tâm chốt đơn", description: "Phân biệt tiền dự kiến và tiền đã duyệt.", href: "/cashback-shopee-la-gi", alt: "Mua sắm thông minh và quản lý khoản hoàn" },
 ];
 const questions = [
-  ["Tiền hoàn của DealHoàn đến từ đâu?", "DealHoàn chia lại một phần hoa hồng tiếp thị từ giao dịch hợp lệ. Khoản được duyệt phụ thuộc kết quả xác nhận của sàn và đối tác."],
+  ["Tiền hoàn của DealHoàn đến từ đâu?", "DealHoàn lấy từ phần tiền Affiliate của Shopee. Chúng tôi gửi cho bạn phần lớn và chỉ giữ lại một phần nhỏ để duy trì website."],
   ["Tôi có cần đăng nhập trước khi mua?", "Bạn có thể kiểm tra link trước. Hãy đăng nhập trước khi mua để gắn liên kết với tài khoản và theo dõi đơn, số dư."],
   ["Khoản hoàn dự kiến có phải số tiền cuối cùng?", "Chưa. Mức hoàn dự kiến giúp bạn tham khảo trước khi mua. Khoản thực nhận phụ thuộc giá trị thanh toán hợp lệ, điều kiện chương trình và kết quả đối soát."],
   ["Khi nào tôi có thể rút tiền hoàn?", "Sau khi đơn được đối soát và khoản hoàn được duyệt, bạn có thể yêu cầu rút về ngân hàng khi số dư đã duyệt đạt tối thiểu 50.000đ."],
