@@ -8,6 +8,7 @@ import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { ClipboardTextIcon } from "@phosphor-icons/react/dist/csr/ClipboardText";
 import HomeDiscovery from "./components/home-discovery";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
+import TopToast, { type ToastData } from "./components/top-toast";
 import styles from "./home-redesign.module.css";
 import motionStyles from "./components/home-motion.module.css";
 import { setupHomeMotion, homeScrollBehavior } from "@/lib/ui/home-motion";
@@ -265,6 +266,11 @@ export default function HomeClient({
   const [showAllCoupons, setShowAllCoupons] = useState(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  const [topToast, setTopToast] = useState<ToastData | null>(null);
+
+  const showTopToast = (data: ToastData) => {
+    setTopToast({ id: Date.now(), ...data });
+  };
 
   const allCoupons = useMemo(() => {
     const fallback = getDailyShopeeCoupons();
@@ -512,12 +518,45 @@ export default function HomeClient({
     const rawClean = extractUrlFromText(targetUrl);
     const trimmed = (rawClean || targetUrl).trim();
     if (!trimmed) {
-      setInputError(true);
-      setTimeout(() => setInputError(false), 600);
+      showTopToast({
+        type: "warning",
+        title: "Chưa có đường link",
+        message: "Vui lòng nhập hoặc dán link sản phẩm Shopee / ShopeeFood để nhận hoàn tiền!",
+      });
       setTimeout(() => {
         (document.activeElement as HTMLElement | null)?.blur();
       }, 1000);
       return notify("Vui lòng dán link sản phẩm 🙂");
+    }
+
+    // Kiểm tra tính hợp lệ: Chỉ chấp nhận link Shopee hoặc ShopeeFood
+    const isFood = isShopeeFoodUrl(trimmed);
+    const isShopee = isShopeeUrl(trimmed) || isFood;
+
+    if (!isShopee) {
+      setBusy(false);
+
+      const lower = trimmed.toLowerCase();
+      let errorTitle = "Chưa hỗ trợ đường link này";
+      let errorMsg = "DealHoàn hiện chỉ hỗ trợ nhận hoàn tiền cho link Shopee và ShopeeFood. Vui lòng kiểm tra lại đường link của bạn nhé!";
+
+      if (lower.includes("lazada.vn") || lower.includes("lazada.")) {
+        errorMsg = "DealHoàn hiện chỉ hỗ trợ hoàn tiền cho Shopee & ShopeeFood (chưa hỗ trợ link Lazada). Bạn dán link Shopee nhé!";
+      } else if (lower.includes("tiktok.com") || lower.includes("tiktok.")) {
+        errorMsg = "DealHoàn hiện chỉ hỗ trợ hoàn tiền cho Shopee & ShopeeFood (chưa hỗ trợ link TikTok). Bạn dán link Shopee nhé!";
+      } else if (lower.includes("tiki.vn")) {
+        errorMsg = "DealHoàn hiện chỉ hỗ trợ hoàn tiền cho Shopee & ShopeeFood (chưa hỗ trợ link Tiki). Bạn dán link Shopee nhé!";
+      } else if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+        errorTitle = "Đường dẫn không hợp lệ";
+        errorMsg = "Vui lòng sao chép đúng đường link sản phẩm Shopee hoặc quán ăn ShopeeFood và dán vào đây.";
+      }
+
+      showTopToast({
+        type: "error",
+        title: errorTitle,
+        message: errorMsg,
+      });
+      return notify("Link không hợp lệ: Chỉ hỗ trợ link Shopee và ShopeeFood.");
     }
 
     const calculationId = ++calculationIdRef.current;
@@ -625,6 +664,11 @@ export default function HomeClient({
       if (!url && !text.trim()) {
         setPasteMessage("Hãy sao chép link sản phẩm rồi bấm Dán ngay.");
         (linkInputRef.current || pasteActionRef.current)?.focus();
+        showTopToast({
+          type: "warning",
+          title: "Chưa sao chép link",
+          message: "Không tìm thấy nội dung trong bộ nhớ tạm. Hãy sao chép link Shopee hoặc ShopeeFood trước nhé!",
+        });
         return;
       }
       const target = url || text.trim();
@@ -633,6 +677,11 @@ export default function HomeClient({
     } catch {
       setPasteMessage("Nhấn giữ ô nhập để dán link, hoặc dùng Ctrl/Cmd + V.");
       (linkInputRef.current || pasteActionRef.current)?.focus();
+      showTopToast({
+        type: "info",
+        title: "Quyền bộ nhớ tạm",
+        message: "Trình duyệt chưa cấp quyền dán tự động. Bạn vui lòng nhấn giữ vào ô nhập và chọn 'Dán' nhé!",
+      });
     } finally { setReadingClipboard(false); }
   };
   const calc = (e: React.FormEvent) => {
@@ -723,7 +772,27 @@ export default function HomeClient({
               <img src="/brand/deal-hoan-logo.png" alt="DealHoàn — Săn deal · Hoàn tiền" />
             </span>
           </Link>
-          <form className="search" onSubmit={(e) => { e.preventDefault(); document.getElementById("deals")?.scrollIntoView({ behavior: homeScrollBehavior() }); }}>
+          <form
+            className="search"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const rawUrl = extractUrlFromText(searchQuery);
+              if (rawUrl) {
+                if (!isShopeeUrl(rawUrl) && !isShopeeFoodUrl(rawUrl)) {
+                  showTopToast({
+                    type: "error",
+                    title: "Chưa hỗ trợ đường link này",
+                    message: "DealHoàn hiện chỉ hỗ trợ link Shopee và ShopeeFood. Vui lòng kiểm tra lại link của bạn nhé!",
+                  });
+                  return;
+                }
+                setLink(rawUrl);
+                void executeCalculation(rawUrl);
+                return;
+              }
+              document.getElementById("deals")?.scrollIntoView({ behavior: homeScrollBehavior() });
+            }}
+          >
             <MagnifyingGlassIcon size={19} aria-hidden="true" />
             <input aria-label="Tìm sản phẩm, deal, mã giảm giá" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm sản phẩm, deal, mã giảm giá…" />
             <button>Tìm deal</button>
@@ -1311,6 +1380,7 @@ export default function HomeClient({
           onNotify={notify}
         />
       )}
+      <TopToast toast={topToast} onClose={() => setTopToast(null)} />
       <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">{announcement}</span>
     </main>
   );

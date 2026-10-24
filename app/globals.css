@@ -7398,3 +7398,43 @@ select.account-input.select-bank-field:focus {
 
 
 .flash-grid .flash-cashback-rate .flash-cashback-percent { font-size:15px; font-weight:800; line-height:1.2; }
+
+/* Top Center Toast */
+@keyframes topToastSlideDown {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -24px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+}
+
+@keyframes topToastSlideUp {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -20px) scale(0.95);
+  }
+}
+
+.top-toast-container {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translate(-50%, 0);
+  z-index: 99999;
+}
+
+.top-toast-enter {
+  animation: topToastSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.top-toast-exit {
+  animation: topToastSlideUp 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+

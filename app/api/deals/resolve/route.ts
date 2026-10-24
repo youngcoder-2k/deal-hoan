@@ -53,6 +53,17 @@ export async function POST(request: NextRequest) {
 
     const isShopeeFood = isShopeeFoodUrl(rawUrl);
     const isShopee = isShopeeUrl(rawUrl) || isShopeeFood;
+
+    if (!isShopee) {
+      return NextResponse.json(
+        {
+          error: "unsupported_platform",
+          message: "DealHoàn hiện chỉ hỗ trợ nhận hoàn tiền cho link Shopee và ShopeeFood.",
+        },
+        { status: 400 }
+      );
+    }
+
     const isTikTok = isTikTokUrl(rawUrl);
 
     let canonicalUrl = rawUrl;
