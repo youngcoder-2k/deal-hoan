@@ -527,7 +527,7 @@ export default function HomeClient({
       showTopToast({
         type: "warning",
         title: "Chưa có đường link",
-        message: "Vui lòng nhập hoặc dán link sản phẩm Shopee / ShopeeFood để nhận hoàn tiền!",
+        message: "Hãy dán link Shopee hoặc ShopeeFood.",
       });
       setTimeout(() => {
         (document.activeElement as HTMLElement | null)?.blur();
@@ -544,17 +544,17 @@ export default function HomeClient({
 
       const lower = trimmed.toLowerCase();
       let errorTitle = "Chưa hỗ trợ đường link này";
-      let errorMsg = "DealHoàn hiện chỉ hỗ trợ nhận hoàn tiền cho link Shopee và ShopeeFood. Vui lòng kiểm tra lại đường link của bạn nhé!";
+      let errorMsg = "Hãy dán link Shopee hoặc ShopeeFood.";
 
       if (lower.includes("lazada.vn") || lower.includes("lazada.")) {
-        errorMsg = "DealHoàn hiện chỉ hỗ trợ hoàn tiền cho Shopee & ShopeeFood (chưa hỗ trợ link Lazada). Bạn dán link Shopee nhé!";
+        errorMsg = "Hãy dán link Shopee hoặc ShopeeFood.";
       } else if (lower.includes("tiktok.com") || lower.includes("tiktok.")) {
-        errorMsg = "DealHoàn hiện chỉ hỗ trợ hoàn tiền cho Shopee & ShopeeFood (chưa hỗ trợ link TikTok). Bạn dán link Shopee nhé!";
+        errorMsg = "Hãy dán link Shopee hoặc ShopeeFood.";
       } else if (lower.includes("tiki.vn")) {
-        errorMsg = "DealHoàn hiện chỉ hỗ trợ hoàn tiền cho Shopee & ShopeeFood (chưa hỗ trợ link Tiki). Bạn dán link Shopee nhé!";
+        errorMsg = "Hãy dán link Shopee hoặc ShopeeFood.";
       } else if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
         errorTitle = "Đường dẫn không hợp lệ";
-        errorMsg = "Vui lòng sao chép đúng đường link sản phẩm Shopee hoặc quán ăn ShopeeFood và dán vào đây.";
+        errorMsg = "Hãy sao chép link sản phẩm rồi dán lại.";
       }
 
       showTopToast({
@@ -589,7 +589,7 @@ export default function HomeClient({
     // 3. Wait until server returns ALL real data before dropping down receipt
     let resolvedProduct: CalculatedProduct | null = null;
     let resolvedTracked = "";
-    let resolveMessage = "Hãy sao chép lại link sản phẩm trên Shopee rồi thử lại. Hệ thống sẽ không hiển thị sản phẩm thay thế.";
+    let resolveMessage = "Hãy sao chép link sản phẩm rồi dán lại.";
     try {
       const res = await fetch("/api/deals/resolve", {
         method: "POST",
@@ -631,7 +631,7 @@ export default function HomeClient({
       setBusy(false);
       if (!resolvedProduct) showTopToast({
         type: "warning",
-        title: "Chưa xác minh được sản phẩm",
+        title: "Chưa tìm thấy sản phẩm",
         message: resolveMessage,
       });
       notify(resolvedProduct ? "✓ Đã gắn mã hoàn tiền DealHoàn" : "Chưa lấy được thông tin sản phẩm. Bạn thử lại nhé.");
@@ -655,7 +655,7 @@ export default function HomeClient({
         showTopToast({
           type: "warning",
           title: "Chưa sao chép link",
-          message: "Không tìm thấy nội dung trong bộ nhớ tạm. Hãy sao chép link Shopee hoặc ShopeeFood trước nhé!",
+          message: "Hãy sao chép link sản phẩm trước nhé.",
         });
         return;
       }
@@ -668,7 +668,7 @@ export default function HomeClient({
       showTopToast({
         type: "info",
         title: "Quyền bộ nhớ tạm",
-        message: "Trình duyệt chưa cấp quyền dán tự động. Bạn vui lòng nhấn giữ vào ô nhập và chọn 'Dán' nhé!",
+        message: "Nhấn giữ ô nhập rồi chọn “Dán”.",
       });
     } finally { setReadingClipboard(false); }
   };
@@ -770,7 +770,7 @@ export default function HomeClient({
                   showTopToast({
                     type: "error",
                     title: "Chưa hỗ trợ đường link này",
-                    message: "DealHoàn hiện chỉ hỗ trợ link Shopee và ShopeeFood. Vui lòng kiểm tra lại link của bạn nhé!",
+                    message: "Hãy dán link Shopee hoặc ShopeeFood.",
                   });
                   return;
                 }

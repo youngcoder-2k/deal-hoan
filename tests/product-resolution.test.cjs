@@ -23,7 +23,7 @@ test('verified provider product is retained',async()=>{
  assert.equal(response.status,200);assert.equal(data.product.name,'Sản phẩm đúng');assert.equal(data.product.price,250000);
  }finally{global.fetch=old;}
 });
-test('client does not generate substitute receipt on API errors',()=>{const s=fs.readFileSync('app/home-client.tsx','utf8');assert.ok(!s.includes('resolveProductLocally'));assert.ok(s.includes('title: "Chưa xác minh được sản phẩm"'));});
+test('client does not generate substitute receipt on API errors',()=>{const s=fs.readFileSync('app/home-client.tsx','utf8');assert.ok(!s.includes('resolveProductLocally'));assert.ok(s.includes('title: "Chưa tìm thấy sản phẩm"'));});
 test('user Shopee video link gets actionable error, not a product',async()=>{
  const post=route('app/api/deals/resolve/route.ts');const response=await post({json:async()=>({url:'https://sv.shopee.vn/share-video/gkGKGyjOCQD8L9gKAAAAAA=='})});const data=await response.json();
  assert.equal(response.status,422);assert.equal(data.error,'video_link_not_product');assert.match(data.message,/Chia sẻ/);assert.equal(data.product,undefined);

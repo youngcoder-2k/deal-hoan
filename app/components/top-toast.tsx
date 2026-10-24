@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export interface ToastData {
   id?: string | number;
@@ -18,27 +18,25 @@ interface TopToastProps {
 export default function TopToast({ toast, onClose }: TopToastProps) {
   const [isClosing, setIsClosing] = useState(false);
 
-  useEffect(() => {
-    if (!toast) {
-      return;
-    }
+  const closeRef = useRef(onClose);
+  useEffect(() => { closeRef.current = onClose; }, [onClose]);
 
-    const duration = toast.duration ?? 4500;
-    if (duration > 0) {
-      const timer = setTimeout(() => {
-        setIsClosing(true);
-        setTimeout(onClose, 250);
-      }, duration);
-      return () => clearTimeout(timer);
-    }
-  }, [toast, onClose]);
+  useEffect(() => {
+    setIsClosing(false);
+    if (!toast) return;
+    const duration = Math.min(3750, Math.max(3000, toast.duration ?? 3500));
+    const timer = setTimeout(() => setIsClosing(true), duration);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  useEffect(() => {
+    if (!isClosing) return;
+    const timer = setTimeout(() => closeRef.current(), 250);
+    return () => clearTimeout(timer);
+  }, [isClosing]);
 
   if (!toast) return null;
-
-  const handleClose = () => {
-    setIsClosing(true);
-    setTimeout(onClose, 250);
-  };
+  const handleClose = () => setIsClosing(true);
 
   const type = toast.type || "error";
   const isError = type === "error";

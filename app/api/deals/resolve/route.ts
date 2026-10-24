@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     if (inputUrl?.hostname === "sv.shopee.vn" && inputUrl.pathname.startsWith("/share-video/")) {
       return NextResponse.json({
         error: "video_link_not_product",
-        message: "Đây là link Shopee Video. Hãy mở video, chọn sản phẩm được gắn trong video rồi bấm Chia sẻ → Sao chép liên kết sản phẩm.",
+        message: "Link video: mở sản phẩm trong video → Chia sẻ → Sao chép link.",
       }, { status: 422 });
     }
     const auth = await createSupabaseServerClient();
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
     if (!providerProduct?.name?.trim() || !providerProduct.isVerifiedPrice || !Number.isFinite(providerProduct.price) || providerProduct.price <= 0) {
       return NextResponse.json({
         error: "product_unresolved",
-        message: "Chưa xác minh được sản phẩm từ link này. Hãy sao chép lại link sản phẩm trên Shopee rồi thử lại.",
+        message: "Chưa tìm thấy sản phẩm từ link này. Hãy sao chép lại link sản phẩm trên Shopee rồi thử lại.",
       }, { status: 422 });
     }
 
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
     );
 
     if (!hasRealCommission) {
-      return NextResponse.json({ error: "commission_unverified", message: "Chưa xác minh được tiền hoàn của sản phẩm này. Bạn thử dán lại link sau nhé." }, { status: 422 });
+      return NextResponse.json({ error: "commission_unverified", message: "Chưa lấy được tiền hoàn. Bạn thử lại sau nhé." }, { status: 422 });
     }
     let finalCashback = 0;
     let cashbackRate = finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 0;
