@@ -269,7 +269,7 @@ export default function HomeClient({
   const [topToast, setTopToast] = useState<ToastData | null>(null);
 
   const showTopToast = (data: ToastData) => {
-    setTopToast({ id: Date.now(), ...data });
+    setTopToast({ id: Date.now(), ...data, ...((data.type === "error" || data.type === "warning") ? { title: undefined, message: "Vui lòng nhập đúng link sản phẩm Shopee" } : {}) });
   };
 
   const allCoupons = useMemo(() => {
