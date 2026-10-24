@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import s from "./home-discovery.module.css";
 import HomeSupport from "./home-support";
+import HomePledge from "./home-pledge";
 import journeyPhone from "@/public/home-art/journey-reference/phone.webp";
 import journeyShopping from "@/public/home-art/journey-reference/shopping.webp";
 import journeyWallet from "@/public/home-art/journey-reference/wallet.webp";
@@ -50,6 +51,8 @@ export default function HomeDiscovery({ onStart, onAccount, signedIn, accountPen
           </ol>
         </div>
       </section>
+
+      <HomePledge />
 
       <HomeSupport onStart={onStart} onAccount={onAccount} signedIn={signedIn} accountPending={accountPending} />
     </div>
