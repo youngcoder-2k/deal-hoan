@@ -30,7 +30,7 @@ import {
   formatSubIdForUser,
 } from "@/lib/deals/affiliate";
 import { cashbackFor } from "@/lib/deals/score";
-import { resolveProductLocally, matchProductFromCatalog, SAMPLE_CHIP_PRODUCTS, type CalculatedProduct } from "@/lib/deals/resolve";
+import { type CalculatedProduct } from "@/lib/deals/resolve";
 
 /**
  * Tabs over "Deal hot hôm nay". Every sort is backed by a field the marketplace
@@ -515,6 +515,12 @@ export default function HomeClient({
   };
 
   const executeCalculation = async (targetUrl: string) => {
+    // Invalidate old requests and receipts even when the next pasted URL is invalid.
+    const calculationId = ++calculationIdRef.current;
+    setResult("");
+    setCalculatedProduct(null);
+    setTrackedLink("");
+    setBusy(false);
     const rawClean = extractUrlFromText(targetUrl);
     const trimmed = (rawClean || targetUrl).trim();
     if (!trimmed) {
@@ -559,7 +565,6 @@ export default function HomeClient({
       return notify("Link không hợp lệ: Chỉ hỗ trợ link Shopee và ShopeeFood.");
     }
 
-    const calculationId = ++calculationIdRef.current;
     if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     setCopiedTracked(false);
@@ -574,36 +579,17 @@ export default function HomeClient({
 
     const subId = user ? formatSubIdForUser(user.id) : "calc";
 
-    // 1. If it is a sample chip demo (e.g. clicked chip buttons), display immediately
-    if (SAMPLE_CHIP_PRODUCTS[trimmed]) {
-      const chipProduct = SAMPLE_CHIP_PRODUCTS[trimmed];
-      const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
-      const localTracked = isShopeeUrl(trimmed)
-        ? buildShopeeAffiliateUrl(trimmed, { affiliateId: "17351320644", subId })
-        : buildCustomShortUrl(trimmed, { baseUrl, subId });
-      setCalcPercent(100);
-      await new Promise((r) => setTimeout(r, 180));
-      if (calculationId !== calculationIdRef.current) return;
-      setCalculatedProduct(chipProduct);
-      setTrackedLink(localTracked);
-      setCopiedTracked(false);
-      setResultClosing(false);
-      setResult(chipProduct.platform);
-      setBusy(false);
-      notify("✓ Đã gắn mã hoàn tiền DealHoàn");
-      return;
-    }
-
     // 2. For pasted/entered links: reset previous receipt so no stale/old price is shown
     if (result) {
       setResult("");
       setCalculatedProduct(null);
     }
+    setTrackedLink("");
 
     // 3. Wait until server returns ALL real data before dropping down receipt
-    const allAvailableDeals = [...hotDeals, ...flashDeals];
     let resolvedProduct: CalculatedProduct | null = null;
     let resolvedTracked = "";
+    let resolveMessage = "Hãy sao chép lại link sản phẩm trên Shopee rồi thử lại. Hệ thống sẽ không hiển thị sản phẩm thay thế.";
     try {
       const res = await fetch("/api/deals/resolve", {
         method: "POST",
@@ -620,17 +606,14 @@ export default function HomeClient({
           }
         }
       } else {
+        const failure = await res.json().catch(() => null);
+        if (typeof failure?.message === "string") resolveMessage = failure.message;
         throw new Error("Server resolve failed");
       }
     } catch {
-      // Fallback only if server request completely fails
-      resolvedProduct = resolveProductLocally(trimmed, allAvailableDeals);
-      const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
-      resolvedTracked = isShopeeFoodUrl(trimmed)
-        ? buildShopeeFoodAffiliateUrl(trimmed, { affiliateId: "17351320644", subId })
-        : isShopeeUrl(trimmed)
-        ? buildShopeeAffiliateUrl(trimmed, { affiliateId: "17351320644", subId })
-        : buildCustomShortUrl(trimmed, { baseUrl, subId });
+      // Do not substitute a catalog/demo product when the pasted link fails.
+      resolvedProduct = null;
+      resolvedTracked = "";
     } finally {
       if (calculationId !== calculationIdRef.current) return;
       if (resolvedProduct) {
@@ -646,6 +629,11 @@ export default function HomeClient({
         setResult(resolvedProduct.platform);
       }
       setBusy(false);
+      if (!resolvedProduct) showTopToast({
+        type: "warning",
+        title: "Chưa xác minh được sản phẩm",
+        message: resolveMessage,
+      });
       notify(resolvedProduct ? "✓ Đã gắn mã hoàn tiền DealHoàn" : "Chưa lấy được thông tin sản phẩm. Bạn thử lại nhé.");
     }
   };

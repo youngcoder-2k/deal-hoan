@@ -43,6 +43,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const rawInput = body.url ? String(body.url).trim() : "";
     const rawUrl = extractUrlFromText(rawInput);
+    let inputUrl: URL;
+    try {
+      inputUrl = new URL(rawUrl);
+      if (!["https:", "http:"].includes(inputUrl.protocol)) throw new Error("invalid_protocol");
+    } catch {
+      return NextResponse.json({ error: "invalid_url", message: "Link chưa hợp lệ. Hãy sao chép liên kết sản phẩm rồi dán lại." }, { status: 400 });
+    }
+    const host = inputUrl.hostname.toLowerCase();
+    const allowedHost = ["shopee.vn", "shopeefood.vn", "now.vn", "shope.ee", "shp.ee"].some(domain => host === domain || host.endsWith(`.${domain}`));
+    if (!allowedHost) {
+      return NextResponse.json({ error: "unsupported_platform", message: "Hãy dán link sản phẩm Shopee hoặc ShopeeFood." }, { status: 400 });
+    }
+    if (inputUrl?.hostname === "sv.shopee.vn" && inputUrl.pathname.startsWith("/share-video/")) {
+      return NextResponse.json({
+        error: "video_link_not_product",
+        message: "Đây là link Shopee Video. Hãy mở video, chọn sản phẩm được gắn trong video rồi bấm Chia sẻ → Sao chép liên kết sản phẩm.",
+      }, { status: 422 });
+    }
     const auth = await createSupabaseServerClient();
     const session = auth ? await auth.auth.getUser() : null;
     const subId = formatSubIdForUser(session?.data.user?.id);
@@ -186,6 +204,16 @@ export async function POST(request: NextRequest) {
       ? await lookupAccessTradeProduct(canonicalUrl).catch(() => null)
       : null;
 
+    // A short-link slug is not a product identity. Never fabricate a receipt
+    // from category defaults when product providers cannot resolve the link.
+    const providerProduct = hoanNgayProduct || atProduct;
+    if (!providerProduct?.name?.trim() || !providerProduct.isVerifiedPrice || !Number.isFinite(providerProduct.price) || providerProduct.price <= 0) {
+      return NextResponse.json({
+        error: "product_unresolved",
+        message: "Chưa xác minh được sản phẩm từ link này. Hãy sao chép lại link sản phẩm trên Shopee rồi thử lại.",
+      }, { status: 422 });
+    }
+
     // 4. Fallback to local catalog resolution if external providers yielded no match
     const baseProduct = resolveProductLocally(canonicalUrl, [], ogTitle);
 
@@ -230,7 +258,10 @@ export async function POST(request: NextRequest) {
       typeof hoanNgayProduct?.cashbackRate === "number"
     );
 
-    let finalCashback = cashbackFor(finalPrice, finalPlatform);
+    if (!hasRealCommission) {
+      return NextResponse.json({ error: "commission_unverified", message: "Chưa xác minh được tiền hoàn của sản phẩm này. Bạn thử dán lại link sau nhé." }, { status: 422 });
+    }
+    let finalCashback = 0;
     let cashbackRate = finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 0;
 
     if (hasRealCommission && (hoanNgayProduct?.cashbackRate ?? 0) === 0 && (hoanNgayProduct?.commission ?? 0) === 0) {
@@ -271,10 +302,10 @@ export async function POST(request: NextRequest) {
     // https://s.shopee.vn/an_redir?affiliate_id=17351320644
     // AccessTrade is used SOLELY as a read-only data source for product prices and images.
     // 100% of all affiliate commissions go directly to DealHoàn without any intermediary.
-    const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
-    const proto = request.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
-    const siteBase = host
-      ? `${proto}://${host}`
+    const requestHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const proto = request.headers.get("x-forwarded-proto") || (requestHost?.includes("localhost") ? "http" : "https");
+    const siteBase = requestHost
+      ? `${proto}://${requestHost}`
       : request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.vn";
     let trackedLink: string;
     if (isShopeeFood) {
