@@ -496,3 +496,18 @@
  .calculator .inputWrap input::placeholder { font-size:12px; }
 }
 @media(max-width:374px) { .pasteButton { flex-basis:108px; } .pasteButton small { font-size:7px; } .pasteButton svg { width:18px; } }
+
+/* Clipboard-first action: exact shared width with the guide/result below. */
+.calculatorPanel .pasteActionForm { display:flex; flex-direction:column; width:100%; gap:0; padding:0; margin:0 0 14px; border-radius:0; background:transparent; box-shadow:none; }
+.glassPasteButton { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:14px; width:100%; min-height:56px; padding:12px 18px; border:0; border-radius:12px; background:linear-gradient(110deg,#fe8a2c,#fb6928 50%,#fa4f26); color:#fff; font:inherit; font-size:18px; font-weight:750; line-height:1.4; cursor:pointer; backdrop-filter:blur(22px) saturate(145%); -webkit-backdrop-filter:blur(22px) saturate(145%); box-shadow:0 6px 16px #fb692826; transition:box-shadow .2s,filter .2s; }
+.glassPasteButton::before { content:none; }
+.glassPasteButton svg { flex-shrink:0; width:24px; height:24px; }
+.glassPasteButton span { font-variant-numeric:tabular-nums; }
+.glassPasteButton:hover:not(:disabled) { filter:brightness(1.03); box-shadow:0 8px 20px #fb692833; }
+.glassPasteButton:focus-visible { outline:3px solid #173d59; outline-offset:4px; }
+.glassPasteButton:disabled { cursor:wait; opacity:.8; }
+.manualPaste { margin-top:12px; }
+.manualPaste input { box-sizing:border-box; width:100%; min-height:48px; border:1px solid #ba7358; border-radius:10px; padding:10px 12px; background:#fffaf6; color:#263747; font:inherit; font-size:16px; }
+@media(max-width:600px) { .glassPasteButton { min-height:52px; padding:10px 12px; gap:10px; font-size:16px; border-radius:12px; } .glassPasteButton svg { width:22px; height:22px; } }
+@media(max-width:374px) { .glassPasteButton { font-size:15px; gap:8px; padding-inline:10px; } .glassPasteButton svg { width:21px; height:21px; } }
+@media(prefers-reduced-motion:reduce) { .glassPasteButton { transition:none; } }

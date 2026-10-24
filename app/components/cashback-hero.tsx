@@ -86,7 +86,7 @@ function resetGlassLight(event: PointerEvent<HTMLDivElement>, surface?: HTMLDivE
 export function CashbackEmpty({ busy }: { busy: boolean }) {
   const steps = [
     { title: "Sao chép", detail: "link sản phẩm", Icon: CopyIcon },
-    { title: "Dán link", detail: "vào ô trên", Icon: LinkIcon },
+    { title: "Bấm nút dán", detail: "link vừa chép", Icon: LinkIcon },
     { title: "Xem tiền", detail: "hoàn dự kiến", Icon: CurrencyCircleDollarIcon },
   ];
   return (

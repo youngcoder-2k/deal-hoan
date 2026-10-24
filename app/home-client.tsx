@@ -2,12 +2,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
-import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
+import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { ClipboardTextIcon } from "@phosphor-icons/react/dist/csr/ClipboardText";
 import HomeDiscovery from "./components/home-discovery";
-import { XIcon } from "@phosphor-icons/react/dist/csr/X";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
 import styles from "./home-redesign.module.css";
 import motionStyles from "./components/home-motion.module.css";
@@ -222,6 +221,7 @@ export default function HomeClient({
   const pageRef = useRef<HTMLElement>(null);
   useEffect(() => setupHomeMotion(pageRef.current), []);
   const linkInputRef = useRef<HTMLInputElement>(null);
+  const pasteActionRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     linkInputRef.current?.focus({ preventScroll: true });
@@ -301,7 +301,6 @@ export default function HomeClient({
   });
   const [busy, setBusy] = useState(false);
   const [calcPercent, setCalcPercent] = useState(1);
-  const [inputError, setInputError] = useState(false);
   const [trackedLink, setTrackedLink] = useState("");
   const [copiedTracked, setCopiedTracked] = useState(false);
   const [calculatedProduct, setCalculatedProduct] = useState<CalculatedProduct | null>(null);
@@ -614,6 +613,7 @@ export default function HomeClient({
 
   const [pasteMessage, setPasteMessage] = useState("");
   const [readingClipboard, setReadingClipboard] = useState(false);
+  useEffect(() => { if (pasteMessage) linkInputRef.current?.focus(); }, [pasteMessage]);
   const pasteCopiedLink = async () => {
     if (busy || readingClipboard) return;
     setPasteMessage("");
@@ -622,16 +622,17 @@ export default function HomeClient({
       if (!navigator.clipboard?.readText) throw new Error("clipboard_unavailable");
       const text = await navigator.clipboard.readText();
       const url = extractUrlFromText(text);
-      if (!/^https?:\/\/[^\s/]+/i.test(url)) {
+      if (!url && !text.trim()) {
         setPasteMessage("Hãy sao chép link sản phẩm rồi bấm Dán ngay.");
-        linkInputRef.current?.focus();
+        (linkInputRef.current || pasteActionRef.current)?.focus();
         return;
       }
-      setLink(url);
-      await executeCalculation(url);
+      const target = url || text.trim();
+      setLink(target);
+      await executeCalculation(target);
     } catch {
       setPasteMessage("Nhấn giữ ô nhập để dán link, hoặc dùng Ctrl/Cmd + V.");
-      linkInputRef.current?.focus();
+      (linkInputRef.current || pasteActionRef.current)?.focus();
     } finally { setReadingClipboard(false); }
   };
   const calc = (e: React.FormEvent) => {
@@ -652,10 +653,10 @@ export default function HomeClient({
         setCalculatedProduct(null);
         setTrackedLink("");
         setResultClosing(false);
-        if (clearInput) linkInputRef.current?.focus({ preventScroll: true });
+        if (clearInput) (linkInputRef.current || pasteActionRef.current)?.focus({ preventScroll: true });
       }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320);
     } else if (clearInput) {
-      linkInputRef.current?.focus({ preventScroll: true });
+      (linkInputRef.current || pasteActionRef.current)?.focus({ preventScroll: true });
     }
   };
   // A calculation made before login must not keep an anonymous sub_id after login.
@@ -782,46 +783,23 @@ export default function HomeClient({
         <div className={styles.heroGrid}>
           <CashbackStory />
           <div className={`${styles.calculatorPanel} ${result && calculatedProduct ? "" : styles.calculatorIntro}`} aria-busy={busy}>
-            <form className={styles.calculator} onSubmit={calc}>
-              <div className={`${styles.inputWrap} ${inputError ? styles.inputError : ""}`}>
-                <LinkIcon className={styles.inputIcon} size={23} aria-hidden="true" />
-                <input
-                  ref={linkInputRef}
-                  aria-label="Link sản phẩm"
-                  aria-invalid={inputError}
-                  aria-describedby={pasteMessage ? "paste-help" : undefined}
-                  type="text"
-                  inputMode="url"
-                  autoComplete="off"
-                  spellCheck={false}
-                  value={link}
-                  onChange={(e) => {
-                    const nextLink = e.target.value;
-                    setLink(nextLink);
-                    if (!nextLink.trim()) resetCalculation(false);
-                  }}
-                  onPaste={(e) => {
-                    const pasted = e.clipboardData.getData("text");
-                    e.preventDefault();
-                    const url = extractUrlFromText(pasted);
-                    setLink(url || pasted);
-                    setPasteMessage("");
-                    if (/^https?:\/\/[^\s/]+/i.test(url) && !busy && !readingClipboard) void executeCalculation(url);
-                    requestAnimationFrame(() => {
-                      linkInputRef.current?.setSelectionRange(0, 0);
-                      if (linkInputRef.current) linkInputRef.current.scrollLeft = 0;
-                    });
-                  }}
-                  placeholder="Link sản phẩm vừa sao chép…"
-                />
-                {link && <button type="button" className={styles.clearInput} aria-label="Xoá link" onClick={() => resetCalculation()}><XIcon size={17} weight="bold" aria-hidden="true" /></button>}
-                <button type="button" className={styles.pasteButton} onClick={() => void pasteCopiedLink()} disabled={busy || readingClipboard} aria-busy={busy || readingClipboard} aria-label="Dán link vừa sao chép và xem tiền hoàn">
-                  <ClipboardTextIcon size={25} weight="bold" aria-hidden="true" />
-                  <span><strong>{busy ? `${calcPercent}%` : readingClipboard ? "Đang dán…" : "Dán ngay"}</strong><small>Dán link vừa sao chép</small></span>
-                </button>
-              </div>
+            <form className={`${styles.calculator} ${styles.pasteActionForm}`} onSubmit={calc}>
+              <button ref={pasteActionRef} type="button" className={styles.glassPasteButton} onClick={() => void pasteCopiedLink()} disabled={busy || readingClipboard} aria-busy={busy || readingClipboard} aria-describedby={pasteMessage ? "paste-help" : undefined}>
+                <ClipboardTextIcon size={28} weight="bold" aria-hidden="true" />
+                <span aria-live="polite">{busy ? `Đang kiểm tra ${calcPercent}%` : readingClipboard ? "Đang dán…" : "Dán link vừa sao chép"}</span>
+                <ArrowRightIcon size={24} weight="bold" aria-hidden="true" />
+              </button>
+              {pasteMessage && <div className={styles.manualPaste}>
+                <p id="paste-help" className={styles.pasteHelp} role="status">{pasteMessage}</p>
+                <input ref={linkInputRef} aria-label="Dán link thủ công" type="url" value={link} placeholder="Nhấn giữ để dán link…" onChange={(e) => setLink(e.target.value)} onPaste={(e) => {
+                  e.preventDefault();
+                  const target = extractUrlFromText(e.clipboardData.getData("text")).trim();
+                  setLink(target);
+                  setPasteMessage("");
+                  if (!busy && !readingClipboard) void executeCalculation(target);
+                }} />
+              </div>}
             </form>
-            {pasteMessage && <p id="paste-help" className={styles.pasteHelp} role="status">{pasteMessage}</p>}
             <div className={styles.calculatorState}>
               {result && calculatedProduct ? (
                 <div className={`${styles.resultState} ${resultClosing ? styles.resultClosing : ""}`}>
@@ -1190,8 +1168,8 @@ export default function HomeClient({
                     type="button"
                     className="preview-cta"
                     onClick={() => {
-                      linkInputRef.current?.scrollIntoView({ behavior: homeScrollBehavior(), block: "center" });
-                      linkInputRef.current?.focus();
+                      (linkInputRef.current || pasteActionRef.current)?.scrollIntoView({ behavior: homeScrollBehavior(), block: "center" });
+                      (linkInputRef.current || pasteActionRef.current)?.focus();
                       notify("⚡ Dán link sản phẩm vào ô trên nhé");
                     }}
                   >
@@ -1251,8 +1229,8 @@ export default function HomeClient({
         signedIn={Boolean(user)}
         accountPending={authPending}
         onStart={() => {
-          linkInputRef.current?.scrollIntoView({ behavior: homeScrollBehavior(), block: "center" });
-          linkInputRef.current?.focus({ preventScroll: true });
+          (linkInputRef.current || pasteActionRef.current)?.scrollIntoView({ behavior: homeScrollBehavior(), block: "center" });
+          (linkInputRef.current || pasteActionRef.current)?.focus({ preventScroll: true });
         }}
         onAccount={() => {
           if (user) setAccountOpen(true);
