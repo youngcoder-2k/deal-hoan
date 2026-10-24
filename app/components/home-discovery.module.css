@@ -475,3 +475,31 @@
   .referenceHeading h2 em { background:none; -webkit-text-fill-color:CanvasText; color:CanvasText; }
   .referenceSteps > li { border-color:CanvasText; }
 }
+
+/* Keep journey descriptions on the same responsive type scale as benefits copy. */
+.referenceScene .referenceSteps p { font-size:clamp(16px,1.35vw,21px); }
+@media(max-width:767px) { .referenceScene .referenceSteps p { font-size:16px; } }
+
+/* Compact mobile journey: match the pledge rows without changing desktop. */
+@media(max-width:767px) {
+  .referenceScene { padding:48px 0; }
+  .referenceInner { width:var(--home-content-width,calc(100% - 32px)); }
+  .referenceHeading { padding:0; gap:16px; margin-bottom:24px; }
+  .referenceHeading h2 { font-size:29px; line-height:1.22; letter-spacing:-1.1px; }
+  .referenceEyebrow { font-size:12px; }
+  .referenceHeading > p { font-size:12px; line-height:1.6; }
+  .referenceSparkLeft,.referenceSparkRight { display:none; }
+  .referenceSteps { grid-template-columns:1fr; gap:0; }
+  .referenceSteps > li { position:relative; display:grid; grid-template-columns:90px minmax(0,1fr); grid-template-rows:auto auto; align-content:center; align-items:start; gap:8px 18px; min-height:155px; padding:22px 0; border:0; border-radius:0; box-shadow:none; background:transparent; }
+  .referenceSteps > li + li { border-top:1px solid #ffd4c3; }
+  .referenceObject { grid-column:1; grid-row:1 / 3; align-self:center; width:90px; height:100px; margin:0; }
+  .referenceNumber { position:absolute; top:12px; left:0; margin:0; font-size:11px; line-height:1; }
+  .referenceSteps h3 { grid-column:2; grid-row:1; align-self:end; margin:0; font-size:22px; line-height:1.25; letter-spacing:-.6px; }
+  .referenceScene .referenceSteps p { grid-column:2; grid-row:2; font-size:16px; line-height:1.6; letter-spacing:0; }
+}
+@media(max-width:374px) {
+  .referenceHeading h2 { font-size:25px; }
+  .referenceSteps > li { grid-template-columns:72px minmax(0,1fr); column-gap:12px; }
+  .referenceObject { width:72px; height:86px; }
+  .referenceSteps h3 { font-size:20px; }
+}
