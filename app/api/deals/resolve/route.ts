@@ -42,7 +42,10 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const rawInput = body.url ? String(body.url).trim() : "";
-    const rawUrl = extractUrlFromText(rawInput);
+    let rawUrl = extractUrlFromText(rawInput);
+    if (rawUrl && !rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
+      rawUrl = `https://${rawUrl}`;
+    }
     let inputUrl: URL;
     try {
       inputUrl = new URL(rawUrl);
@@ -51,7 +54,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "invalid_url", message: "Link chưa hợp lệ. Hãy sao chép liên kết sản phẩm rồi dán lại." }, { status: 400 });
     }
     const host = inputUrl.hostname.toLowerCase();
-    const allowedHost = ["shopee.vn", "shopeefood.vn", "now.vn", "shope.ee", "shp.ee"].some(domain => host === domain || host.endsWith(`.${domain}`));
+    const isFoodHost = host.includes("shopeefood") || host.includes("food.shopee") || host === "now.vn" || host.endsWith(".now.vn");
+    const allowedHost = isFoodHost || ["shopee.vn", "shopeefood.vn", "now.vn", "shope.ee", "shp.ee"].some(domain => host === domain || host.endsWith(`.${domain}`));
     if (!allowedHost) {
       return NextResponse.json({ error: "unsupported_platform", message: "Hãy dán link sản phẩm Shopee hoặc ShopeeFood." }, { status: 400 });
     }
@@ -91,7 +95,7 @@ export async function POST(request: NextRequest) {
     let showDiscount: number | null = null;
 
     // 1. Resolve Shopee and TikTok share/direct links through the same HoanNgay provider.
-    const hoanNgayDirectPromise = isShopee || isTikTok
+    const hoanNgayDirectPromise = (!isShopeeFood && (isShopee || isTikTok))
       ? lookupHoanNgayProduct(rawUrl).catch(() => null)
       : Promise.resolve(null);
 
@@ -151,7 +155,7 @@ export async function POST(request: NextRequest) {
       if (title) {
         const cleaned = title
           .replace(/&amp;/g, "&")
-          .replace(/\s*[|–-]\s*(Shopee Việt Nam|Lazada\.vn|TikTok Shop|Tiki\.vn|Mua và Bán.*)$/i, "")
+          .replace(/\s*[|–-]\s*(Shopee Việt Nam|ShopeeFood(\.vn)?|Now\.vn|Lazada\.vn|TikTok Shop|Tiki\.vn|Mua và Bán.*|Đặt Món.*)$/i, "")
           .trim();
         if (cleaned.length > 3 && !cleaned.toLowerCase().startsWith("shopee việt nam")) {
           ogTitle = cleaned;
@@ -180,18 +184,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const isCurrentShopeeFood = isShopeeFood || isShopeeFoodUrl(canonicalUrl);
     const isCurrentShopee = isShopeeUrl(canonicalUrl) || isShopee;
     const isCurrentTikTok = isTikTokUrl(canonicalUrl) || isTikTok;
 
     // Apply Shopee discount metadata only to Shopee; retry canonical links if needed.
     let hoanNgayProduct = hoanNgayDirect;
-    if (hoanNgayProduct && isCurrentShopee && showDiscount && showDiscount > 0) {
-      const realOrig = Math.round((hoanNgayProduct.price / (1 - showDiscount / 100)) / 1000) * 1000;
-      if (realOrig > hoanNgayProduct.price) {
-        hoanNgayProduct = { ...hoanNgayProduct, originalPrice: realOrig };
+    if (!isCurrentShopeeFood) {
+      if (hoanNgayProduct && isCurrentShopee && showDiscount && showDiscount > 0) {
+        const realOrig = Math.round((hoanNgayProduct.price / (1 - showDiscount / 100)) / 1000) * 1000;
+        if (realOrig > hoanNgayProduct.price) {
+          hoanNgayProduct = { ...hoanNgayProduct, originalPrice: realOrig };
+        }
+      } else if (!hoanNgayProduct && (isCurrentShopee || isCurrentTikTok)) {
+        hoanNgayProduct = await lookupHoanNgayProduct(canonicalUrl, showDiscount).catch(() => null);
       }
-    } else if (!hoanNgayProduct && (isCurrentShopee || isCurrentTikTok)) {
-      hoanNgayProduct = await lookupHoanNgayProduct(canonicalUrl, showDiscount).catch(() => null);
     }
 
     // Canonicalize with the provider product URL, not an upstream affiliate link.
@@ -200,24 +207,27 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Query AccessTrade product datafeed (exact SKU match for real price & CDN image)
-    const atProduct = !hoanNgayProduct
+    const atProduct = (!isCurrentShopeeFood && !hoanNgayProduct)
       ? await lookupAccessTradeProduct(canonicalUrl).catch(() => null)
       : null;
 
     // A short-link slug is not a product identity. Never fabricate a receipt
     // from category defaults when product providers cannot resolve the link.
+    // Note: ShopeeFood operates on flat restaurant cashback without physical SKU feeds.
     const providerProduct = hoanNgayProduct || atProduct;
-    if (!providerProduct?.name?.trim() || !providerProduct.isVerifiedPrice || !Number.isFinite(providerProduct.price) || providerProduct.price <= 0) {
-      return NextResponse.json({
-        error: "product_unresolved",
-        message: "Chưa tìm thấy sản phẩm từ link này. Hãy sao chép lại link sản phẩm trên Shopee rồi thử lại.",
-      }, { status: 422 });
+    if (!isCurrentShopeeFood) {
+      if (!providerProduct?.name?.trim() || !providerProduct.isVerifiedPrice || !Number.isFinite(providerProduct.price) || providerProduct.price <= 0) {
+        return NextResponse.json({
+          error: "product_unresolved",
+          message: "Chưa tìm thấy sản phẩm từ link này. Hãy sao chép lại link sản phẩm trên Shopee rồi thử lại.",
+        }, { status: 422 });
+      }
     }
 
     // 4. Fallback to local catalog resolution if external providers yielded no match
     const baseProduct = resolveProductLocally(canonicalUrl, [], ogTitle);
 
-    const finalPlatform: Platform = isShopeeFood
+    const finalPlatform: Platform = isCurrentShopeeFood
       ? "ShopeeFood"
       : hoanNgayProduct
         ? isCurrentTikTok ? "TikTok Shop" : "Shopee"
@@ -233,38 +243,60 @@ export async function POST(request: NextRequest) {
                   : "Shopee Mall"
                 : "Shopee";
 
-    const isVerifiedPrice = Boolean(
-      hoanNgayProduct?.isVerifiedPrice ||
-      atProduct?.isVerifiedPrice ||
-      extractedPrice !== null
-    );
+    const isVerifiedPrice = isCurrentShopeeFood
+      ? false
+      : Boolean(
+          hoanNgayProduct?.isVerifiedPrice ||
+          atProduct?.isVerifiedPrice ||
+          extractedPrice !== null
+        );
 
-    const priceType = (hoanNgayProduct?.isVerifiedPrice || atProduct?.isVerifiedPrice || extractedPrice !== null)
-      ? "exact"
-      : "estimated";
+    const priceType = isCurrentShopeeFood
+      ? "estimated"
+      : (hoanNgayProduct?.isVerifiedPrice || atProduct?.isVerifiedPrice || extractedPrice !== null)
+        ? "exact"
+        : "estimated";
 
-    const finalName = hoanNgayProduct?.name || atProduct?.name || ogTitle || baseProduct.name;
-    const finalImage = hoanNgayProduct?.imageUrl || atProduct?.imageUrl || ogImage || baseProduct.imageUrl;
-    const finalPrice = hoanNgayProduct?.price ?? atProduct?.price ?? (extractedPrice || baseProduct.price);
-    const finalOriginalPrice =
-      hoanNgayProduct?.originalPrice ??
-      atProduct?.originalPrice ??
-      (baseProduct.originalPrice > finalPrice
-        ? baseProduct.originalPrice
-        : Math.round((finalPrice * 1.28) / 1000) * 1000);
+    const finalName = isCurrentShopeeFood
+      ? (ogTitle || baseProduct.name || "Quán ngon ShopeeFood")
+      : (hoanNgayProduct?.name || atProduct?.name || ogTitle || baseProduct.name);
 
-    const hasRealCommission = Boolean(
-      typeof hoanNgayProduct?.commission === "number" ||
-      typeof hoanNgayProduct?.cashbackRate === "number"
-    );
+    const finalImage = isCurrentShopeeFood
+      ? (ogImage || baseProduct.imageUrl || "/brand/shopeefood-logo.png")
+      : (hoanNgayProduct?.imageUrl || atProduct?.imageUrl || ogImage || baseProduct.imageUrl);
+
+    const finalPrice = isCurrentShopeeFood
+      ? (extractedPrice || baseProduct.price || 65000)
+      : (hoanNgayProduct?.price ?? atProduct?.price ?? (extractedPrice || baseProduct.price));
+
+    const finalOriginalPrice = isCurrentShopeeFood
+      ? (baseProduct.originalPrice > finalPrice
+          ? baseProduct.originalPrice
+          : Math.round((finalPrice * 1.3) / 1000) * 1000)
+      : (hoanNgayProduct?.originalPrice ??
+         atProduct?.originalPrice ??
+         (baseProduct.originalPrice > finalPrice
+           ? baseProduct.originalPrice
+           : Math.round((finalPrice * 1.28) / 1000) * 1000));
+
+    const hasRealCommission = isCurrentShopeeFood
+      ? true
+      : Boolean(
+          typeof hoanNgayProduct?.commission === "number" ||
+          typeof hoanNgayProduct?.cashbackRate === "number"
+        );
 
     if (!hasRealCommission) {
       return NextResponse.json({ error: "commission_unverified", message: "Chưa lấy được tiền hoàn. Bạn thử lại sau nhé." }, { status: 422 });
     }
     let finalCashback = 0;
-    let cashbackRate = finalPrice > 0 ? Number(((finalCashback / finalPrice) * 100).toFixed(1)) : 0;
+    let cashbackRate = 0;
 
-    if (hasRealCommission && (hoanNgayProduct?.cashbackRate ?? 0) === 0 && (hoanNgayProduct?.commission ?? 0) === 0) {
+    if (isCurrentShopeeFood) {
+      // ShopeeFood fixed rate 6.0%
+      cashbackRate = 6.0;
+      finalCashback = Math.round((finalPrice * 0.06) / 1000) * 1000;
+    } else if (hasRealCommission && (hoanNgayProduct?.cashbackRate ?? 0) === 0 && (hoanNgayProduct?.commission ?? 0) === 0) {
       finalCashback = 0;
       cashbackRate = 0;
     } else if (hoanNgayProduct?.cashbackRate && hoanNgayProduct.cashbackRate > 0) {
@@ -308,7 +340,7 @@ export async function POST(request: NextRequest) {
       ? `${proto}://${requestHost}`
       : request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.vn";
     let trackedLink: string;
-    if (isShopeeFood) {
+    if (isCurrentShopeeFood) {
       trackedLink = buildShopeeFoodAffiliateUrl(canonicalUrl, {
         affiliateId: "17351320644",
         subId,
@@ -344,13 +376,13 @@ export async function POST(request: NextRequest) {
       originalPrice: finalOriginalPrice,
       cashback: finalCashback,
       platform: finalPlatform,
-      seller: atProduct?.seller || hoanNgayProduct?.seller || baseProduct.seller,
+      seller: isCurrentShopeeFood ? "ShopeeFood" : (atProduct?.seller || hoanNgayProduct?.seller || baseProduct.seller),
       trackedLink,
       discountPercent,
       savingsPercent,
       isVerifiedPrice,
       priceType,
-      cap: hoanNgayProduct?.cap,
+      cap: isCurrentShopeeFood ? 500000 : hoanNgayProduct?.cap,
       isExactCashback: hasRealCommission,
       cashbackRate,
     };

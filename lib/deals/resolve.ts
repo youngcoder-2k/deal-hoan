@@ -206,16 +206,50 @@ export function parseSlugFromUrl(rawUrl: string): string | null {
   try {
     const trimmed = rawUrl.trim();
     const u = new URL(trimmed.startsWith("http") ? trimmed : `https://${trimmed}`);
+    if (u.searchParams.has("origin_link")) {
+      const nested = u.searchParams.get("origin_link");
+      if (nested) {
+        return parseSlugFromUrl(nested);
+      }
+    }
     const pathname = decodeURIComponent(u.pathname);
     const parts = pathname.split("/").filter(Boolean);
     if (!parts.length) return null;
     let s = parts[0];
-    if (u.hostname.includes("shopeefood") || u.pathname.startsWith("/now-food")) {
-      const foodParts = parts.filter((p) => p !== "now-food");
-      if (foodParts.length > 1) {
-        s = foodParts[foodParts.length - 1];
-      } else if (foodParts.length === 1 && !["ha-noi", "ho-chi-minh", "da-nang", "hai-phong", "can-tho", "now-food"].includes(foodParts[0])) {
-        s = foodParts[0];
+    if (
+      u.hostname.includes("shopeefood") ||
+      u.hostname.includes("food.shopee.vn") ||
+      u.hostname.includes("now.vn") ||
+      u.pathname.includes("now-food") ||
+      u.pathname.includes("shopeefood")
+    ) {
+      const ignored = new Set([
+        "universal-link",
+        "now-food",
+        "shopeefood",
+        "shop",
+        "restaurant",
+        "item",
+        "food",
+        "app",
+        "ha-noi",
+        "ho-chi-minh",
+        "da-nang",
+        "hai-phong",
+        "can-tho",
+        "binh-duong",
+        "dong-nai",
+        "hue",
+        "vung-tau",
+        "nha-trang",
+        "quang-ninh",
+      ]);
+      const meaningful = parts.filter((p) => !ignored.has(p.toLowerCase()));
+      if (meaningful.length > 0) {
+        s = meaningful[meaningful.length - 1];
+        if (/^\d+$/.test(s)) {
+          return `Quán ăn ShopeeFood #${s}`;
+        }
       } else {
         return "Quán ngon ShopeeFood";
       }
@@ -230,7 +264,11 @@ export function parseSlugFromUrl(rawUrl: string): string | null {
     s = s.replace(/-i\d+.*$/, "");
     s = s.replace(/\.html.*$/, "");
     const clean = s.replace(/[-_+]/g, " ").replace(/\s+/g, " ").trim();
-    return clean || null;
+    if (!clean) return null;
+    return clean
+      .split(" ")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
   } catch {
     return null;
   }

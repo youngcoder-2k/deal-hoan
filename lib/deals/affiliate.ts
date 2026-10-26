@@ -56,7 +56,7 @@ export function cleanShopeeUrl(rawUrl: string): string {
     // Convert ShopeeFood URLs to shopee.vn/now-food so Shopee Affiliate an_redir accepts it
     const host = parsed.hostname.toLowerCase();
     if (
-      host.includes("shopeefood.vn") ||
+      host.includes("shopeefood") ||
       host.includes("now.vn") ||
       host.includes("food.shopee.vn") ||
       parsed.pathname.startsWith("/universal-link/now-food") ||
@@ -64,7 +64,14 @@ export function cleanShopeeUrl(rawUrl: string): string {
     ) {
       const universalFoodUrl = toShopeeFoodUniversalUrl(extracted);
       const foodParsed = new URL(universalFoodUrl);
-      return `${foodParsed.origin}${foodParsed.pathname}`;
+      const foodSearch = new URLSearchParams();
+      for (const [key, val] of foodParsed.searchParams.entries()) {
+        if (!key.startsWith("utm_") && !key.startsWith("aff_") && key !== "shareChannel" && key !== "fbclid") {
+          foodSearch.set(key, val);
+        }
+      }
+      const searchStr = foodSearch.toString();
+      return `${foodParsed.origin}${foodParsed.pathname}${searchStr ? `?${searchStr}` : ""}`;
     }
 
     const paramsToKeep = ["sp_atk", "xptdk"];
@@ -122,16 +129,27 @@ export function buildShopeeAffiliateUrl(
 export function isShopeeFoodUrl(rawUrl: string): boolean {
   try {
     const extracted = extractUrlFromText(rawUrl);
+    let decoded = extracted;
+    try {
+      decoded = decodeURIComponent(extracted);
+    } catch {}
     const lower = extracted.toLowerCase();
+    const lowerDecoded = decoded.toLowerCase();
     return (
-      lower.includes("shopeefood.vn") ||
+      lower.includes("shopeefood") ||
+      lowerDecoded.includes("shopeefood") ||
       lower.includes("food.shopee.vn") ||
+      lowerDecoded.includes("food.shopee.vn") ||
       lower.includes("shopee.vn/now-food") ||
+      lowerDecoded.includes("shopee.vn/now-food") ||
       lower.includes("shopee.vn/universal-link/now-food") ||
+      lowerDecoded.includes("shopee.vn/universal-link/now-food") ||
       lower.includes("shopee.vn/universal-link/shopeefood") ||
+      lowerDecoded.includes("shopee.vn/universal-link/shopeefood") ||
       lower.includes("now.vn") ||
+      lowerDecoded.includes("now.vn") ||
       lower.includes("spf.shopee.vn") ||
-      lower.includes("gofood")
+      lowerDecoded.includes("spf.shopee.vn")
     );
   } catch {
     return false;
@@ -158,26 +176,26 @@ export function toShopeeFoodUniversalUrl(rawUrl?: string): string {
     // Already on shopee.vn
     if (host === "shopee.vn" || host.endsWith(".shopee.vn")) {
       if (parsed.pathname.startsWith("/now-food")) {
-        return `https://shopee.vn${parsed.pathname}`;
+        return `https://shopee.vn${parsed.pathname}${parsed.search}`;
       }
       if (parsed.pathname.startsWith("/universal-link/now-food")) {
         const remaining = parsed.pathname.replace(/^\/universal-link\/now-food/, "");
-        return `https://shopee.vn/now-food${remaining}`;
+        return `https://shopee.vn/now-food${remaining}${parsed.search}`;
       }
       if (parsed.pathname.startsWith("/universal-link/shopeefood")) {
         const remaining = parsed.pathname.replace(/^\/universal-link\/shopeefood/, "");
-        return `https://shopee.vn/now-food${remaining}`;
+        return `https://shopee.vn/now-food${remaining}${parsed.search}`;
       }
     }
 
-    // shopeefood.vn, food.shopee.vn, now.vn
+    // shopeefood.vn, food.shopee.vn, now.vn or any shopeefood domain
     if (
-      host.includes("shopeefood.vn") ||
+      host.includes("shopeefood") ||
       host.includes("now.vn") ||
       host.includes("food.shopee.vn")
     ) {
       const cleanPath = parsed.pathname.replace(/^\/+/, "");
-      return cleanPath ? `https://shopee.vn/now-food/${cleanPath}` : DEFAULT_SHOPEEFOOD_URL;
+      return cleanPath ? `https://shopee.vn/now-food/${cleanPath}${parsed.search}` : DEFAULT_SHOPEEFOOD_URL;
     }
 
     return extracted;
