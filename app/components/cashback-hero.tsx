@@ -214,7 +214,7 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
       </a>
       {product.platform?.toLowerCase().includes("food") && (
         <p className={styles.foodAppNote}>
-          💡 Món ăn được đặt qua ShopeeFood (bên trong app Shopee) để tự động ghi nhận hoàn tiền.
+          💡 Mở trực tiếp ứng dụng ShopeeFood để đặt món và nhận hoàn tiền 6%.
         </p>
       )}
       <div className={styles.receiptFooter}>

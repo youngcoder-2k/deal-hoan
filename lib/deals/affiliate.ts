@@ -53,25 +53,17 @@ export function cleanShopeeUrl(rawUrl: string): string {
       }
     }
 
-    // Convert ShopeeFood URLs to shopee.vn/now-food so Shopee Affiliate an_redir accepts it
+    // Convert ShopeeFood URLs to clean shopeefood.vn so it opens ShopeeFood directly
     const host = parsed.hostname.toLowerCase();
     if (
       host.includes("shopeefood") ||
       host.includes("now.vn") ||
       host.includes("food.shopee.vn") ||
       parsed.pathname.startsWith("/universal-link/now-food") ||
-      parsed.pathname.startsWith("/universal-link/shopeefood")
+      parsed.pathname.startsWith("/universal-link/shopeefood") ||
+      parsed.pathname.startsWith("/now-food")
     ) {
-      const universalFoodUrl = toShopeeFoodUniversalUrl(extracted);
-      const foodParsed = new URL(universalFoodUrl);
-      const foodSearch = new URLSearchParams();
-      for (const [key, val] of foodParsed.searchParams.entries()) {
-        if (!key.startsWith("utm_") && !key.startsWith("aff_") && key !== "shareChannel" && key !== "fbclid") {
-          foodSearch.set(key, val);
-        }
-      }
-      const searchStr = foodSearch.toString();
-      return `${foodParsed.origin}${foodParsed.pathname}${searchStr ? `?${searchStr}` : ""}`;
+      return toShopeeFoodUniversalUrl(extracted);
     }
 
     const paramsToKeep = ["sp_atk", "xptdk"];
@@ -156,12 +148,11 @@ export function isShopeeFoodUrl(rawUrl: string): boolean {
   }
 }
 
-export const DEFAULT_SHOPEEFOOD_URL = "https://shopee.vn/now-food";
+export const DEFAULT_SHOPEEFOOD_URL = "https://shopeefood.vn";
 
 /**
- * Converts any ShopeeFood / Now.vn link into a valid shopee.vn/now-food link.
- * Shopee Affiliate s.shopee.vn/an_redir strictly requires domain shopee.vn
- * (otherwise it redirects to https://shope.ee/error_page).
+ * Converts any ShopeeFood, Now.vn, or Shopee universal food link into a valid shopeefood.vn link.
+ * Opening shopeefood.vn on a mobile device triggers the ShopeeFood app directly to the restaurant.
  */
 export function toShopeeFoodUniversalUrl(rawUrl?: string): string {
   if (!rawUrl || !rawUrl.trim()) return DEFAULT_SHOPEEFOOD_URL;
@@ -171,42 +162,33 @@ export function toShopeeFoodUniversalUrl(rawUrl?: string): string {
       return DEFAULT_SHOPEEFOOD_URL;
     }
     const parsed = new URL(extracted);
-    const host = parsed.hostname.toLowerCase();
 
-    // Already on shopee.vn
-    if (host === "shopee.vn" || host.endsWith(".shopee.vn")) {
-      if (parsed.pathname.startsWith("/now-food")) {
-        return `https://shopee.vn${parsed.pathname}${parsed.search}`;
-      }
-      if (parsed.pathname.startsWith("/universal-link/now-food")) {
-        const remaining = parsed.pathname.replace(/^\/universal-link\/now-food/, "");
-        return `https://shopee.vn/now-food${remaining}${parsed.search}`;
-      }
-      if (parsed.pathname.startsWith("/universal-link/shopeefood")) {
-        const remaining = parsed.pathname.replace(/^\/universal-link\/shopeefood/, "");
-        return `https://shopee.vn/now-food${remaining}${parsed.search}`;
-      }
+    let pathname = parsed.pathname;
+    if (pathname.startsWith("/universal-link/now-food")) {
+      pathname = pathname.replace(/^\/universal-link\/now-food/, "");
+    } else if (pathname.startsWith("/universal-link/shopeefood")) {
+      pathname = pathname.replace(/^\/universal-link\/shopeefood/, "");
+    } else if (pathname.startsWith("/now-food")) {
+      pathname = pathname.replace(/^\/now-food/, "");
     }
 
-    // shopeefood.vn, food.shopee.vn, now.vn or any shopeefood domain
-    if (
-      host.includes("shopeefood") ||
-      host.includes("now.vn") ||
-      host.includes("food.shopee.vn")
-    ) {
-      const cleanPath = parsed.pathname.replace(/^\/+/, "");
-      return cleanPath ? `https://shopee.vn/now-food/${cleanPath}${parsed.search}` : DEFAULT_SHOPEEFOOD_URL;
+    const cleanPath = pathname.replace(/^\/+/, "");
+    const cleanSearch = new URLSearchParams();
+    for (const [key, val] of parsed.searchParams.entries()) {
+      if (!key.startsWith("utm_") && !key.startsWith("aff_") && key !== "shareChannel" && key !== "fbclid") {
+        cleanSearch.set(key, val);
+      }
     }
-
-    return extracted;
+    const searchStr = cleanSearch.toString();
+    return cleanPath ? `https://shopeefood.vn/${cleanPath}${searchStr ? `?${searchStr}` : ""}` : DEFAULT_SHOPEEFOOD_URL;
   } catch {
     return DEFAULT_SHOPEEFOOD_URL;
   }
 }
 
 /**
- * Generates an official ShopeeFood Affiliate tracking link that opens the ShopeeFood
- * section inside the Shopee App and records cashback.
+ * Generates an official ShopeeFood link that preserves tracking sub_id and opens
+ * the restaurant directly in the ShopeeFood App without 404 routing errors.
  */
 export function buildShopeeFoodAffiliateUrl(
   rawUrl?: string,
@@ -216,7 +198,18 @@ export function buildShopeeFoodAffiliateUrl(
   }
 ): string {
   const targetUrl = toShopeeFoodUniversalUrl(rawUrl);
-  return buildShopeeAffiliateUrl(targetUrl, options);
+  try {
+    const parsed = new URL(targetUrl);
+    if (options?.subId) {
+      parsed.searchParams.set("sub_id", options.subId);
+    }
+    if (options?.affiliateId) {
+      parsed.searchParams.set("affiliate_id", options.affiliateId);
+    }
+    return parsed.toString();
+  } catch {
+    return targetUrl;
+  }
 }
 
 /**
