@@ -11,9 +11,9 @@ import s from "./home-support-refresh.module.css";
 type Props = { onStart: () => void; onAccount: () => void; signedIn: boolean; accountPending: boolean };
 const art = "/home-art/support-refresh/";
 const guides = [
-  { image: "guide-start-sharp-v2.webp", category: "BẮT ĐẦU", title: "Lấy link đúng, nhận hoàn dễ hơn", description: "Một thao tác nhỏ trước mỗi lần mua.", href: "/how-to", alt: "Kiểm tra tiền hoàn trên điện thoại" },
-  { image: "guide-saving-reference.png", category: "MẸO TIẾT KIỆM", title: "Săn sale khéo, mua sắm hời hơn", description: "Kết hợp mã giảm giá và khoản hoàn.", href: "/cach-san-sale-shopee", alt: "Ống tiết kiệm và những đồng tiền vàng" },
-  { image: "guide-cashback-reference.png", category: "HIỂU TIỀN HOÀN", title: "Hiểu khoản hoàn, an tâm chốt đơn", description: "Phân biệt tiền dự kiến và tiền đã duyệt.", href: "/cashback-shopee-la-gi", alt: "Mua sắm thông minh và quản lý khoản hoàn" },
+  { image: "guide-start-retina-v3.webp", category: "BẮT ĐẦU", title: "Lấy link đúng, nhận hoàn dễ hơn", description: "Một thao tác nhỏ trước mỗi lần mua.", href: "/how-to", alt: "Kiểm tra tiền hoàn trên điện thoại" },
+  { image: "guide-saving-retina-v3.webp", category: "MẸO TIẾT KIỆM", title: "Săn sale khéo, mua sắm hời hơn", description: "Kết hợp mã giảm giá và khoản hoàn.", href: "/cach-san-sale-shopee", alt: "Ống tiết kiệm và những đồng tiền vàng" },
+  { image: "guide-cashback-retina-v3.webp", category: "HIỂU TIỀN HOÀN", title: "Hiểu khoản hoàn, an tâm chốt đơn", description: "Phân biệt tiền dự kiến và tiền đã duyệt.", href: "/cashback-shopee-la-gi", alt: "Mua sắm thông minh và quản lý khoản hoàn" },
 ];
 const questions = [
   ["Tiền hoàn của DealHoàn đến từ đâu?", "DealHoàn lấy từ phần tiền Affiliate của Shopee. Chúng tôi gửi cho bạn phần lớn và chỉ giữ lại một phần nhỏ để duy trì website."],
