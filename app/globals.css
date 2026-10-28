@@ -6345,7 +6345,7 @@ select.account-input.select-bank-field:focus {
 
 .modal-section-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
 }
 
@@ -6367,9 +6367,30 @@ select.account-input.select-bank-field:focus {
   border: 1px solid #fef3c7;
 }
 
+.orange-box {
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+}
+
 .blue-box {
   background: #eff6ff;
   border: 1px solid #dbeafe;
+}
+
+.green-text {
+  color: #16a34a;
+}
+
+.amber-text {
+  color: #d97706;
+}
+
+.orange-text {
+  color: #ea580c;
+}
+
+.blue-text {
+  color: #2563eb;
 }
 
 .box-label {
@@ -6688,7 +6709,7 @@ select.account-input.select-bank-field:focus {
     justify-content: space-between;
   }
   .modal-section-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
   .bank-detail-grid {
     grid-template-columns: 1fr;

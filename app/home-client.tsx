@@ -461,8 +461,8 @@ export default function HomeClient({
         email: "demo@dealhoan.vn",
         app_metadata: {},
         user_metadata: {
-          full_name: "Nguyễn Văn Demo",
-          name: "Nguyễn Văn Demo",
+          full_name: "Huy Quang Vũ",
+          name: "Huy Quang Vũ",
           avatar_url: "",
         },
         aud: "authenticated",

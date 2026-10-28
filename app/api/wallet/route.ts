@@ -18,7 +18,7 @@ let demoWallet: WalletData = {
   total_withdrawn: 200000,
   bank_name: "MB Bank (MBB)",
   bank_account_no: "0988889999",
-  bank_account_name: "NGUYEN VAN DEMO",
+  bank_account_name: "HUY QUANG VU",
 };
 
 export async function GET() {

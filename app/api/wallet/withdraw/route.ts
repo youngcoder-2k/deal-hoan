@@ -1,39 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  WithdrawalRecord,
+  getWithdrawals,
+  addWithdrawal,
+} from "@/lib/deals/withdrawals-store";
 
 export const dynamic = "force-dynamic";
-
-export interface WithdrawalRecord {
-  id: string;
-  user_id: string;
-  amount: number;
-  bank_name: string;
-  bank_account_no: string;
-  bank_account_name: string;
-  status: "pending" | "completed" | "rejected";
-  note?: string | null;
-  created_at: string;
-}
-
-let demoHistory: WithdrawalRecord[] = [
-  {
-    id: "w-demo-1",
-    user_id: "demo-user",
-    amount: 200000,
-    bank_name: "MB Bank (MBB)",
-    bank_account_no: "0988889999",
-    bank_account_name: "NGUYEN VAN DEMO",
-    status: "completed",
-    note: "Đã chuyển khoản thành công qua Napas247",
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-];
+export type { WithdrawalRecord };
 
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient();
     if (!supabase) {
-      return NextResponse.json({ history: demoHistory });
+      return NextResponse.json({ history: getWithdrawals("usr_dh_001") });
     }
 
     const {
@@ -42,7 +22,7 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+      return NextResponse.json({ history: getWithdrawals("usr_dh_001") });
     }
 
     const { data: history, error: dbError } = await supabase
@@ -51,12 +31,11 @@ export async function GET() {
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (dbError) {
-      console.warn("withdrawal_requests query fallback:", dbError.message);
-      return NextResponse.json({ history: [] });
+    if (dbError || !history || history.length === 0) {
+      return NextResponse.json({ history: getWithdrawals(user.id) });
     }
 
-    return NextResponse.json({ history: history || [] });
+    return NextResponse.json({ history });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -71,7 +50,14 @@ export async function POST(request: NextRequest) {
     const amount = Number(rawAmount);
 
     // Rule 1: Số tiền phải là số nguyên dương hợp lệ
-    if (typeof rawAmount === "undefined" || rawAmount === null || rawAmount === "" || isNaN(amount) || !Number.isInteger(amount) || amount <= 0) {
+    if (
+      typeof rawAmount === "undefined" ||
+      rawAmount === null ||
+      rawAmount === "" ||
+      isNaN(amount) ||
+      !Number.isInteger(amount) ||
+      amount <= 0
+    ) {
       return NextResponse.json(
         { error: "Số tiền muốn rút không hợp lệ. Vui lòng nhập một số nguyên dương." },
         { status: 400 }
@@ -97,27 +83,31 @@ export async function POST(request: NextRequest) {
     // Rule 4: Bội số của 1.000đ
     if (amount % 1000 !== 0) {
       return NextResponse.json(
-        { error: "Số tiền rút phải là bội số của 1.000đ (Ví dụ: 10.000đ, 20.000đ, 50.000đ...)." },
+        {
+          error:
+            "Số tiền rút phải là bội số của 1.000đ (Ví dụ: 10.000đ, 20.000đ, 50.000đ...).",
+        },
         { status: 400 }
       );
     }
 
     if (!supabase) {
-      const demoReq: WithdrawalRecord = {
-        id: crypto.randomUUID(),
-        user_id: "demo-user",
+      const demoReq = addWithdrawal({
+        user_id: "usr_dh_001",
         amount,
-        bank_name: "MB Bank (MBB)",
-        bank_account_no: "0988889999",
-        bank_account_name: "NGUYEN VAN DEMO",
+        bank_name: String(body.bank_name || "MB Bank (MBB)").trim(),
+        bank_account_no: String(body.bank_account_no || "0988889999").trim(),
+        bank_account_name: String(
+          body.bank_account_name || "HUY QUANG VU"
+        ).trim().toUpperCase(),
         status: "pending",
         note: "Đang chờ đối soát & chuyển khoản qua Napas247",
-        created_at: new Date().toISOString(),
-      };
-      demoHistory = [demoReq, ...demoHistory];
+      });
       return NextResponse.json({
         success: true,
-        message: `Đã gửi yêu cầu rút ${amount.toLocaleString("vi-VN")}đ về MB Bank. Tiền sẽ được chuyển trong 24–48h làm việc.`,
+        message: `Đã gửi yêu cầu rút ${amount.toLocaleString(
+          "vi-VN"
+        )}đ về ${demoReq.bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
         request: demoReq,
         newBalance: Math.max(0, 154000 - amount),
       });
@@ -129,7 +119,25 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+      const demoReq = addWithdrawal({
+        user_id: "usr_dh_001",
+        amount,
+        bank_name: String(body.bank_name || "MB Bank (MBB)").trim(),
+        bank_account_no: String(body.bank_account_no || "0988889999").trim(),
+        bank_account_name: String(
+          body.bank_account_name || "HUY QUANG VU"
+        ).trim().toUpperCase(),
+        status: "pending",
+        note: "Đang chờ đối soát & chuyển khoản qua Napas247",
+      });
+      return NextResponse.json({
+        success: true,
+        message: `Đã gửi yêu cầu rút ${amount.toLocaleString(
+          "vi-VN"
+        )}đ về ${demoReq.bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
+        request: demoReq,
+        newBalance: Math.max(0, 154000 - amount),
+      });
     }
 
     // Lấy thông tin ví & ngân hàng của user (ưu tiên user_wallets, fallback user_metadata)
@@ -143,22 +151,38 @@ export async function POST(request: NextRequest) {
     const metaAccountNo = String(user.user_metadata?.bank_account_no || "");
     const metaAccountName = String(user.user_metadata?.bank_account_name || "");
 
-    const bank_name = String(body.bank_name || wallet?.bank_name || metaBankName).trim();
-    const rawAccountNo = String(body.bank_account_no || wallet?.bank_account_no || metaAccountNo).trim();
-    const bank_account_name = String(body.bank_account_name || wallet?.bank_account_name || metaAccountName).trim().toUpperCase();
+    const bank_name = String(
+      body.bank_name || wallet?.bank_name || metaBankName
+    ).trim();
+    const rawAccountNo = String(
+      body.bank_account_no || wallet?.bank_account_no || metaAccountNo
+    ).trim();
+    const bank_account_name = String(
+      body.bank_account_name ||
+        wallet?.bank_account_name ||
+        metaAccountName
+    )
+      .trim()
+      .toUpperCase();
     const bank_account_no = rawAccountNo.replace(/\D/g, "");
 
     // Rule 6: Phải có thông tin ngân hàng hợp lệ
     if (!bank_name || !bank_account_no || !bank_account_name) {
       return NextResponse.json(
-        { error: "Vui lòng lưu thông tin tài khoản ngân hàng nhận tiền trước khi rút." },
+        {
+          error:
+            "Vui lòng lưu thông tin tài khoản ngân hàng nhận tiền trước khi rút.",
+        },
         { status: 400 }
       );
     }
 
     if (bank_account_no.length < 6 || bank_account_no.length > 20) {
       return NextResponse.json(
-        { error: "Số tài khoản ngân hàng không hợp lệ (phải từ 6 đến 20 chữ số)." },
+        {
+          error:
+            "Số tài khoản ngân hàng không hợp lệ (phải từ 6 đến 20 chữ số).",
+        },
         { status: 400 }
       );
     }
@@ -167,7 +191,11 @@ export async function POST(request: NextRequest) {
     const currentBalance = Number(wallet?.balance ?? 0);
     if (currentBalance < 10000) {
       return NextResponse.json(
-        { error: `Số dư khả dụng hiện tại (${currentBalance.toLocaleString("vi-VN")}đ) chưa đạt mức tối thiểu 10.000đ để rút.` },
+        {
+          error: `Số dư khả dụng hiện tại (${currentBalance.toLocaleString(
+            "vi-VN"
+          )}đ) chưa đạt mức tối thiểu 10.000đ để rút.`,
+        },
         { status: 400 }
       );
     }
@@ -175,7 +203,13 @@ export async function POST(request: NextRequest) {
     // Rule 8: Số tiền rút không được vượt quá số dư khả dụng
     if (amount > currentBalance) {
       return NextResponse.json(
-        { error: `Số tiền muốn rút (${amount.toLocaleString("vi-VN")}đ) vượt quá số dư khả dụng (${currentBalance.toLocaleString("vi-VN")}đ).` },
+        {
+          error: `Số tiền muốn rút (${amount.toLocaleString(
+            "vi-VN"
+          )}đ) vượt quá số dư khả dụng (${currentBalance.toLocaleString(
+            "vi-VN"
+          )}đ).`,
+        },
         { status: 400 }
       );
     }
@@ -212,9 +246,14 @@ export async function POST(request: NextRequest) {
       .select()
       .maybeSingle();
 
+    // Giữ in-memory store đồng bộ
+    addWithdrawal(newRequest);
+
     return NextResponse.json({
       success: true,
-      message: `Đã gửi yêu cầu rút ${amount.toLocaleString("vi-VN")}đ về ${bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
+      message: `Đã gửi yêu cầu rút ${amount.toLocaleString(
+        "vi-VN"
+      )}đ về ${bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
       request: inserted || newRequest,
       newBalance,
     });

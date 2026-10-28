@@ -288,6 +288,9 @@ export default function AccountModal({
 
   // Kiểm tra lệnh rút đang chờ xử lý
   const pendingWithdrawal = history.find((h) => h.status === "pending");
+  const pendingWithdrawalTotal = history
+    .filter((h) => h.status === "pending")
+    .reduce((sum, h) => sum + (Number(h.amount) || 0), 0);
 
   // Kiểm tra tài khoản ngân hàng đã sẵn sàng chưa
   const isBankReady = Boolean(wallet.bank_account_no && wallet.bank_name);
@@ -546,14 +549,15 @@ export default function AccountModal({
           {[
             { label: "Chờ nền tảng duyệt", value: wallet.pending_balance, Icon: Clock },
             { label: "Có thể rút", value: wallet.balance, Icon: Wallet, isAvailable: true },
+            { label: "Chờ rút", value: pendingWithdrawalTotal, Icon: Receipt, isPendingWithdraw: true },
             { label: "Đã nhận", value: wallet.total_withdrawn, Icon: Bank },
-          ].map(({ label, value, Icon, isAvailable }) => (
-            <div className={`${s.stat} ${isAvailable ? s.available : ""}`} key={label}>
+          ].map(({ label, value, Icon, isAvailable, isPendingWithdraw }) => (
+            <div className={`${s.stat} ${isAvailable ? s.available : isPendingWithdraw ? s.pendingWithdraw : ""}`} key={label}>
               <Icon size={27} />
               <div>
                 <span>{label}</span>
                 <strong data-length={formatVnd(value).length > 9 ? "long" : formatVnd(value).length > 6 ? "medium" : "short"}>
-                  {busyWallet ? "—" : formatVnd(value)}
+                  {(isPendingWithdraw ? loading.history : busyWallet) ? "—" : formatVnd(value)}
                 </strong>
               </div>
             </div>
