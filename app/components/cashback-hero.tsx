@@ -1,6 +1,6 @@
 "use client";
 
-import type { PointerEvent } from "react";
+import { useState, type PointerEvent } from "react";
 import Image from "next/image";
 import shopeeFoodLogo from "@/public/brand/shopeefood-logo.png";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
@@ -13,6 +13,7 @@ import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { PercentIcon } from "@phosphor-icons/react/dist/csr/Percent";
+import { TicketIcon } from "@phosphor-icons/react/dist/csr/Ticket";
 import { formatPrice } from "@/lib/deals/format";
 import type { CalculatedProduct } from "@/lib/deals/resolve";
 import styles from "../home-redesign.module.css";
@@ -153,6 +154,16 @@ export function CashbackReceipt({
   onRequireAuth?: (action?: "copy" | "link" | "buy") => void;
 }) {
   const { price, cashback } = product;
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const handleCopyVoucher = (code: string) => {
+    try {
+      navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch {}
+  };
+
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
   const hasPrice = price > 0;
@@ -199,6 +210,83 @@ export function CashbackReceipt({
           <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng</span>
         </div>}
       </div>
+
+      {product.matchedVouchers && product.matchedVouchers.length > 0 && (
+        <div className={styles.voucherSection}>
+          <div className={styles.voucherHeading}>
+            <TicketIcon size={16} weight="bold" />
+            <span>
+              Mã giảm giá có thể áp dụng ({product.matchedVouchers.filter((v) => v.isApplicable).length})
+            </span>
+          </div>
+          <div className={styles.voucherList}>
+            {product.matchedVouchers.slice(0, 4).map((mv, idx) => {
+              const isCopied = copiedCode === mv.coupon.code;
+              return (
+                <div
+                  key={mv.coupon.id || idx}
+                  className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""}`}
+                >
+                  <div className={styles.voucherInfo}>
+                    <span className={styles.voucherBadge}>
+                      {mv.coupon.badge || (mv.isApplicable ? "Shopee" : "Chưa đủ ĐK")}
+                    </span>
+                    <p className={styles.voucherTitle} title={mv.coupon.title}>
+                      {mv.coupon.title}
+                    </p>
+                    <p className={styles.voucherCondition}>
+                      {mv.isApplicable ? mv.coupon.condition : mv.reason || mv.coupon.condition}
+                    </p>
+                  </div>
+                  {mv.isApplicable ? (
+                    <div style={{ textAlign: "right", flexShrink: 0 }}>
+                      <span className={styles.voucherSavings}>
+                        -{formatPrice(mv.calculatedDiscount)}
+                      </span>
+                      <div className={styles.voucherActions}>
+                        <button
+                          type="button"
+                          className={styles.voucherCopyBtn}
+                          onClick={() => handleCopyVoucher(mv.coupon.code)}
+                          title="Sao chép mã giảm giá"
+                        >
+                          {isCopied ? (
+                            <>
+                              <CheckIcon size={12} weight="bold" />
+                              Đã chép
+                            </>
+                          ) : (
+                            <>
+                              <CopyIcon size={12} />
+                              {mv.coupon.code}
+                            </>
+                          )}
+                        </button>
+                        {mv.coupon.url && (
+                          <a
+                            href={mv.coupon.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={styles.voucherSaveLink}
+                            title="Mở trang lưu mã trên Shopee"
+                          >
+                            Lưu mã
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <span style={{ fontSize: "11px", color: "#94a3b8", flexShrink: 0 }}>
+                      {mv.coupon.code}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {trackedLink && (
         <div className={styles.linkSection}>
           <p>Link nhận hoàn</p>

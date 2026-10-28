@@ -1,6 +1,7 @@
 import { buildShopeeAffiliateUrl, cleanShopeeUrl, isShopeeUrl, isShopeeFoodUrl } from "./affiliate";
 import { cashbackFor } from "./score";
 import type { Deal, Platform } from "./types";
+import type { MatchedCoupon } from "./matching";
 
 export type CalculatedProduct = {
   name: string;
@@ -18,6 +19,8 @@ export type CalculatedProduct = {
   cap?: number;
   isExactCashback?: boolean;
   cashbackRate?: number;
+  matchedVouchers?: MatchedCoupon[];
+  bestVoucherDiscount?: number;
 };
 
 export const SAMPLE_CHIP_PRODUCTS: Record<string, CalculatedProduct> = {

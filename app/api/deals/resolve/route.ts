@@ -20,6 +20,8 @@ import { lookupAccessTradeProduct } from "@/lib/deals/providers/accesstrade";
 import { lookupHoanNgayProduct } from "@/lib/deals/providers/hoanngay";
 import { boostCashbackRate } from "@/lib/deals/cashback-booster";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
+import { getVouchers } from "@/lib/deals/vouchers";
+import { matchVouchersForProduct, type MatchedCoupon } from "@/lib/deals/matching";
 
 export const dynamic = "force-dynamic";
 
@@ -369,6 +371,18 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // So khớp mã giảm giá Shopee tối ưu cho sản phẩm này
+    let matchedVouchers: MatchedCoupon[] = [];
+    let bestVoucherDiscount = 0;
+    try {
+      const allCoupons = await getVouchers();
+      const matchResult = matchVouchersForProduct(finalPrice, finalPlatform, allCoupons);
+      matchedVouchers = matchResult.matched;
+      bestVoucherDiscount = matchResult.bestDiscount;
+    } catch (e) {
+      console.error("[VoucherMatching] Lỗi so khớp mã giảm giá:", e);
+    }
+
     const resolvedProduct: CalculatedProduct = {
       name: finalName,
       imageUrl: finalImage,
@@ -385,6 +399,8 @@ export async function POST(request: NextRequest) {
       cap: isCurrentShopeeFood ? 500000 : hoanNgayProduct?.cap,
       isExactCashback: hasRealCommission,
       cashbackRate,
+      matchedVouchers,
+      bestVoucherDiscount,
     };
 
     return NextResponse.json({
