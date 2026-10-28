@@ -546,7 +546,8 @@ export default function AccountModal({
             <summary><span className={s.avatar}>{avatarUrl ? <Image unoptimized src={avatarUrl} alt="" width={32} height={32} /> : getInitials(displayName)}</span><span className={s.profileLabel}>Tài khoản của bạn</span><CaretDown size={16} /></summary>
             <div className={s.accountMenu}>
               <strong>{displayName}</strong><span className={s.email}>{user.email}</span>
-              <button type="button" onClick={copyRefCode}><Copy size={18} /> Mã: {refCode}</button>
+              {/* Tạm thời ẩn mã giới thiệu */}
+              {false && <button type="button" onClick={copyRefCode}><Copy size={18} /> Mã: {refCode}</button>}
               {isAdmin && <Link href="/admin" onClick={onClose}><ShieldCheck size={18} /> Trang quản trị</Link>}
               <button type="button" onClick={onSignOut}><SignOut size={18} /> Đăng xuất tài khoản</button>
             </div>
