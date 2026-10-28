@@ -640,18 +640,18 @@ export default function HomeClient({
 
   const [pasteMessage, setPasteMessage] = useState("");
   const [readingClipboard, setReadingClipboard] = useState(false);
-  useEffect(() => { if (pasteMessage) linkInputRef.current?.focus(); }, [pasteMessage]);
   const pasteCopiedLink = async () => {
     if (busy || readingClipboard) return;
-    setPasteMessage("");
-    setReadingClipboard(true);
     try {
       if (!navigator.clipboard?.readText) throw new Error("clipboard_unavailable");
-      const text = await navigator.clipboard.readText();
+      // Call readText immediately on user gesture so iOS Safari keeps transient activation
+      const readPromise = navigator.clipboard.readText();
+      setReadingClipboard(true);
+      setPasteMessage("");
+      const text = await readPromise;
       const url = extractUrlFromText(text);
       if (!url && !text.trim()) {
         setPasteMessage("Hãy sao chép link sản phẩm rồi bấm Dán ngay.");
-        (linkInputRef.current || pasteActionRef.current)?.focus();
         showTopToast({
           type: "warning",
           title: "Chưa sao chép link",
@@ -664,7 +664,6 @@ export default function HomeClient({
       await executeCalculation(target);
     } catch {
       setPasteMessage("Nhấn giữ ô nhập để dán link, hoặc dùng Ctrl/Cmd + V.");
-      (linkInputRef.current || pasteActionRef.current)?.focus();
       showTopToast({
         type: "info",
         title: "Quyền bộ nhớ tạm",
