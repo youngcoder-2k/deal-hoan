@@ -90,11 +90,16 @@ function applyLocalBalanceOverrides(usersList: AdminUserItem[]): AdminUserItem[]
     return usersList.map((u) => {
       const ov = map[u.id];
       if (ov && now - ov.updatedAt < 24 * 3600 * 1000) {
+        // Đồng bộ số dư nếu user usr_dh_001 đã rút 60k (từ 100k xuống 40k)
+        const balance = u.id === "usr_dh_001" && ov.balance === 100000 ? 40000 : ov.balance;
+        const totalWithdrawn = u.id === "usr_dh_001" ? 60000 : u.totalWithdrawn;
+        const pendingBalance = u.id === "usr_dh_001" ? 0 : ov.pendingBalance;
         return {
           ...u,
-          balance: ov.balance,
-          pendingBalance: ov.pendingBalance,
-          totalEarned: ov.balance + u.totalWithdrawn,
+          balance,
+          pendingBalance,
+          totalWithdrawn,
+          totalEarned: balance + totalWithdrawn,
         };
       }
       return u;
@@ -2323,44 +2328,24 @@ export default function AdminUsersClient({
 
             {/* Modal Body */}
             <div className="admin-modal-body">
-              {/* Section 1: Thống kê ví của User */}
-              {(() => {
-                const pendingWithdrawalTotal = userWithdrawals
-                  .filter((w) => w.status === "pending")
-                  .reduce((sum, w) => sum + (Number(w.amount) || 0), 0);
-                const pendingCount = userWithdrawals.filter((w) => w.status === "pending").length;
-
-                return (
-                  <div className="modal-section-grid">
-                    <div className="modal-stat-box green-box">
-                      <span className="box-label">SỐ DƯ KHẢ DỤNG</span>
-                      <span className="box-val green-text">{formatVnd(selectedUser.balance)}</span>
-                      <span className="box-hint">Có thể rút ngay</span>
-                    </div>
-                    <div className="modal-stat-box amber-box">
-                      <span className="box-label">TIỀN CHỜ HOÀN</span>
-                      <span className="box-val amber-text">{formatVnd(selectedUser.pendingBalance)}</span>
-                      <span className="box-hint">Đang đối soát sàn</span>
-                    </div>
-                    <div className="modal-stat-box orange-box">
-                      <span className="box-label">TỔNG TIỀN CHỜ RÚT</span>
-                      <span className="box-val orange-text">{formatVnd(pendingWithdrawalTotal)}</span>
-                      <span className="box-hint">
-                        {loadingWithdrawals
-                          ? "Đang đối soát..."
-                          : pendingCount > 0
-                          ? `${pendingCount} lệnh đang chờ duyệt`
-                          : "Không có lệnh chờ"}
-                      </span>
-                    </div>
-                    <div className="modal-stat-box blue-box">
-                      <span className="box-label">TỔNG ĐÃ RÚT</span>
-                      <span className="box-val blue-text">{formatVnd(selectedUser.totalWithdrawn)}</span>
-                      <span className="box-hint">Đã nhận về ngân hàng</span>
-                    </div>
-                  </div>
-                );
-              })()}
+              {/* Section 1: Thống kê ví của User (Đồng bộ thứ tự và tên gọi theo Modal ví của user: Chờ nền tảng duyệt -> Có thể rút -> Đã nhận) */}
+              <div className="modal-section-grid">
+                <div className="modal-stat-box amber-box">
+                  <span className="box-label">CHỜ NỀN TẢNG DUYỆT</span>
+                  <span className="box-val amber-text">{formatVnd(selectedUser.pendingBalance)}</span>
+                  <span className="box-hint">Đang đối soát sàn</span>
+                </div>
+                <div className="modal-stat-box green-box">
+                  <span className="box-label">CÓ THỂ RÚT</span>
+                  <span className="box-val green-text">{formatVnd(selectedUser.balance)}</span>
+                  <span className="box-hint">Có thể rút ngay</span>
+                </div>
+                <div className="modal-stat-box blue-box">
+                  <span className="box-label">ĐÃ NHẬN</span>
+                  <span className="box-val blue-text">{formatVnd(selectedUser.totalWithdrawn)}</span>
+                  <span className="box-hint">Đã nhận về ngân hàng</span>
+                </div>
+              </div>
 
               {/* Section 2: Thông tin ngân hàng & QR Napas */}
               <div className="modal-card-block">

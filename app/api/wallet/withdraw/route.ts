@@ -5,6 +5,9 @@ import {
   getWithdrawals,
   addWithdrawal,
 } from "@/lib/deals/withdrawals-store";
+import {
+  deductSharedWithdrawal,
+} from "@/lib/deals/user-wallet-store";
 
 export const dynamic = "force-dynamic";
 export type { WithdrawalRecord };
@@ -92,13 +95,14 @@ export async function POST(request: NextRequest) {
     }
 
     if (!supabase) {
+      const sw = deductSharedWithdrawal(amount);
       const demoReq = addWithdrawal({
         user_id: "usr_dh_001",
         amount,
-        bank_name: String(body.bank_name || "MB Bank (MBB)").trim(),
-        bank_account_no: String(body.bank_account_no || "0988889999").trim(),
+        bank_name: String(body.bank_name || sw.bankName || "MB Bank (MBB)").trim(),
+        bank_account_no: String(body.bank_account_no || sw.bankAccountNo || "0988889999").trim(),
         bank_account_name: String(
-          body.bank_account_name || "HUY QUANG VU"
+          body.bank_account_name || sw.bankAccountName || "HUY QUANG VU"
         ).trim().toUpperCase(),
         status: "pending",
         note: "Đang chờ đối soát & chuyển khoản qua Napas247",
@@ -109,7 +113,7 @@ export async function POST(request: NextRequest) {
           "vi-VN"
         )}đ về ${demoReq.bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
         request: demoReq,
-        newBalance: Math.max(0, 154000 - amount),
+        newBalance: sw.balance,
       });
     }
 
@@ -119,13 +123,14 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      const sw = deductSharedWithdrawal(amount);
       const demoReq = addWithdrawal({
         user_id: "usr_dh_001",
         amount,
-        bank_name: String(body.bank_name || "MB Bank (MBB)").trim(),
-        bank_account_no: String(body.bank_account_no || "0988889999").trim(),
+        bank_name: String(body.bank_name || sw.bankName || "MB Bank (MBB)").trim(),
+        bank_account_no: String(body.bank_account_no || sw.bankAccountNo || "0988889999").trim(),
         bank_account_name: String(
-          body.bank_account_name || "HUY QUANG VU"
+          body.bank_account_name || sw.bankAccountName || "HUY QUANG VU"
         ).trim().toUpperCase(),
         status: "pending",
         note: "Đang chờ đối soát & chuyển khoản qua Napas247",
@@ -136,7 +141,7 @@ export async function POST(request: NextRequest) {
           "vi-VN"
         )}đ về ${demoReq.bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
         request: demoReq,
-        newBalance: Math.max(0, 154000 - amount),
+        newBalance: sw.balance,
       });
     }
 

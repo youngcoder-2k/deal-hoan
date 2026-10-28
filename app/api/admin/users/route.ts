@@ -10,6 +10,7 @@ import {
   checkAdminApiAuth,
   fetchRealAdminUsers,
 } from "@/lib/auth/admin-server";
+import { updateSharedWallet } from "@/lib/deals/user-wallet-store";
 
 export const dynamic = "force-dynamic";
 
@@ -237,6 +238,16 @@ export async function PATCH(request: NextRequest) {
     const demoIdx = DEMO_ADMIN_USERS.findIndex((u) => u.id === userId);
     if (demoIdx !== -1) {
       updateInMemoryItem(DEMO_ADMIN_USERS[demoIdx]);
+    }
+
+    if (userId === "usr_dh_001" || userId === "demo-user" || userId === "demo-user-123") {
+      updateSharedWallet({
+        balance: typeof balance === "number" ? balance : undefined,
+        pendingBalance: typeof pendingBalance === "number" ? pendingBalance : undefined,
+        bankName: typeof bankName === "string" ? bankName : undefined,
+        bankAccountNo: typeof bankAccountNo === "string" ? bankAccountNo : undefined,
+        bankAccountName: typeof bankAccountName === "string" ? bankAccountName : undefined,
+      });
     }
 
     return NextResponse.json({

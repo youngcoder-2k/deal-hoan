@@ -450,11 +450,32 @@ export default function AccountModal({
       if (res.ok) {
         onNotify("🎉 Đã tạo yêu cầu rút tiền!");
         setWithdrawAmount("");
-        setWallet((prev) => ({
-          ...prev,
-          balance: typeof data.newBalance === "number" ? data.newBalance : Math.max(0, prev.balance - parsedAmount),
-          total_withdrawn: prev.total_withdrawn + parsedAmount,
-        }));
+        setWallet((prev) => {
+          const nextBalance = typeof data.newBalance === "number" ? data.newBalance : Math.max(0, prev.balance - parsedAmount);
+          const nextWithdrawn = prev.total_withdrawn + parsedAmount;
+          if (typeof window !== "undefined") {
+            try {
+              const raw = localStorage.getItem("dealhoan_admin_balance_overrides");
+              const map = raw ? JSON.parse(raw) : {};
+              map[user.id] = {
+                balance: nextBalance,
+                pendingBalance: prev.pending_balance,
+                updatedAt: Date.now(),
+              };
+              map["usr_dh_001"] = {
+                balance: nextBalance,
+                pendingBalance: prev.pending_balance,
+                updatedAt: Date.now(),
+              };
+              localStorage.setItem("dealhoan_admin_balance_overrides", JSON.stringify(map));
+            } catch {}
+          }
+          return {
+            ...prev,
+            balance: nextBalance,
+            total_withdrawn: nextWithdrawn,
+          };
+        });
         if (data.request) {
           setHistory((prev) => [data.request, ...prev]);
         }
@@ -549,15 +570,14 @@ export default function AccountModal({
           {[
             { label: "Chờ nền tảng duyệt", value: wallet.pending_balance, Icon: Clock },
             { label: "Có thể rút", value: wallet.balance, Icon: Wallet, isAvailable: true },
-            { label: "Chờ rút", value: pendingWithdrawalTotal, Icon: Receipt, isPendingWithdraw: true },
             { label: "Đã nhận", value: wallet.total_withdrawn, Icon: Bank },
-          ].map(({ label, value, Icon, isAvailable, isPendingWithdraw }) => (
-            <div className={`${s.stat} ${isAvailable ? s.available : isPendingWithdraw ? s.pendingWithdraw : ""}`} key={label}>
+          ].map(({ label, value, Icon, isAvailable }) => (
+            <div className={`${s.stat} ${isAvailable ? s.available : ""}`} key={label}>
               <Icon size={27} />
               <div>
                 <span>{label}</span>
                 <strong data-length={formatVnd(value).length > 9 ? "long" : formatVnd(value).length > 6 ? "medium" : "short"}>
-                  {(isPendingWithdraw ? loading.history : busyWallet) ? "—" : formatVnd(value)}
+                  {busyWallet ? "—" : formatVnd(value)}
                 </strong>
               </div>
             </div>

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  getSharedWallet,
+  updateSharedWallet,
+} from "@/lib/deals/user-wallet-store";
 
 export const dynamic = "force-dynamic";
 
@@ -12,20 +16,21 @@ export interface WalletData {
   bank_account_name: string;
 }
 
-let demoWallet: WalletData = {
-  balance: 154000,
-  pending_balance: 77000,
-  total_withdrawn: 200000,
-  bank_name: "MB Bank (MBB)",
-  bank_account_no: "0988889999",
-  bank_account_name: "HUY QUANG VU",
-};
-
 export async function GET() {
   try {
     const supabase = await createSupabaseServerClient();
     if (!supabase) {
-      return NextResponse.json({ wallet: demoWallet });
+      const sw = getSharedWallet();
+      return NextResponse.json({
+        wallet: {
+          balance: sw.balance,
+          pending_balance: sw.pendingBalance,
+          total_withdrawn: sw.totalWithdrawn,
+          bank_name: sw.bankName,
+          bank_account_no: sw.bankAccountNo,
+          bank_account_name: sw.bankAccountName,
+        },
+      });
     }
 
     const {
@@ -34,7 +39,17 @@ export async function GET() {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
+      const sw = getSharedWallet();
+      return NextResponse.json({
+        wallet: {
+          balance: sw.balance,
+          pending_balance: sw.pendingBalance,
+          total_withdrawn: sw.totalWithdrawn,
+          bank_name: sw.bankName,
+          bank_account_no: sw.bankAccountNo,
+          bank_account_name: sw.bankAccountName,
+        },
+      });
     }
 
     const { data: wallet, error: dbError } = await supabase
@@ -126,13 +141,22 @@ export async function POST(request: NextRequest) {
     }
 
     if (!supabase) {
-      demoWallet = {
-        ...demoWallet,
-        bank_name,
-        bank_account_no: cleanAccountNo,
-        bank_account_name,
-      };
-      return NextResponse.json({ success: true, wallet: demoWallet });
+      const sw = updateSharedWallet({
+        bankName: bank_name,
+        bankAccountNo: cleanAccountNo,
+        bankAccountName: bank_account_name,
+      });
+      return NextResponse.json({
+        success: true,
+        wallet: {
+          balance: sw.balance,
+          pending_balance: sw.pendingBalance,
+          total_withdrawn: sw.totalWithdrawn,
+          bank_name: sw.bankName,
+          bank_account_no: sw.bankAccountNo,
+          bank_account_name: sw.bankAccountName,
+        },
+      });
     }
 
     const {

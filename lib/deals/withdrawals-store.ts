@@ -37,7 +37,7 @@ let globalWithdrawals: WithdrawalRecord[] = [
   {
     id: "w-demo-1",
     user_id: "usr_dh_001",
-    amount: 200000,
+    amount: 60000,
     bank_name: "MB Bank (MBB)",
     bank_account_no: "0988889999",
     bank_account_name: "HUY QUANG VU",
