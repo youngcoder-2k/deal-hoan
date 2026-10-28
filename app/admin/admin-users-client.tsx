@@ -2432,8 +2432,8 @@ export default function AdminUsersClient({
                     </div>
                   </div>
                 ) : (
-                  <div className="unlinked-alert">
-                    <p>⚠️ Người dùng này chưa cập nhật thông tin tài khoản ngân hàng nhận tiền.</p>
+                  <div className="p-4 text-center text-stone-500 text-sm">
+                    Không có thông tin
                   </div>
                 )}
               </div>
@@ -2443,7 +2443,7 @@ export default function AdminUsersClient({
                 <div className="block-title-row">
                   <div className="flex items-center gap-2">
                     <span className="block-icon">⚙️</span>
-                    <h4 className="block-title">Điều Chỉnh Số Dư (Quyền Admin)</h4>
+                    <h4 className="block-title">Điều Chỉnh Số Dư</h4>
                   </div>
                   <button
                     type="button"
@@ -2544,7 +2544,7 @@ export default function AdminUsersClient({
                   <div className="p-4 text-center text-stone-500 text-sm">Đang tải danh sách đơn hàng...</div>
                 ) : userOrders.length === 0 ? (
                   <div className="p-4 text-center text-stone-500 text-sm">
-                    Người dùng này chưa có đơn hàng hoàn tiền nào. Bạn có thể bấm nút <b>+ Test</b> phía trên để tạo đơn thử nghiệm.
+                    Không có thông tin
                   </div>
                 ) : (
                   <div className="modal-withdrawals-list">
@@ -2625,7 +2625,7 @@ export default function AdminUsersClient({
                   <div className="p-4 text-center text-stone-500">Đang tải lịch sử rút tiền...</div>
                 ) : userWithdrawals.length === 0 ? (
                   <div className="p-4 text-center text-stone-500 text-sm">
-                    Người dùng này chưa có yêu cầu rút tiền nào.
+                    Không có thông tin
                   </div>
                 ) : (
                   <div className="modal-withdrawals-list">
