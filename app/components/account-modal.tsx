@@ -546,8 +546,20 @@ export default function AccountModal({
           <button type="button" className={s.close} onClick={onClose} aria-label="Đóng ví hoàn tiền"><X size={20} /></button>
         </header>
         <div className={s.stats} aria-label="Tổng quan ví" aria-busy={loading.wallet}>
-          {[{ label: "Có thể rút", value: wallet.balance, Icon: Wallet }, { label: "Chờ duyệt", value: wallet.pending_balance, Icon: Clock }, { label: "Đã nhận", value: wallet.total_withdrawn, Icon: Bank }].map(({label, value, Icon}, index) => (
-            <div className={`${s.stat} ${index === 0 ? s.available : ""}`} key={label}><Icon size={27} /><div><span>{label}</span><strong data-length={formatVnd(value).length > 9 ? "long" : formatVnd(value).length > 6 ? "medium" : "short"}>{busyWallet ? "—" : formatVnd(value)}</strong></div></div>
+          {[
+            { label: "Chờ nền tảng duyệt", value: wallet.pending_balance, Icon: Clock },
+            { label: "Có thể rút", value: wallet.balance, Icon: Wallet, isAvailable: true },
+            { label: "Đã nhận", value: wallet.total_withdrawn, Icon: Bank },
+          ].map(({ label, value, Icon, isAvailable }) => (
+            <div className={`${s.stat} ${isAvailable ? s.available : ""}`} key={label}>
+              <Icon size={27} />
+              <div>
+                <span>{label}</span>
+                <strong data-length={formatVnd(value).length > 9 ? "long" : formatVnd(value).length > 6 ? "medium" : "short"}>
+                  {busyWallet ? "—" : formatVnd(value)}
+                </strong>
+              </div>
+            </div>
           ))}
         </div>
         <div className={s.tabs} role="tablist" aria-label="Ví hoàn tiền" onKeyDown={event => {
