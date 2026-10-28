@@ -9,8 +9,40 @@ import { getDailyShopeeCoupons } from "./coupons-static";
 const VOUCHER_CACHE_DIR = path.join(process.cwd(), "lib/deals/cache");
 const VOUCHER_CACHE_PATH = path.join(VOUCHER_CACHE_DIR, "shopee-vouchers.json");
 
-// Tự động làm mới cache nếu cũ hơn 15 phút
-const VOUCHER_TTL_MS = 15 * 60 * 1000;
+// Ngụy trang User-Agent trình duyệt thật để luân phiên
+const STEALTH_USER_AGENTS = [
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.2 Safari/605.1.15",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0",
+];
+
+function getStealthHeaders(): Record<string, string> {
+  const ua = STEALTH_USER_AGENTS[Math.floor(Math.random() * STEALTH_USER_AGENTS.length)];
+  return {
+    "User-Agent": ua,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Referer": "https://riokupon.com/vn/",
+    "Origin": "https://riokupon.com",
+    "Sec-Ch-Ua": '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"',
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": '"macOS"',
+    "Sec-Fetch-Dest": "empty",
+    "Sec-Fetch-Mode": "cors",
+    "Sec-Fetch-Site": "same-origin",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+  };
+}
+
+// TTL cơ bản 15 phút + Jitter ngẫu nhiên 3 - 8 phút để tránh chu kỳ quét cố định bị bot-detector phát hiện
+function getDynamicTTL(): number {
+  const baseMs = 15 * 60 * 1000;
+  const jitterMs = Math.floor(Math.random() * 8 * 60 * 1000);
+  return baseMs + jitterMs;
+}
+
 const DEALHOAN_AFFILIATE_ID = "17333200656";
 
 let inFlightSync: Promise<Coupon[]> | null = null;
@@ -36,10 +68,8 @@ async function readFromSupabase(): Promise<Coupon[] | null> {
 export async function fetchLiveShopeeVouchers(): Promise<Coupon[]> {
   const endpoint = "https://riokupon.com/api/vn/voucher/data/voucher-list-today_list.txt?v=" + Date.now();
   const res = await fetch(endpoint, {
-    headers: {
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    },
-    signal: AbortSignal.timeout(12000)
+    headers: getStealthHeaders(),
+    signal: AbortSignal.timeout(12000),
   });
 
   if (!res.ok) {
@@ -154,7 +184,7 @@ export async function getVouchers(): Promise<Coupon[]> {
     if (existsSync(VOUCHER_CACHE_PATH)) {
       const stats = await stat(VOUCHER_CACHE_PATH);
       const age = Date.now() - stats.mtimeMs;
-      if (age < VOUCHER_TTL_MS) {
+      if (age < getDynamicTTL()) {
         isCacheStale = false;
       }
       const raw = await readFile(VOUCHER_CACHE_PATH, "utf-8");
