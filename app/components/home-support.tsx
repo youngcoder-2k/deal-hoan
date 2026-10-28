@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
@@ -25,6 +26,36 @@ const questions = [
 ];
 
 export default function HomeSupport({ onStart, onAccount, signedIn, accountPending }: Props) {
+  const guideTrack = useRef<HTMLDivElement>(null);
+  const [activeGuide, setActiveGuide] = useState(0);
+  const guideTrackId = useId();
+  const syncActiveGuide = useCallback(() => {
+    const track = guideTrack.current;
+    if (!track) return;
+    if (track.scrollWidth <= track.clientWidth) { setActiveGuide(0); return; }
+    const cards = Array.from(track.querySelectorAll<HTMLAnchorElement>("a"));
+    const left = track.getBoundingClientRect().left;
+    let closest = 0;
+    cards.forEach((card, index) => {
+      if (Math.abs(card.getBoundingClientRect().left - left) < Math.abs(cards[closest].getBoundingClientRect().left - left)) closest = index;
+    });
+    setActiveGuide(closest);
+  }, []);
+  useEffect(() => {
+    const track = guideTrack.current;
+    if (!track) return;
+    const observer = new ResizeObserver(syncActiveGuide);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [syncActiveGuide]);
+  const showGuide = (index: number, focusCard = false) => {
+    const track = guideTrack.current;
+    const next = Math.max(0, Math.min(index, guides.length - 1));
+    const card = track?.querySelectorAll<HTMLAnchorElement>("a")[next];
+    if (!track || !card) return;
+    track.scrollTo({ left: track.scrollLeft + card.getBoundingClientRect().left - track.getBoundingClientRect().left, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+    if (focusCard) card.focus({ preventScroll: true });
+  };
   return <div className={s.refresh}>
     <section id="benefits" aria-labelledby="benefits-title" className={s.story}>
       <div className={s.storyCopy} data-motion="left">
@@ -43,10 +74,21 @@ export default function HomeSupport({ onStart, onAccount, signedIn, accountPendi
 
     <section id="guides" aria-labelledby="guides-title" className={s.guides}>
       <header className={s.guideHeading} data-motion="rise"><div><span className={s.eyebrow}>CẨM NANG MUA KHÉO</span><h2 id="guides-title">Mẹo nhỏ<span>Tiết kiệm hơn</span></h2></div><Link href="/docs" className={s.secondary}>Tất cả cẩm nang <ArrowRightIcon size={18} aria-hidden="true" /></Link></header>
-      <div className={s.guideGrid}>{guides.map((guide, index) => <Link data-motion="rise" data-motion-delay={index * 90} key={guide.href} href={guide.href} className={s.guideCard}>
-        <div className={s.guideImage}><Image unoptimized src={`${art}${guide.image}`} alt={guide.alt} fill sizes="(max-width: 600px) 90vw, (max-width: 1000px) 45vw, 30vw" /></div>
+      <div id={guideTrackId} ref={guideTrack} className={s.guideGrid} role="group" aria-label="Các bài cẩm nang mua sắm" onScroll={syncActiveGuide} onKeyDown={event => {
+        if (!window.matchMedia("(max-width: 767px)").matches) return;
+        const focused = Array.from(guideTrack.current?.querySelectorAll("a") || []).indexOf(event.target as HTMLAnchorElement);
+        const next = event.key === "ArrowRight" ? focused + 1 : event.key === "ArrowLeft" ? focused - 1 : event.key === "Home" ? 0 : event.key === "End" ? guides.length - 1 : null;
+        if (next !== null) { event.preventDefault(); showGuide(next, true); }
+      }}>{guides.map((guide, index) => <Link data-motion="rise" data-motion-delay={index * 90} key={guide.href} href={guide.href} className={s.guideCard}>
+        <div className={s.guideImage}><Image unoptimized src={`${art}${guide.image}`} alt={guide.alt} fill sizes="(max-width: 767px) 78vw, (max-width: 1000px) 45vw, 30vw" /></div>
         <div className={s.guideBody}><span className={s.category}>{guide.category}</span><h3>{guide.title}</h3><p>{guide.description}</p><span className={s.readMore}>Đọc hướng dẫn <ArrowRightIcon size={20} aria-hidden="true" /></span></div>
       </Link>)}</div>
+      <nav className={s.guideControls} aria-label="Chuyển bài cẩm nang">
+        <button type="button" aria-label="Cẩm nang trước" aria-controls={guideTrackId} disabled={activeGuide === 0} onClick={() => showGuide(activeGuide - 1)}><ArrowRightIcon className={s.previousArrow} size={21} aria-hidden="true" /></button>
+        <div className={s.guideDots}>{guides.map((guide, index) => <button key={guide.href} type="button" aria-label={`Xem cẩm nang ${index + 1}: ${guide.title}`} aria-controls={guideTrackId} aria-current={activeGuide === index ? "true" : undefined} onClick={() => showGuide(index)}><span /></button>)}</div>
+        <button type="button" aria-label="Cẩm nang tiếp theo" aria-controls={guideTrackId} disabled={activeGuide === guides.length - 1} onClick={() => showGuide(activeGuide + 1)}><ArrowRightIcon size={21} aria-hidden="true" /></button>
+      </nav>
+      <div className={s.guideFooter}><Link href="/docs" className={s.secondary}>Tất cả cẩm nang <ArrowRightIcon size={18} aria-hidden="true" /></Link></div>
     </section>
 
     <section id="faq" aria-labelledby="faq-title" className={s.faq}>

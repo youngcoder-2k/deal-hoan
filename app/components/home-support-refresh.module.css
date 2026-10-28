@@ -74,3 +74,44 @@
 /* Align the shared footer only on the homepage; document pages keep their layout. */
 .refresh :global(#contact) { padding-inline:0; }
 .refresh :global(#contact > div) { width:var(--home-content-width); max-width:none; }
+
+/* Compact, user-controlled mobile guides; desktop remains the three-card grid. */
+.guideControls,.guideFooter { display:none; }
+.previousArrow { transform:rotate(180deg); }
+@media(max-width:767px) {
+  .guides { padding-block:32px; }
+  .guideHeading { margin-bottom:18px; gap:0; }
+  .guideHeading .eyebrow { font-size:10px; margin-bottom:8px; }
+  .guideHeading h2 { font-size:28px; line-height:1.16; letter-spacing:-.035em; }
+  .guideHeading > .secondary { display:none; }
+  .guideGrid { display:flex; gap:12px; overflow-x:auto; overscroll-behavior-x:contain; scroll-snap-type:x mandatory; scrollbar-width:none; padding:5px 5px 10px; margin-inline:-5px; scroll-padding-inline:5px; }
+  .guideGrid::-webkit-scrollbar { display:none; }
+  .guideGrid::after { content:""; flex:0 0 max(calc(18% - 12px),calc(100% - 332px)); }
+  .guideCard { flex:0 0 82%; max-width:320px; scroll-snap-align:start; border-color:#f6daca; border-radius:14px; box-shadow:none; }
+  .guideCard[data-motion] { opacity:1!important; transform:none!important; filter:none!important; }
+  .guideCard:hover { transform:none; box-shadow:none; }
+  .guideImage { aspect-ratio:auto; height:145px; flex-shrink:0; }
+  .guideBody { padding:13px 14px 16px; }
+  .category { font-size:10px; line-height:1.4; }
+  .guideBody h3 { margin:6px 0; font-size:16px; line-height:1.4; font-weight:700; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; overflow:hidden; min-height:44.8px; }
+  .guideBody p { margin:0; font-size:12px; line-height:1.5; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+  .readMore { display:none; }
+  .guideControls { display:grid; grid-template-columns:44px 1fr 44px; align-items:center; gap:6px; margin:3px 0 10px; }
+  .guideControls button { display:grid; place-items:center; width:44px; height:44px; padding:0; background:none; border:0; border-radius:8px; color:#c84312; cursor:pointer; }
+  .guideControls button:hover:not(:disabled) { background:#fff1e8; }
+  .guideControls button:disabled { opacity:.25; cursor:default; }
+  .guideDots { display:flex; align-items:center; justify-content:center; }
+  .guideDots button span { display:block; width:7px; height:7px; border-radius:8px; background:#d7d9da; transition:width .18s,background .18s; }
+  .guideDots button[aria-current="true"] span { width:22px; background:#ff6024; }
+  .guideFooter { display:block; border-top:1px solid #ffcfb9; padding-top:8px; }
+  .guideFooter .secondary { font-size:13px; gap:10px; }
+}
+@media(max-width:374px) {
+  .guideHeading h2 { font-size:26px; }
+  .guideImage { height:130px; }
+  .guideBody { padding:12px; }
+  .guideBody h3 { font-size:15px; min-height:42px; }
+}
+@media(prefers-reduced-motion:reduce) { .guideDots button span { transition:none; } }
+
+@media(max-width:767px) { .guides .guideCard:focus-visible { outline:2px solid #1477c9; outline-offset:2px; } }
