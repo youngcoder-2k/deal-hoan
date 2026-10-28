@@ -3,10 +3,9 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Wallet, Clock, Bank, ShoppingBag, Receipt, CreditCard, X, CaretDown, ArrowRight, Question, CheckCircle, Info, SignOut, ShieldCheck, Copy } from "@phosphor-icons/react";
+import { Wallet, Clock, Bank, ShoppingBag, Receipt, CreditCard, X, CaretDown, ArrowRight, Question, CheckCircle, Info, SignOut, Copy } from "@phosphor-icons/react";
 import s from "./account-wallet.module.css";
 import type { User } from "@supabase/supabase-js";
-import { isAdminUser } from "@/lib/auth/admin";
 
 export interface WalletData {
   balance: number;
@@ -482,7 +481,6 @@ export default function AccountModal({
 
   const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Tài khoản của bạn";
-  const isAdmin = isAdminUser(user);
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/);
@@ -539,7 +537,6 @@ export default function AccountModal({
               <strong>{displayName}</strong><span className={s.email}>{user.email}</span>
               {/* Tạm thời ẩn mã giới thiệu */}
               {false && <button type="button" onClick={copyRefCode}><Copy size={18} /> Mã: {refCode}</button>}
-              {isAdmin && <Link href="/admin" onClick={onClose}><ShieldCheck size={18} /> Trang quản trị</Link>}
               <button type="button" onClick={onSignOut}><SignOut size={18} /> Đăng xuất tài khoản</button>
             </div>
           </details>
