@@ -66,8 +66,7 @@ export function isAdminUser(user: {
   }
 
   if (
-    user.app_metadata?.role === "admin" ||
-    user.user_metadata?.role === "admin"
+    user.app_metadata?.role === "admin"
   ) {
     return true;
   }

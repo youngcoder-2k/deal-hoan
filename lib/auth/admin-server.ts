@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import type { NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -37,23 +38,12 @@ export async function checkAdminApiAuth(request: NextRequest): Promise<{
     console.warn("Check admin API auth error:", err);
   }
 
-  // 2. Kiểm tra Header, Cookie hoặc Query Secret Key (hỗ trợ ADMIN_SECRET_KEY hoặc master key dealhoan2026)
-  const configuredKey = process.env.ADMIN_SECRET_KEY?.trim() || "dealhoan2026";
-  const headerKey = request.headers.get("x-admin-key")?.trim();
-  const cookieKey = request.cookies.get("dealhoan_admin_key")?.value?.trim();
-  const queryKey = request.nextUrl.searchParams.get("key")?.trim();
-
-  if (
-    (headerKey && (headerKey === configuredKey || headerKey === "dealhoan2026")) ||
-    (cookieKey && (cookieKey === configuredKey || cookieKey === "dealhoan2026")) ||
-    (queryKey && (queryKey === configuredKey || queryKey === "dealhoan2026"))
-  ) {
-    return { isAuthorized: true, method: "admin_key" };
-  }
-
-  // 3. Cho phép truy cập ở môi trường development (localhost)
-  if (process.env.NODE_ENV !== "production") {
-    return { isAuthorized: true, method: "dev_environment" };
+  // Manual order crediting requires configured credentials, never a public default key.
+  const configuredKey = process.env.ADMIN_SECRET_KEY?.trim();
+  const supplied = request.headers.get("x-admin-key")?.trim() || request.cookies.get("dealhoan_admin_key")?.value?.trim();
+  if (configuredKey && supplied) {
+    const a = Buffer.from(configuredKey), b = Buffer.from(supplied);
+    if (a.length === b.length && timingSafeEqual(a,b)) return { isAuthorized:true,method:"admin_key" };
   }
 
   return {

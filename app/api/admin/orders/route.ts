@@ -62,12 +62,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       userId,
-      orderId = `TEST_${Date.now().toString().slice(-8)}`,
+      orderId,
       platform = "Shopee",
       productName = "Đơn hàng thử nghiệm DealHoàn",
-      orderValue = 250000,
-      commissionAmount = 25000,
-      cashbackAmount = 25000,
+      orderValue,
+      commissionAmount,
+      cashbackAmount,
       status = "pending",
       note = "Đơn test do Admin tạo",
     } = body;
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       productName,
       orderValue: Number(orderValue),
       commissionAmount: Number(commissionAmount),
-      cashbackAmount: Number(cashbackAmount),
+      cashbackAmount: cashbackAmount === undefined ? undefined : Number(cashbackAmount),
       status,
       note,
     });
@@ -120,10 +120,14 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Thiếu orderId hoặc status cần cập nhật." }, { status: 400 });
     }
 
+    const db = getSupabaseAdminClient();
+    const existing = db ? await db.from("cashback_orders").select("user_id,order_value").eq("order_id", orderId).eq("platform", platform).maybeSingle() : null;
+    if (!existing?.data || existing.error) return NextResponse.json({ error: "Chưa tìm thấy đơn hàng cần cập nhật." }, { status: 404 });
     const result = await recordCashbackOrder({
+      userId: existing.data.user_id,
       orderId,
       platform,
-      orderValue: 0, // Sẽ giữ nguyên giá trị đơn hiện có trong DB
+      orderValue: Number(existing.data.order_value),
       status,
       note: note || `Admin cập nhật trạng thái sang ${status}`,
     });

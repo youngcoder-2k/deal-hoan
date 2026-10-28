@@ -13,7 +13,8 @@
     "shopee:flash-sale": "node scripts/shopee-scrape-flashsale.mjs",
     "shopee:xtra": "node scripts/shopee-scrape-xtra.mjs",
     "shopee:schedule": "bash scripts/schedule-shopee-scrape.sh",
-    "sync:auto": "node scripts/auto-sync-all.mjs"
+    "sync:auto": "node scripts/auto-sync-all.mjs",
+    "test:cashback": "node --test tests/cashback-recording.test.cjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
@@ -27,6 +28,7 @@
     "react-dom": "19.2.8"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@tailwindcss/postcss": "^4",
     "@types/canvas-confetti": "^1.9.0",
     "@types/node": "^20",

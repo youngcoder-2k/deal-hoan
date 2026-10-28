@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAdminApiAuth } from "@/lib/auth/admin-server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
-import { recordCashbackOrder } from "@/lib/deals/cashback";
-import { parseShopeeMoney } from "@/lib/deals/shopee-import";
-import { parseUserIdFromSubId } from "@/lib/deals/affiliate";
-import { getBoosterSettingsSync } from "@/lib/deals/cashback-booster";
-import { getShopeeSyncConfig, saveShopeeSyncConfig, type ShopeeSyncConfig } from "@/lib/deals/shopee-sync-config";
+import type { ShopeeSyncConfig } from "@/lib/deals/shopee-sync-config";
+import { loadOrderSyncConfig, saveOrderSyncConfig, publicOrderSyncConfig } from "@/lib/deals/order-sync-config";
+import { syncShopeeOrders } from "@/lib/deals/order-sync";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 150;
 
 /**
  * Lấy cấu hình và trạng thái tự động chạy ngầm của Shopee
@@ -19,7 +18,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Không có quyền truy cập." }, { status: 403 });
     }
 
-    const config = getShopeeSyncConfig();
+    const config = await loadOrderSyncConfig();
     const supabaseAdmin = getSupabaseAdminClient();
     let recentOrders: Record<string, unknown>[] = [];
     if (supabaseAdmin) {
@@ -34,25 +33,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      config: {
-        ...config,
-        // Che một phần cookie để bảo mật khi trả về
-        shopeeCookieMasked: config.shopeeCookie
-          ? config.shopeeCookie.slice(0, 15) + "..." + config.shopeeCookie.slice(-10)
-          : "",
-        hasCookie: Boolean(config.shopeeCookie),
-        accesstradeTokenMasked: config.accesstradeToken
-          ? config.accesstradeToken.slice(0, 8) + "..." + config.accesstradeToken.slice(-6)
-          : "",
-        hasAccessTradeToken: Boolean(config.accesstradeToken || process.env.ACCESSTRADE_TOKEN),
-        shopeeAppIdMasked: config.shopeeAppId
-          ? config.shopeeAppId.slice(0, 4) + "..." + config.shopeeAppId.slice(-4)
-          : (process.env.SHOPEE_AFFILIATE_APP_ID ? "Đã có từ ENV" : ""),
-        hasShopeeOpenApi: Boolean(
-          (config.shopeeAppId && config.shopeeSecret) ||
-          (process.env.SHOPEE_AFFILIATE_APP_ID && process.env.SHOPEE_AFFILIATE_SECRET)
-        ),
-      },
+      config: publicOrderSyncConfig(config),
       recentOrders,
     });
   } catch (err: unknown) {
@@ -75,11 +56,11 @@ export async function POST(request: NextRequest) {
 
     // Cập nhật AccessTrade API Token
     if (typeof body.accesstradeToken === "string") {
-      const updated = saveShopeeSyncConfig({ accesstradeToken: body.accesstradeToken.trim() });
+      const updated = await saveOrderSyncConfig({ accesstradeToken: body.accesstradeToken.trim() });
       return NextResponse.json({
         success: true,
         message: "Đã lưu mã AccessTrade API Token cho TikTok Shop / Lazada thành công!",
-        config: updated,
+        config: publicOrderSyncConfig(updated),
       });
     }
 
@@ -89,205 +70,28 @@ export async function POST(request: NextRequest) {
       if (typeof body.shopeeAppId === "string") updateData.shopeeAppId = body.shopeeAppId.trim();
       if (typeof body.shopeeSecret === "string") updateData.shopeeSecret = body.shopeeSecret.trim();
 
-      const updated = saveShopeeSyncConfig(updateData);
+      const updated = await saveOrderSyncConfig(updateData);
       return NextResponse.json({
         success: true,
         message: "Đã lưu Shopee Open API (App ID & Secret Key) thành công! Hệ thống sẽ tự động quét sản phẩm Hoa hồng Xtra.",
-        config: updated,
+        config: publicOrderSyncConfig(updated),
       });
     }
 
     // Cập nhật bật/tắt chế độ tự động chạy ngầm
     if (typeof body.autoSyncEnabled === "boolean") {
-      const updated = saveShopeeSyncConfig({ autoSyncEnabled: body.autoSyncEnabled });
+      const updated = await saveOrderSyncConfig({ autoSyncEnabled: body.autoSyncEnabled });
       return NextResponse.json({
         success: true,
         message: `Đã ${body.autoSyncEnabled ? "BẬT" : "TẮT"} chế độ tự động đồng bộ ngầm 24/7!`,
-        config: updated,
+        config: publicOrderSyncConfig(updated),
       });
     }
 
-    const currentConfig = getShopeeSyncConfig();
-    const cookie =
-      (body.cookie as string)?.trim() ||
-      currentConfig.shopeeCookie?.trim() ||
-      process.env.SHOPEE_AFFILIATE_COOKIE?.trim() ||
-      "";
-
-    if (!cookie) {
-      return NextResponse.json(
-        {
-          error:
-            "Chưa cấu hình Shopee Cookie. Vui lòng dán Shopee Cookie hoặc lưu biến SHOPEE_AFFILIATE_COOKIE.",
-        },
-        { status: 400 }
-      );
-    }
-
-    // Lưu cookie vào cấu hình bền vững
-    saveShopeeSyncConfig({ shopeeCookie: cookie });
-
-    // Tính toán khoảng thời gian (30 ngày gần nhất)
-    const now = Math.floor(Date.now() / 1000);
-    const thirtyDaysAgo = now - 30 * 86400;
-
-    const shopeeApiUrl = `https://affiliate.shopee.vn/api/v3/conversion_report?start_time=${thirtyDaysAgo}&end_time=${now}&page=1&limit=50`;
-
-    interface ShopeeConversionItem {
-      order_sn?: string;
-      order_id?: string;
-      sub_id?: string;
-      sub1?: string;
-      gmv?: number | string;
-      order_amount?: number | string;
-      commission?: number | string;
-      pub_commission?: number | string;
-      status?: number | string;
-      item_name?: string;
-      product_name?: string;
-      shop_name?: string;
-      order_type?: string | number;
-      create_time?: number;
-      [key: string]: unknown;
-    }
-
-    let shopeeData: { code?: number; msg?: string; data?: { list?: ShopeeConversionItem[] } } | null = null;
-    let fetchError: string | null = null;
-
-    try {
-      const res = await fetch(shopeeApiUrl, {
-        headers: {
-          Cookie: cookie,
-          "User-Agent":
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-          Accept: "application/json, text/plain, */*",
-          Referer: "https://affiliate.shopee.vn/report/conversion",
-        },
-        signal: AbortSignal.timeout(9000),
-      });
-
-      if (res.ok) {
-        shopeeData = await res.json();
-      } else {
-        fetchError = `Shopee API trả về mã lỗi HTTP ${res.status}`;
-      }
-    } catch (err: unknown) {
-      fetchError = err instanceof Error ? err.message : "Lỗi kết nối tới máy chủ Shopee";
-    }
-
-    if (!shopeeData || (shopeeData.code !== 0 && !Array.isArray(shopeeData?.data?.list))) {
-      const errMsg =
-        fetchError ||
-        shopeeData?.msg ||
-        "Cookie Shopee không hợp lệ hoặc đã hết hạn phiên đăng nhập. Vui lòng đăng nhập lại Shopee và lấy cookie mới.";
-      saveShopeeSyncConfig({
-        lastSyncAt: new Date().toISOString(),
-        lastSyncResult: `Lỗi: ${errMsg}`,
-      });
-      return NextResponse.json(
-        {
-          success: false,
-          error: errMsg,
-          needsRefresh: true,
-        },
-        { status: 400 }
-      );
-    }
-
-    const rawList = shopeeData?.data?.list || [];
-    const boosterSettings = getBoosterSettingsSync();
-    const safeMultiplier = Math.max(0.6, (100 - boosterSettings.safetyMarginPercent) / 100);
-
-    let successCount = 0;
-    let totalCashback = 0;
-    const userSet = new Set<string>();
-    const syncedOrders: Array<{
-      orderId: string;
-      subId: string;
-      userId: string;
-      productName: string;
-      orderValue: number;
-      commissionAmount: number;
-      cashbackAmount: number;
-      status: "pending" | "completed" | "rejected";
-      orderedAt: string;
-    }> = [];
-
-    for (const item of rawList) {
-      const orderId = String(item.order_sn || item.order_id || "").trim();
-      const subId = String(item.sub_id || item.sub1 || "").trim();
-      const userId = parseUserIdFromSubId(subId);
-
-      if (!orderId || !userId) continue;
-
-      const orderValue = parseShopeeMoney(item.gmv || item.order_amount || 0);
-      const commissionAmount = parseShopeeMoney(item.commission || item.pub_commission || 0);
-      const cashbackAmount = Math.round(commissionAmount * safeMultiplier);
-
-      const status: "pending" | "completed" | "rejected" =
-        item.status === 2 || item.status === "completed"
-          ? "completed"
-          : item.status === 3 || item.status === "cancelled"
-          ? "rejected"
-          : "pending";
-
-      const isFood =
-        (item.item_name || item.product_name || "").toLowerCase().includes("shopeefood") ||
-        (item.shop_name || "").toLowerCase().includes("food") ||
-        item.order_type === "food" ||
-        item.order_type === 2;
-
-      const platform: "Shopee" | "ShopeeFood" = isFood ? "ShopeeFood" : "Shopee";
-
-      const res = await recordCashbackOrder({
-        orderId,
-        subId,
-        userId,
-        platform,
-        productName: item.item_name || item.product_name || (isFood ? "Đơn món ShopeeFood" : "Sản phẩm mua qua DealHoàn"),
-        orderValue,
-        commissionAmount,
-        cashbackAmount,
-        status,
-        note: `Tự động đồng bộ từ ${platform} qua Bot API (${new Date().toLocaleDateString("vi-VN")})`,
-      });
-
-      if (res.success) {
-        successCount++;
-        totalCashback += cashbackAmount;
-        userSet.add(userId);
-        syncedOrders.push({
-          orderId,
-          subId,
-          userId,
-          productName: item.item_name || item.product_name || (isFood ? "Đơn món ShopeeFood" : "Sản phẩm mua qua DealHoàn"),
-          orderValue,
-          commissionAmount,
-          cashbackAmount,
-          status,
-          orderedAt: item.create_time ? new Date(item.create_time * 1000).toISOString() : new Date().toISOString(),
-        });
-      }
-    }
-
-    const summaryMsg = `Đã đồng bộ thành công ${successCount} đơn hàng cho ${userSet.size} thành viên!`;
-    saveShopeeSyncConfig({
-      lastSyncAt: new Date().toISOString(),
-      lastSyncResult: summaryMsg,
-      lastOrdersCount: successCount,
-    });
-
-    return NextResponse.json({
-      success: true,
-      message: summaryMsg,
-      summary: {
-        totalOrdersFound: rawList.length,
-        successCount,
-        matchedUsersCount: userSet.size,
-        totalCashback,
-      },
-      syncedOrders,
-    });
+    const cookie = typeof body.cookie === "string" ? body.cookie.trim() : undefined;
+    if (cookie) await saveOrderSyncConfig({ shopeeCookie:cookie });
+    const result = await syncShopeeOrders({ cookie });
+    return NextResponse.json(result.body, { status:result.code });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });

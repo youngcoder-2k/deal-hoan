@@ -1,7 +1,12 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { recordCashbackOrder } from "@/lib/deals/cashback";
 
 export const dynamic = "force-dynamic";
+function validSecret(provided: string | null, expected: string) {
+  const a = Buffer.from(provided || ""), b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a,b);
+}
 
 /**
  * Webhook / Postback tiếp nhận đơn hàng hoàn tiền từ AccessTrade, Shopee hoặc đối tác
@@ -12,9 +17,10 @@ export async function GET(request: NextRequest) {
 
   // 1. Kiểm tra mã bảo mật Webhook (nếu được cấu hình)
   const webhookSecret = process.env.AFFILIATE_WEBHOOK_SECRET?.trim();
-  if (webhookSecret) {
+  if (!webhookSecret) return NextResponse.json({ error: "Webhook chưa được cấu hình." }, { status: 503 });
+  {
     const providedSecret = searchParams.get("secret") || searchParams.get("token");
-    if (providedSecret !== webhookSecret) {
+    if (!validSecret(providedSecret, webhookSecret)) {
       return NextResponse.json({ error: "Unauthorized webhook secret" }, { status: 401 });
     }
   }
@@ -27,6 +33,7 @@ export async function GET(request: NextRequest) {
     "";
   const subId =
     searchParams.get("sub1") ||
+    searchParams.get("sub_1") ||
     searchParams.get("sub_id") ||
     searchParams.get("sub") ||
     searchParams.get("user_id") ||
@@ -46,14 +53,14 @@ export async function GET(request: NextRequest) {
         : "Shopee";
 
   const productName = searchParams.get("product_name") || searchParams.get("item_name") || "Sản phẩm mua qua DealHoàn";
-  const orderValue = Number(searchParams.get("order_amount") || searchParams.get("transaction_value") || 0);
-  const commissionAmount = Number(
-    searchParams.get("pub_commission") || searchParams.get("commission") || 0
-  );
+  const orderValueRaw = searchParams.get("order_amount") ?? searchParams.get("transaction_value");
+  const orderValue = orderValueRaw === null ? undefined : Number(orderValueRaw);
+  const commissionRaw = searchParams.get("pub_commission") ?? searchParams.get("commission");
+  const commissionAmount = commissionRaw === null ? undefined : Number(commissionRaw);
   const rawStatus = (searchParams.get("status") || "pending").toLowerCase();
 
   const status: "pending" | "completed" | "rejected" =
-    rawStatus === "2" || rawStatus === "approved" || rawStatus === "completed" || rawStatus === "success"
+    rawStatus === "2" || rawStatus === "approved" || rawStatus === "completed"
       ? "completed"
       : rawStatus === "3" || rawStatus === "rejected" || rawStatus === "cancelled"
         ? "rejected"
@@ -88,10 +95,11 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const webhookSecret = process.env.AFFILIATE_WEBHOOK_SECRET?.trim();
-    if (webhookSecret) {
+    if (!webhookSecret) return NextResponse.json({ error: "Webhook chưa được cấu hình." }, { status: 503 });
+    {
       const headerSecret = request.headers.get("x-webhook-secret");
       const urlSecret = request.nextUrl.searchParams.get("secret");
-      if (headerSecret !== webhookSecret && urlSecret !== webhookSecret) {
+      if (!validSecret(headerSecret, webhookSecret) && !validSecret(urlSecret, webhookSecret)) {
         return NextResponse.json({ error: "Unauthorized webhook secret" }, { status: 401 });
       }
     }
@@ -100,8 +108,8 @@ export async function POST(request: NextRequest) {
 
     // Hỗ trợ cả định dạng AccessTrade, Shopee Open API và định dạng chuẩn DealHoàn
     const orderId = String(body.orderId || body.order_id || body.order_code || "").trim();
-    const subId = String(body.subId || body.sub_id || body.sub1 || "").trim();
-    const userId = body.userId ? String(body.userId).trim() : undefined;
+    const subId = String(body.subId || body.sub_id || body.sub1 || body.sub_1 || "").trim();
+    // The partner must send the tracking reference, never an independently supplied owner.
     const rawPlatform = String(body.platform || body.merchant || "Shopee").toLowerCase();
 
     const platform: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada" = rawPlatform.includes("tiktok")
@@ -114,15 +122,15 @@ export async function POST(request: NextRequest) {
 
     const productName = body.productName || body.product_name || "Sản phẩm mua qua DealHoàn";
     const productImage = body.productImage || body.product_image || "";
-    const orderValue = Number(body.orderValue || body.order_value || body.transaction_value || 0);
-    const commissionAmount = Number(
-      body.commissionAmount || body.commission_amount || body.pub_commission || body.commission || 0
-    );
-    const cashbackAmount = body.cashbackAmount ? Number(body.cashbackAmount) : undefined;
+    const orderValueRaw = body.orderValue ?? body.order_value ?? body.transaction_value;
+    const orderValue = orderValueRaw === undefined ? undefined : Number(orderValueRaw);
+    const commissionRaw = body.commissionAmount ?? body.commission_amount ?? body.pub_commission ?? body.commission;
+    const commissionAmount = commissionRaw === undefined ? undefined : Number(commissionRaw);
+    const cashbackAmount = body.cashbackAmount === undefined ? undefined : Number(body.cashbackAmount);
     const rawStatus = String(body.status || "pending").toLowerCase();
 
     const status: "pending" | "completed" | "rejected" =
-      rawStatus === "2" || rawStatus === "approved" || rawStatus === "completed" || rawStatus === "success"
+      rawStatus === "2" || rawStatus === "approved" || rawStatus === "completed"
         ? "completed"
         : rawStatus === "3" || rawStatus === "rejected" || rawStatus === "cancelled"
           ? "rejected"
@@ -135,7 +143,6 @@ export async function POST(request: NextRequest) {
     const result = await recordCashbackOrder({
       orderId,
       subId,
-      userId,
       platform,
       productName,
       productImage,
