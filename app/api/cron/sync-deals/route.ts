@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 import { syncXtra } from '@/lib/deals/xtra-sync.mjs';
+import { getVouchers } from '@/lib/deals/vouchers';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,10 @@ async function handleSyncDeals(request: NextRequest) {
       return NextResponse.json({ status: 'browser_launch_failed', engine: 'vercel-chromium' }, { status: 502 });
     } finally { await browser?.close().catch(() => {}); }
   }
+
+  // Tự động đồng bộ kho voucher Shopee thật
+  await getVouchers().catch(() => null);
+
   const result = await syncXtra({
     env: process.env,
     createDb: (url: string, key: string) => createClient(url, key, {
