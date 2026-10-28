@@ -1,8 +1,6 @@
 import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { hasSupabaseConfig, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
-import { createClient } from "@supabase/supabase-js";
 import type { Coupon } from "./types";
 import { getDailyShopeeCoupons } from "./coupons-static";
 
@@ -46,21 +44,6 @@ function getDynamicTTL(): number {
 const DEALHOAN_AFFILIATE_ID = "17333200656";
 
 let inFlightSync: Promise<Coupon[]> | null = null;
-
-async function readFromSupabase(): Promise<Coupon[] | null> {
-  if (!hasSupabaseConfig || !supabaseUrl || !supabasePublishableKey) return null;
-  try {
-    const sb = createClient(supabaseUrl, supabasePublishableKey);
-    const { data, error } = await sb.from("flash_sale_cache").select("data").eq("id", "latest").single();
-    if (error || !data) return null;
-    if (Array.isArray(data.data?.vouchers) && data.data.vouchers.length > 0) {
-      return data.data.vouchers as Coupon[];
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
 
 /**
  * Tự động cào mã giảm giá thật đang chạy trên hệ thống Shopee
@@ -171,15 +154,7 @@ export async function getVouchers(): Promise<Coupon[]> {
   let cachedVouchers: Coupon[] = [];
   let isCacheStale = true;
 
-  // 1. Kiểm tra cache Supabase Cloud
-  try {
-    const cloud = await readFromSupabase();
-    if (cloud && cloud.length > 0) {
-      return cloud;
-    }
-  } catch {}
-
-  // 2. Kiểm tra file cache cục bộ
+  // 1. Kiểm tra file cache cục bộ
   try {
     if (existsSync(VOUCHER_CACHE_PATH)) {
       const stats = await stat(VOUCHER_CACHE_PATH);
