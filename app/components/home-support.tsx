@@ -50,7 +50,7 @@ export default function HomeSupport({ onStart, onAccount, signedIn, accountPendi
     </section>
 
     <section id="faq" aria-labelledby="faq-title" className={s.faq}>
-      <div className={s.faqIntro} data-motion="left"><span className={s.eyebrow}>GIẢI ĐÁP NHANH</span><h2 id="faq-title">Bạn hỏi,<span>DealHoàn trả lời</span></h2><p className={s.lead}>Những điều nên biết để mua sắm chủ động hơn.</p><Image src={`${art}faq-chat.webp`} alt="" width={480} height={480} sizes="(max-width: 767px) 130px, 280px" data-motion-art className={s.chatArt} /><Link href="/terms" className={s.termsLink}>Xem điều khoản <ArrowRightIcon size={24} aria-hidden="true" /></Link></div>
+      <div className={s.faqIntro} data-motion="left"><span className={s.eyebrow}>GIẢI ĐÁP NHANH</span><h2 id="faq-title">Bạn hỏi,<span>DealHoàn trả lời</span></h2><p className={s.lead}>Những điều nên biết để mua sắm chủ động hơn.</p><Image src={`${art}faq-chat.webp`} alt="" width={480} height={480} sizes="(max-width: 767px) 130px, 280px" data-motion-art className={s.chatArt} /><Link href="/terms" className={s.termsLink}>Xem điều khoản <ArrowRightIcon size={20} aria-hidden="true" /></Link></div>
       <div className={s.faqList}>{questions.map(([question, answer], index) => <details data-motion="rise" data-motion-delay={Math.min(index * 55, 165)} key={question}><summary>{question}<PlusIcon size={22} weight="bold" aria-hidden="true" /></summary><div className={s.answer}><p>{answer}</p></div></details>)}<Link href="/help" className={s.helpLink}>Xem trung tâm trợ giúp <ArrowRightIcon size={18} aria-hidden="true" /></Link></div>
     </section>
 
