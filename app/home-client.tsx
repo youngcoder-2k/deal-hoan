@@ -1338,6 +1338,7 @@ export default function HomeClient({
       )}
       {accountOpen && user && (
         <AccountModal
+          key={user.id}
           user={user}
           onClose={() => {
             setAccountOpen(false);

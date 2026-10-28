@@ -168,31 +168,47 @@ export default function AccountModal({
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState({ wallet: true, orders: true, history: true });
   const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
+  const ready = !Object.values(loading).some(Boolean) && Object.keys(loadErrors).length === 0;
+  const openerRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const tabId = useId();
 
   useEffect(() => {
-    const previous = document.activeElement as HTMLElement | null;
+    openerRef.current = document.activeElement as HTMLElement | null;
+    return () => { openerRef.current?.focus(); };
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
-    return () => { document.body.style.overflow = oldOverflow; previous?.focus(); };
-  }, []);
+    return () => { document.body.style.overflow = oldOverflow; };
+  }, [ready]);
 
   const refCode = `u_${user.id.slice(0, 8)}`;
 
   // Tải dữ liệu ví và lịch sử từ server
   useEffect(() => {
     let cancelled = false;
-    const finish = (key: "wallet" | "orders" | "history") => { if (!cancelled) setLoading(prev => ({ ...prev, [key]: false })); };
+    const controller = new AbortController();
+    const deadline = setTimeout(() => controller.abort(), 15000);
+    let remaining = 3;
+    const finish = (key: "wallet" | "orders" | "history") => { if (--remaining === 0) clearTimeout(deadline); if (!cancelled) setLoading(prev => ({ ...prev, [key]: false })); };
     const failed = (key: string) => { if (!cancelled) setLoadErrors(prev => ({ ...prev, [key]: "Tải dữ liệu chưa thành công. Vui lòng thử lại." })); };
 
-    fetch("/api/wallet")
+    fetch("/api/wallet", { cache: "no-store", signal: controller.signal })
       .then((res) => { if (!res.ok) throw new Error("Request failed"); return res.json(); })
       .then((data) => {
-        if (!cancelled && data.wallet) {
-          const serverW = data.wallet;
+        if (!data.wallet || ![data.wallet.balance, data.wallet.pending_balance, data.wallet.total_withdrawn].every(value => typeof value === "number" && Number.isFinite(value) && value >= 0)) throw new Error("Invalid wallet data");
+        if (!cancelled) {
+          const serverW: WalletData = {
+            ...data.wallet,
+            bank_name: typeof data.wallet.bank_name === "string" ? data.wallet.bank_name : "",
+            bank_account_no: typeof data.wallet.bank_account_no === "string" ? data.wallet.bank_account_no : "",
+            bank_account_name: typeof data.wallet.bank_account_name === "string" ? data.wallet.bank_account_name : "",
+          };
 
           // Nếu server có thông tin ngân hàng thì cập nhật state & localStorage
           if (serverW.bank_account_no) {
@@ -244,19 +260,21 @@ export default function AccountModal({
       })
       .catch(() => failed("wallet")).finally(() => finish("wallet"));
 
-    fetch("/api/wallet/withdraw")
+    fetch("/api/wallet/withdraw", { cache: "no-store", signal: controller.signal })
       .then((res) => { if (!res.ok) throw new Error("Request failed"); return res.json(); })
       .then((data) => {
-        if (!cancelled && Array.isArray(data.history)) {
+        if (!Array.isArray(data.history)) throw new Error("Invalid history data");
+        if (!cancelled) {
           setHistory(data.history);
         }
       })
       .catch(() => failed("history")).finally(() => finish("history"));
 
-    fetch("/api/wallet/orders")
+    fetch("/api/wallet/orders", { cache: "no-store", signal: controller.signal })
       .then((res) => { if (!res.ok) throw new Error("Request failed"); return res.json(); })
       .then((data) => {
-        if (!cancelled && Array.isArray(data.orders)) {
+        if (!Array.isArray(data.orders)) throw new Error("Invalid orders data");
+        if (!cancelled) {
           setOrders(data.orders);
         }
       })
@@ -264,6 +282,8 @@ export default function AccountModal({
 
     return () => {
       cancelled = true;
+      clearTimeout(deadline);
+      controller.abort();
     };
   }, [user.id, refreshKey]);
 
@@ -503,6 +523,15 @@ export default function AccountModal({
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   };
 
+  if (!ready) {
+    const failed = Object.keys(loadErrors).length > 0;
+    return <aside className={s.opening} aria-label="Tải ví hoàn tiền">
+      <span role={failed ? "alert" : "status"}>{failed ? "Chưa tải được thông tin ví. Vui lòng thử lại." : "Đang tải thông tin ví…"}</span>
+      {failed && <button type="button" disabled={Object.values(loading).some(Boolean)} onClick={() => { setLoading({ wallet: true, orders: true, history: true }); setLoadErrors({}); setRefreshKey(key => key + 1); }}>Thử lại</button>}
+      <button type="button" onClick={onClose} aria-label="Hủy mở ví">Hủy</button>
+    </aside>;
+  }
+
   return (
     <div className={s.overlay} onClick={onClose}>
       <div className={s.dialog} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1} onKeyDown={onDialogKeyDown} onClick={event => event.stopPropagation()}>
@@ -539,7 +568,6 @@ export default function AccountModal({
         <div className={s.content} role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${activeTab}`} tabIndex={0}>
           {(loadErrors.wallet || loadErrors[activeTab === "withdraw" ? "history" : activeTab]) && <div className={s.error} role="alert"><Info size={18} /><span>Tải dữ liệu chưa thành công. Vui lòng thử lại.</span><button type="button" onClick={() => { setLoading({ wallet: true, orders: true, history: true }); setLoadErrors({}); setRefreshKey(key => key + 1); }}>Thử lại</button></div>}
           {activeTab === "orders" && <>
-            <div className={s.notice}><Clock size={18} /> Đơn hàng thường được cập nhật trong 1–24 giờ.</div>
             {loading.orders ? <p className={s.loading} role="status">Đang tải đơn hoàn tiền…</p> : loadErrors.orders ? null : orders.length === 0 ? <div className={s.empty}>
               <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span><h3>Chưa có đơn hoàn tiền</h3>
               <Link href="/#deals" onClick={onClose} className={s.primary}>Tìm sản phẩm nhận hoàn <ArrowRight size={19} /></Link>
