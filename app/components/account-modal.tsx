@@ -319,7 +319,7 @@ export default function AccountModal({
     if (parsedAmount < 10000) {
       return {
         isValid: false,
-        error: `Số tiền rút tối thiểu là 10.000đ (còn thiếu ${formatVnd(10000 - parsedAmount)}).`,
+        error: "Số tiền rút tối thiểu là 10.000đ.",
       };
     }
     if (parsedAmount > wallet.balance) {
