@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { ArrowLeft, ArrowClockwise, DownloadSimple, CaretRight, Bank } from "@phosphor-icons/react";
+import design from "./admin-users.module.css";
 import type { AdminUserItem, AdminKPIStats } from "@/lib/auth/admin";
 import {
   type CashbackBoosterSettings,
@@ -1095,86 +1097,14 @@ export default function AdminUsersClient({
   };
 
   return (
-    <div className="admin-page-container">
+    <div className={`admin-page-container ${design.root} ${activeTab === "users" ? design.users : ""}`}>
       {/* Toast Notification */}
       {toastMsg && <div className="admin-toast">{toastMsg}</div>}
 
-      {/* Top Header */}
       <header className="admin-header">
         <div className="admin-header-inner">
-          <div className="admin-brand-area">
-            <Link href="/" className="admin-back-btn" title="Quay lại trang chủ DealHoàn">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12" />
-                <polyline points="12 19 5 12 12 5" />
-              </svg>
-              <span>Về trang chủ</span>
-            </Link>
-
-            <div className="admin-title-wrap">
-              <div className="admin-title-row">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/brand/deal-hoan-mark.png" alt="DealHoàn" className="admin-logo-mark" />
-                <h1 className="admin-heading">Quản Lý Người Dùng & Số Dư</h1>
-                <span className="admin-role-tag">🛡️ Admin Portal</span>
-                {isRealData ? (
-                  <span
-                    className="admin-status-badge badge-live"
-                    title="Đang hiển thị dữ liệu tài khoản người dùng thực từ Supabase"
-                  >
-                    <span className="live-dot" /> Dữ liệu thật
-                  </span>
-                ) : (
-                  <span
-                    className="admin-status-badge badge-demo"
-                    title="Chưa có người dùng thực trong CSDL, đang hiển thị dữ liệu mẫu"
-                  >
-                    Demo Mode
-                  </span>
-                )}
-              </div>
-              <p className="admin-subheading">
-                Tra cứu danh sách thành viên, số dư ví khả dụng, tài khoản ngân hàng nhận tiền và đối soát chi trả.
-              </p>
-            </div>
-          </div>
-
-          <div className="admin-actions-area">
-            <button
-              onClick={refreshData}
-              disabled={loading}
-              className="admin-btn-secondary"
-              title="Tải lại dữ liệu"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className={loading ? "animate-spin" : ""}
-              >
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-              </svg>
-              <span>{loading ? "Đang tải…" : "Làm mới"}</span>
-            </button>
-
-            <button
-              onClick={exportToCsv}
-              className="admin-btn-primary"
-              title="Xuất file CSV danh sách người dùng và STK"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              <span>Xuất CSV ({filteredUsers.length})</span>
-            </button>
-          </div>
+          <Link href="/" className={design.brand}><span>DealHoàn</span><span className={design.adminLabel}>Quản trị</span></Link>
+          <Link href="/" className="admin-back-btn"><ArrowLeft size={18} /> Về trang chủ</Link>
         </div>
       </header>
 
@@ -1185,8 +1115,8 @@ export default function AdminUsersClient({
           className={`admin-nav-tab-btn ${activeTab === "users" ? "active" : ""}`}
           onClick={() => setActiveTab("users")}
         >
-          <span className="tab-icon">👥</span>
-          <span>Quản Lý Người Dùng & Số Dư</span>
+
+          <span>Người dùng</span>
           <span className="tab-pill">{users.length}</span>
         </button>
         <button
@@ -1197,8 +1127,8 @@ export default function AdminUsersClient({
             loadBoosterSettings();
           }}
         >
-          <span className="tab-icon">⚙️</span>
-          <span>Cấu Hình Tỷ Lệ Hoàn Tiền (Smart Booster)</span>
+
+          <span>Tỷ lệ hoàn tiền</span>
           <span className="tab-pill tab-pill-boost">
             {boosterSettings.boostFactor > 0 ? `${boosterSettings.boostFactor.toFixed(2)}x Boost` : "Tắt thưởng"}
           </span>
@@ -1211,8 +1141,8 @@ export default function AdminUsersClient({
             loadShopeeSyncConfig();
           }}
         >
-          <span className="tab-icon">⚡</span>
-          <span>Tự Động Đồng Bộ Shopee (Auto-Pilot 24/7)</span>
+
+          <span>Đồng bộ Shopee</span>
           <span className="tab-pill">
             {autoSyncEnabled ? "🟢 15p/lần" : "⚪ Tắt"}
           </span>
@@ -1222,6 +1152,10 @@ export default function AdminUsersClient({
       <main className="admin-main">
         {activeTab === "users" && (
           <>
+            <div className={design.titleBar}>
+              <div><h1>Người dùng &amp; số dư</h1><span>{users.length} người dùng</span></div>
+              <div className="admin-actions-area"><button type="button" className="admin-btn-secondary" onClick={refreshData} disabled={loading}><ArrowClockwise size={18} className={loading ? "animate-spin" : ""} />{loading ? "Đang tải…" : "Làm mới"}</button><button type="button" className="admin-btn-primary" onClick={exportToCsv}><DownloadSimple size={18} />Xuất CSV</button></div>
+            </div>
             {/* Banner thông báo khi chưa có cấu hình Supabase */}
             {!isRealData && (
           <div className="admin-demo-alert">
@@ -1236,87 +1170,14 @@ export default function AdminUsersClient({
           </div>
         )}
 
-        {/* KPI Stats Grid (5 Cards) */}
-        <section className="admin-kpi-grid">
-          {/* Card 1: Tổng người dùng */}
-          <div className="admin-kpi-card">
-            <div className="kpi-icon-wrap kpi-purple">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                <circle cx="9" cy="7" r="4" />
-                <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-              </svg>
-            </div>
-            <div className="kpi-info">
-              <span className="kpi-label">TỔNG NGƯỜI DÙNG</span>
-              <div className="kpi-value">{stats.totalUsers} <span className="kpi-unit">user</span></div>
-              <div className="kpi-sub">Đã đăng ký tài khoản</div>
-            </div>
-          </div>
-
-          {/* Card 2: Tổng số dư khả dụng */}
-          <div className="admin-kpi-card">
-            <div className="kpi-icon-wrap kpi-green">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" />
-                <path d="M3 5v14a2 2 0 0 0 2 2h16v-5" />
-                <path d="M18 12a2 2 0 0 0 0 4h4v-4Z" />
-              </svg>
-            </div>
-            <div className="kpi-info">
-              <span className="kpi-label">SỐ DƯ KHẢ DỤNG TOÀN SÀN</span>
-              <div className="kpi-value text-green">{formatVnd(stats.totalBalance)}</div>
-              <div className="kpi-sub">Cần chi trả khi user rút</div>
-            </div>
-          </div>
-
-          {/* Card 3: Chờ đối soát */}
-          <div className="admin-kpi-card">
-            <div className="kpi-icon-wrap kpi-amber">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-            </div>
-            <div className="kpi-info">
-              <span className="kpi-label">TIỀN CHỜ HOÀN (14–15 NGÀY)</span>
-              <div className="kpi-value text-amber">{formatVnd(stats.totalPendingBalance)}</div>
-              <div className="kpi-sub">Đang đối soát đơn sàn</div>
-            </div>
-          </div>
-
-          {/* Card 4: Tổng đã chi trả */}
-          <div className="admin-kpi-card">
-            <div className="kpi-icon-wrap kpi-blue">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 21h18M3 10h18M5 10v11M9 10v11M15 10v11M19 10v11M12 2 2 7h20L12 2z" />
-              </svg>
-            </div>
-            <div className="kpi-info">
-              <span className="kpi-label">TỔNG TIỀN ĐÃ CHI TRẢ</span>
-              <div className="kpi-value text-blue">{formatVnd(stats.totalWithdrawn)}</div>
-              <div className="kpi-sub">Đã chuyển khoản Napas247</div>
-            </div>
-          </div>
-
-          {/* Card 5: Tỷ lệ liên kết ngân hàng */}
-          <div className="admin-kpi-card">
-            <div className="kpi-icon-wrap kpi-teal">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="20" height="14" x="2" y="5" rx="2" />
-                <line x1="2" x2="22" y1="10" y2="10" />
-              </svg>
-            </div>
-            <div className="kpi-info">
-              <span className="kpi-label">LIÊN KẾT NGÂN HÀNG</span>
-              <div className="kpi-value">
-                {stats.bankLinkedUsers}/{stats.totalUsers}{" "}
-                <span className="kpi-rate-badge">{stats.bankLinkedRate}%</span>
-              </div>
-              <div className="kpi-sub">Đã lưu thông tin tài khoản</div>
-            </div>
-          </div>
+        <section className="admin-kpi-grid" aria-label="Thống kê người dùng">
+          {[
+            { label: "Người dùng", value: stats.totalUsers, available: false },
+            { label: "Số dư khả dụng", value: formatVnd(stats.totalBalance), available: true },
+            { label: "Chờ hoàn", value: formatVnd(stats.totalPendingBalance), available: false },
+            { label: "Đã chi trả", value: formatVnd(stats.totalWithdrawn), available: false },
+            { label: "Đã liên kết ngân hàng", value: `${stats.bankLinkedUsers}/${stats.totalUsers}`, available: false },
+          ].map(stat => <div className="admin-kpi-card" key={stat.label}><span className="kpi-label">{stat.label}</span><strong className={`kpi-value ${stat.available ? "text-green" : ""}`}>{stat.value}</strong></div>)}
         </section>
 
         {/* Filter Toolbar */}
@@ -1330,7 +1191,8 @@ export default function AdminUsersClient({
             </span>
             <input
               type="text"
-              placeholder="Tìm theo Tên, Email, Mã user, Số tài khoản, Ngân hàng..."
+              placeholder="Tìm tên, email, mã người dùng…"
+              aria-label="Tìm kiếm người dùng"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="admin-search-input"
@@ -1350,8 +1212,9 @@ export default function AdminUsersClient({
           <div className="admin-filters-row">
             {/* Lọc ngân hàng */}
             <div className="filter-group">
-              <label>Tài khoản ngân hàng:</label>
+              <label htmlFor="admin-bank-filter">Ngân hàng:</label>
               <select
+                id="admin-bank-filter"
                 value={bankFilter}
                 onChange={(e) =>
                   setBankFilter(e.target.value as "all" | "linked" | "unlinked")
@@ -1359,22 +1222,23 @@ export default function AdminUsersClient({
                 className="admin-select"
               >
                 <option value="all">Tất cả ({users.length})</option>
-                <option value="linked">Đã có tài khoản NH ({users.filter((u) => u.isBankConfigured).length})</option>
+                <option value="linked">Đã liên kết ({users.filter((u) => u.isBankConfigured).length})</option>
                 <option value="unlinked">Chưa liên kết ({users.filter((u) => !u.isBankConfigured).length})</option>
               </select>
             </div>
 
             {/* Lọc số dư */}
             <div className="filter-group">
-              <label>Trạng thái số dư:</label>
+              <label htmlFor="admin-balance-filter">Số dư:</label>
               <select
+                id="admin-balance-filter"
                 value={balanceFilter}
                 onChange={(e) =>
                   setBalanceFilter(e.target.value as "all" | "positive" | "zero" | "pending")
                 }
                 className="admin-select"
               >
-                <option value="all">Tất cả số dư</option>
+                <option value="all">Tất cả</option>
                 <option value="positive">Có số dư &gt; 0đ ({users.filter((u) => u.balance > 0).length})</option>
                 <option value="pending">Có tiền chờ hoàn ({users.filter((u) => u.pendingBalance > 0).length})</option>
                 <option value="zero">Số dư = 0đ ({users.filter((u) => u.balance === 0).length})</option>
@@ -1383,8 +1247,9 @@ export default function AdminUsersClient({
 
             {/* Sắp xếp */}
             <div className="filter-group">
-              <label>Sắp xếp theo:</label>
+              <label htmlFor="admin-sort">Sắp xếp:</label>
               <select
+                id="admin-sort"
                 value={sortBy}
                 onChange={(e) =>
                   setSortBy(
@@ -1399,8 +1264,8 @@ export default function AdminUsersClient({
                 }
                 className="admin-select"
               >
-                <option value="smart_desc">✨ Mới nhất & Số dư lớn nhất (Mặc định)</option>
-                <option value="created_desc">Mới tham gia nhất (Mới nhất) ↓</option>
+                <option value="smart_desc">Mới nhất & số dư</option>
+                <option value="created_desc">Mới nhất</option>
                 <option value="balance_desc">Số dư khả dụng cao nhất ↓</option>
                 <option value="balance_asc">Số dư thấp nhất ↑</option>
                 <option value="withdrawn_desc">Đã rút nhiều nhất ↓</option>
@@ -1436,14 +1301,14 @@ export default function AdminUsersClient({
           ) : (
             <>
               <div className="table-responsive">
-              <table className="admin-data-table">
+              <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
                 <thead>
                   <tr>
-                    <th>NGƯỜI DÙNG</th>
-                    <th>SỐ DƯ VÍ (VNĐ)</th>
-                    <th>THÔNG TIN NGÂN HÀNG</th>
-                    <th>LỆNH RÚT GẦN NHẤT</th>
-                    <th className="text-right">THAO TÁC</th>
+                    <th scope="col">Người dùng</th>
+                    <th scope="col" className={design.numeric}>Khả dụng</th><th scope="col" className={design.numeric}>Chờ hoàn</th>
+                    <th scope="col">Ngân hàng</th>
+                    <th scope="col">Lệnh rút gần nhất</th>
+                    <th scope="col" className="text-right"><span className={design.srOnly}>Thao tác</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1485,68 +1350,14 @@ export default function AdminUsersClient({
                         </div>
                       </td>
 
-                      {/* Cột 2: Số dư */}
-                      <td className="cell-balances">
-                        <div className="balances-cell-wrap">
-                          <div className="balance-pill green-pill" title="Số dư khả dụng có thể rút ngay">
-                            <span className="pill-dot green-dot" />
-                            <span className="pill-label">Khả dụng:</span>
-                            <strong className="pill-val">{formatVnd(u.balance)}</strong>
-                          </div>
-
-                          <div className="balance-sub-row">
-                            <span className="balance-sub-item amber-text" title="Tiền chờ duyệt đối soát">
-                              ⏳ Chờ hoàn: <b>{formatVnd(u.pendingBalance)}</b>
-                            </span>
-                            <span className="balance-sub-item blue-text" title="Tổng tiền đã chi trả về tài khoản">
-                              🏦 Đã rút: <b>{formatVnd(u.totalWithdrawn)}</b>
-                            </span>
-                          </div>
-                        </div>
-                      </td>
+                      <td className={design.numeric}><strong className={u.balance > 0 ? design.positive : ""}>{formatVnd(u.balance)}</strong></td>
+                      <td className={design.numeric}>{formatVnd(u.pendingBalance)}</td>
 
                       {/* Cột 3: Ngân hàng */}
                       <td className="cell-bank">
                         {u.isBankConfigured ? (
-                          <div className="bank-info-box">
-                            <div className="bank-badge-line">
-                              <span className="bank-name-badge">{u.bankName}</span>
-                            </div>
-
-                            <div className="bank-account-line">
-                              <span className="bank-no-mono">{u.bankAccountNo}</span>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  copyToClipboard(u.bankAccountNo, "Số tài khoản", `stk-${u.id}`)
-                                }
-                                className={`btn-copy-mini ${
-                                  copiedId === `stk-${u.id}` ? "copied" : ""
-                                }`}
-                                title="Sao chép số tài khoản"
-                              >
-                                {copiedId === `stk-${u.id}` ? (
-                                  <span>✓ Đã chép</span>
-                                ) : (
-                                  <>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                      <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
-                                      <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
-                                    </svg>
-                                    <span>Copy</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-
-                            <div className="bank-holder-line">{u.bankAccountName}</div>
-                          </div>
-                        ) : (
-                          <div className="bank-unlinked-badge">
-                            <span>⚠️</span>
-                            <span>Chưa liên kết ngân hàng</span>
-                          </div>
-                        )}
+                          <div className={design.bankSummary}><Bank size={21} /><div><strong>{u.bankName}</strong><span>•••• {u.bankAccountNo.slice(-4)}</span></div></div>
+                        ) : <span className={design.muted}>Chưa liên kết</span>}
                       </td>
 
                       {/* Cột 4: Lệnh rút gần nhất */}
@@ -1568,7 +1379,7 @@ export default function AdminUsersClient({
                             <span className="w-time">{formatDateShort(u.latestWithdrawal.createdAt)}</span>
                           </div>
                         ) : (
-                          <span className="w-empty">— Chưa có lệnh —</span>
+                          <span className="w-empty" aria-label="Chưa có lệnh rút">—</span>
                         )}
                       </td>
 
@@ -1581,7 +1392,7 @@ export default function AdminUsersClient({
                             className="btn-action-detail"
                             title="Xem hồ sơ & đối soát chi tiết"
                           >
-                            Chi tiết
+                            Chi tiết <CaretRight size={15} />
                           </button>
                         </div>
                       </td>
@@ -1936,7 +1747,7 @@ export default function AdminUsersClient({
               </div>
 
               <div className="table-responsive">
-                <table className="admin-data-table">
+                <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
                   <thead>
                     <tr>
                       <th>Sản phẩm mẫu</th>
@@ -2402,7 +2213,7 @@ export default function AdminUsersClient({
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <table className="admin-data-table">
+                  <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
                     <thead>
                       <tr>
                         <th>Mã đơn Shopee</th>
