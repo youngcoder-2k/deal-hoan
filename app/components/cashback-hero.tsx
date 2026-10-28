@@ -246,33 +246,21 @@ export function CashbackReceipt({
                       <div className={styles.voucherActions}>
                         <button
                           type="button"
-                          className={styles.voucherCopyBtn}
+                          className={`${styles.voucherCodeBtn} ${isCopied ? styles.voucherCodeBtnCopied : ""}`}
                           onClick={() => handleCopyVoucher(mv.coupon.code)}
-                          title="Sao chép mã giảm giá"
+                          title={isCopied ? "Đã chép mã Shopee" : "Bấm để sao chép mã Shopee"}
                         >
+                          <span className={styles.voucherCodeText}>{mv.coupon.code}</span>
                           {isCopied ? (
-                            <>
-                              <CheckIcon size={12} weight="bold" />
-                              Đã chép
-                            </>
+                            <CheckIcon size={12} weight="bold" className={styles.voucherCodeIcon} />
                           ) : (
-                            <>
-                              <CopyIcon size={12} />
-                              Chép mã
-                            </>
+                            <CopyIcon size={12} className={styles.voucherCodeIcon} />
                           )}
                         </button>
-                        <span
-                          className={styles.voucherCodeBadge}
-                          onClick={() => handleCopyVoucher(mv.coupon.code)}
-                          title="Bấm để sao chép mã Shopee"
-                        >
-                          {mv.coupon.code}
-                        </span>
                       </div>
                     </div>
                   ) : (
-                    <span style={{ fontSize: "11px", color: "#94a3b8", flexShrink: 0 }}>
+                    <span className={styles.voucherCodeDisabled} title={mv.reason}>
                       {mv.coupon.code}
                     </span>
                   )}

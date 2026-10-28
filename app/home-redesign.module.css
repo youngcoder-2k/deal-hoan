@@ -179,7 +179,11 @@
 @keyframes guideCoinFloat { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-5px) rotate(4deg); } }
 .resultState { height: 100%; min-height: 0; animation: stateIn .35s ease both; }
 .resultClosing { animation: stateOut .32s ease both; pointer-events: none; }
-.receipt { display: flex; flex-direction: column; padding: 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+.receipt { display: flex; flex-direction: column; padding: 0 6px 0 0; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #fb923c transparent; -webkit-overflow-scrolling: touch; }
+.receipt::-webkit-scrollbar { width: 4px; }
+.receipt::-webkit-scrollbar-track { background: transparent; margin: 4px 0; }
+.receipt::-webkit-scrollbar-thumb { background: #fdba74; border-radius: 999px; }
+.receipt::-webkit-scrollbar-thumb:hover { background: #f97316; }
 .receiptHeading { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; }
 .receiptHeading h2 { margin: 0; font-size: 13px; font-weight: 600; line-height: 20px; letter-spacing: -.2px; }
 .platformBadge { display: inline-flex; align-items: center; flex-shrink: 0; padding: 5px 8px; border-radius: 9px; background: #fff0e9; }
@@ -549,8 +553,26 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 240px;
+  max-height: 280px;
   overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #fdba74 transparent;
+  -webkit-overflow-scrolling: touch;
+}
+.voucherList::-webkit-scrollbar {
+  width: 4px;
+}
+.voucherList::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 2px 0;
+}
+.voucherList::-webkit-scrollbar-thumb {
+  background: #fed7aa;
+  border-radius: 999px;
+}
+.voucherList::-webkit-scrollbar-thumb:hover {
+  background: #fb923c;
 }
 .voucherItem {
   display: flex;
@@ -609,50 +631,90 @@
   white-space: nowrap;
   margin-bottom: 3px;
 }
-.voucherCopyBtn {
-  background: #ffedd5;
-  border: 1px solid #fed7aa;
-  color: #c2410c;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-.voucherCopyBtn:hover {
-  background: #fed7aa;
-}
 .voucherActions {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 6px;
 }
-.voucherCodeBadge {
+.voucherCodeBtn {
   background: #fff7ed;
   color: #ea580c;
   border: 1px dashed #f97316;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 11px;
   font-weight: 700;
-  padding: 3px 8px;
+  padding: 4px 8px;
   border-radius: 6px;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   cursor: pointer;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   transition: all 0.15s ease;
-  user-select: all;
+  flex-shrink: 0;
 }
-.voucherCodeBadge:hover {
+.voucherCodeBtn:hover {
   background: #ffedd5;
   border-color: #ea580c;
+  transform: translateY(-1px);
+}
+.voucherCodeBtnCopied {
+  background: #f0fdf4 !important;
+  color: #16a34a !important;
+  border-color: #22c55e !important;
+  border-style: solid !important;
+}
+.voucherCodeText {
+  display: inline-block;
+  line-height: 1;
+}
+.voucherCodeIcon {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+.voucherCodeDisabled {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  color: #94a3b8;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+@media (max-width: 600px) {
+  .receipt {
+    padding-right: 6px;
+  }
+  .voucherSection {
+    padding: 10px 8px;
+    margin-top: 10px;
+  }
+  .voucherList {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
+    gap: 6px;
+  }
+  .voucherItem {
+    padding: 7px 8px;
+    gap: 6px;
+  }
+  .voucherTitle {
+    font-size: 11px;
+  }
+  .voucherCondition {
+    font-size: 10px;
+  }
+  .voucherSavings {
+    font-size: 12px;
+  }
+  .voucherCodeBtn {
+    padding: 3px 6px;
+    font-size: 10px;
+    gap: 4px;
+  }
 }
 
 
