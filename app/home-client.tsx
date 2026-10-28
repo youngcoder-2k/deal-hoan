@@ -264,7 +264,11 @@ export default function HomeClient({
   const [topToast, setTopToast] = useState<ToastData | null>(null);
 
   const showTopToast = (data: ToastData) => {
-    setTopToast({ id: Date.now(), ...data, ...((data.type === "error" || data.type === "warning") ? { title: undefined, message: "Vui lòng nhập đúng link sản phẩm Shopee" } : {}) });
+    setTopToast({
+      id: Date.now(),
+      ...data,
+      message: data.message || "Vui lòng nhập đúng link sản phẩm Shopee",
+    });
   };
 
   const allCoupons = useMemo(() => {
@@ -431,7 +435,24 @@ export default function HomeClient({
         : "❤️ Đã lưu vào yêu thích",
     );
   };
-  const signInWithGoogle = async () => {
+  const handleRequireAuth = (source?: "copy" | "link" | "buy") => {
+    showTopToast({
+      type: "warning",
+      message: "Vui lòng đăng nhập trước để hệ thống ghi nhận tiền hoàn khi mua hàng!",
+    });
+    notify("Vui lòng đăng nhập trước để hệ thống ghi nhận tiền hoàn khi mua hàng!");
+    if (source === "buy") {
+      void signInWithGoogle(false);
+    }
+  };
+
+  const signInWithGoogle = async (options?: { openAccountModal?: boolean } | boolean) => {
+    const openAccountModal = typeof options === "boolean" ? options : (options?.openAccountModal ?? true);
+    if (link) {
+      try {
+        sessionStorage.setItem("dealhoan_pending_calc_link", link);
+      } catch {}
+    }
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
       notify("Đang mở tài khoản Demo...");
@@ -448,7 +469,9 @@ export default function HomeClient({
         created_at: new Date().toISOString(),
       } as User;
       setUser(demoUser);
-      setAccountOpen(true);
+      if (openAccountModal) {
+        setAccountOpen(true);
+      }
       return;
     }
 
@@ -633,6 +656,20 @@ export default function HomeClient({
     }
   };
 
+  useEffect(() => {
+    if (!user) return;
+    try {
+      const pending = sessionStorage.getItem("dealhoan_pending_calc_link");
+      if (pending) {
+        sessionStorage.removeItem("dealhoan_pending_calc_link");
+        if (!calculatedProduct) {
+          setLink(pending);
+          void executeCalculation(pending);
+        }
+      }
+    } catch {}
+  }, [user, calculatedProduct]);
+
   const [readingClipboard, setReadingClipboard] = useState(false);
   const pasteCopiedLink = async () => {
     if (busy || readingClipboard) return;
@@ -699,7 +736,10 @@ export default function HomeClient({
   }, [trackedLink, user?.id]);
 
   const copyTrackedLink = async () => {
-    if (!user) { void signInWithGoogle(); return; }
+    if (!user) {
+      handleRequireAuth("copy");
+      return;
+    }
     const calculationId = calculationIdRef.current;
     try {
       await navigator.clipboard.writeText(currentTrackedLink);
@@ -821,7 +861,7 @@ export default function HomeClient({
                 </button>
               </>
             ) : (
-              <button disabled={authPending} onClick={signInWithGoogle} className="account-login-btn">
+              <button disabled={authPending} onClick={() => void signInWithGoogle()} className="account-login-btn">
                 {authPending ? "Đang mở…" : "Đăng nhập"}
               </button>
             )}
@@ -848,10 +888,15 @@ export default function HomeClient({
                     copied={copiedTracked}
                     onCopy={copyTrackedLink}
                     onBuy={() => {
-                      if (!user) { void signInWithGoogle(); return false; }
+                      if (!user) {
+                        handleRequireAuth("buy");
+                        return false;
+                      }
                       notify(`Đang chuyển tới ${result || "Shopee"} để nhận hoàn tiền!`);
                     }}
                     onClear={() => resetCalculation()}
+                    isLoggedIn={Boolean(user)}
+                    onRequireAuth={handleRequireAuth}
                   />
                 </div>
               ) : <CashbackEmpty busy={busy} />}

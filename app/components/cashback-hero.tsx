@@ -133,13 +133,24 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
   );
 }
 
-export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, onClear }: {
+export function CashbackReceipt({
+  product,
+  trackedLink,
+  copied,
+  onCopy,
+  onBuy,
+  onClear,
+  isLoggedIn = false,
+  onRequireAuth,
+}: {
   product: CalculatedProduct;
   trackedLink: string;
   copied: boolean;
   onCopy: () => void;
   onBuy?: () => boolean | void;
   onClear: () => void;
+  isLoggedIn?: boolean;
+  onRequireAuth?: (action?: "copy" | "link" | "buy") => void;
 }) {
   const { price, cashback } = product;
   // Savings may include marketplace discounts, so it is not the cashback rate.
@@ -192,26 +203,64 @@ export function CashbackReceipt({ product, trackedLink, copied, onCopy, onBuy, o
         <div className={styles.linkSection}>
           <p>Link nhận hoàn</p>
           <div className={styles.linkRow}>
-            <a href={targetUrl} target="_blank" rel="noopener noreferrer" title={targetUrl}>{trackedLink}</a>
-            <button type="button" className={copied ? styles.copied : ""} onClick={onCopy}>
+            {isLoggedIn ? (
+              <a href={targetUrl} target="_blank" rel="noopener noreferrer" title={targetUrl}>{trackedLink}</a>
+            ) : (
+              <button
+                type="button"
+                className={styles.linkRowUnauth}
+                title="Vui lòng đăng nhập trước để nhận hoàn tiền"
+                onClick={() => onRequireAuth?.("link")}
+              >
+                {trackedLink}
+              </button>
+            )}
+            <button
+              type="button"
+              className={copied ? styles.copied : ""}
+              onClick={() => {
+                if (!isLoggedIn) {
+                  onRequireAuth?.("copy");
+                  return;
+                }
+                onCopy();
+              }}
+            >
               {copied ? <CheckIcon size={19} weight="bold" aria-hidden="true" /> : <CopyIcon size={19} aria-hidden="true" />}
               <span aria-live="polite">{copied ? "Đã copy" : "Copy link"}</span>
             </button>
           </div>
         </div>
       )}
-      <a
-        href={targetUrl}
-        target="_blank"
-        rel="noopener noreferrer nofollow"
-        className={styles.buyButton}
-        onClick={(event) => {
-          if (onBuy?.() === false) event.preventDefault();
-        }}
-      >
-        <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" />
-        {product.platform?.toLowerCase().includes("food") ? "Đặt món ngay" : "Mua ngay"}
-      </a>
+      {isLoggedIn ? (
+        <a
+          href={targetUrl}
+          target="_blank"
+          rel="noopener noreferrer nofollow"
+          className={styles.buyButton}
+          onClick={(event) => {
+            if (onBuy?.() === false) event.preventDefault();
+          }}
+        >
+          <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" />
+          {product.platform?.toLowerCase().includes("food") ? "Đặt món ngay" : "Mua ngay"}
+        </a>
+      ) : (
+        <button
+          type="button"
+          className={styles.buyButton}
+          onClick={() => {
+            if (onRequireAuth) {
+              onRequireAuth("buy");
+            } else {
+              onBuy?.();
+            }
+          }}
+        >
+          <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" />
+          Đăng nhập để MUA NGAY
+        </button>
+      )}
       {product.platform?.toLowerCase().includes("food") && (
         <p className={styles.foodAppNote}>
           💡 Mở trực tiếp ứng dụng ShopeeFood để đặt món và nhận hoàn tiền 6%.

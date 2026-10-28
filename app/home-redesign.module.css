@@ -231,11 +231,30 @@
 .linkSection { margin-top: 10px; }
 .linkSection > p { margin: 0 0 5px; font-size: 11px; color: #79808b; }
 .linkRow { display: flex; align-items: stretch; gap: 8px; }
-.linkRow > a { flex: 1; display: block; min-width: 0; overflow: hidden; border: 1px solid #e5e7eb; border-radius: 8px; padding: 9px 10px; color: #505a68; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.linkRow > a:hover { color: #e34820; }
-.linkRow button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 0 0 92px; min-height: 38px; border: 1px solid #e2e5e9; border-radius: 8px; background: #f6f6f7; color: #17202e; font-size: 11px; font-weight: 600; transition: background-color .15s; }
-.linkRow button:hover { background: #ffede2; border-color: #ffd3ba; color: #c33c16; }
-.linkRow button.copied { background: #19212c; color: #fff; border-color: #19212c; }
+.linkRow > a,
+.linkRow > button.linkRowUnauth {
+  flex: 1;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 9px 10px;
+  color: #505a68;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.linkRow > a:hover,
+.linkRow > button.linkRowUnauth:hover {
+  color: #e34820;
+}
+.linkRow button:not(.linkRowUnauth) { display: inline-flex; align-items: center; justify-content: center; gap: 5px; flex: 0 0 92px; min-height: 38px; border: 1px solid #e2e5e9; border-radius: 8px; background: #f6f6f7; color: #17202e; font-size: 11px; font-weight: 600; transition: background-color .15s; }
+.linkRow button:not(.linkRowUnauth):hover { background: #ffede2; border-color: #ffd3ba; color: #c33c16; }
+.linkRow button:not(.linkRowUnauth).copied { background: #19212c; color: #fff; border-color: #19212c; }
 .buyButton { width: 100%; min-height: 46px; flex-shrink: 0; padding: 9px 12px; margin: 12px 0 8px; font-size: 15px; cursor: pointer; text-decoration: none; }
 .foodAppNote { margin: 0 0 8px; font-size: 11.5px; color: #764b38; background: #fff5ee; border: 1px solid #ffd8c4; border-radius: 8px; padding: 6px 10px; line-height: 1.45; text-align: center; }
 .receiptFooter { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px 18px; margin-top: auto; padding-top: 0; }
@@ -382,8 +401,8 @@
   .product h3 { font-size: 12px; }
   .product p { font-size: 11px; }
   .product .platformBadge { display: none; }
-  .linkRow button { min-height: 44px; flex-basis: 88px; }
-  .linkRow > a { font-size: 10px; padding: 12px 8px; }
+  .linkRow button:not(.linkRowUnauth) { min-height: 44px; flex-basis: 88px; }
+  .linkRow > a, .linkRow > button.linkRowUnauth { font-size: 10px; padding: 12px 8px; }
   .buyButton { min-height: 44px; font-size: 13px; }
   .receiptFooter > span { font-size: 10px; }
   .receiptFooter button { min-height: 40px; font-size: 11px; }
