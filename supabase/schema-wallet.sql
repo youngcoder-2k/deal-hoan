@@ -18,7 +18,7 @@ create table if not exists public.user_wallets (
 create table if not exists public.withdrawal_requests (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  amount bigint not null check (amount >= 50000), -- Số tiền rút tối thiểu 50.000đ
+  amount bigint not null check (amount >= 10000), -- Số tiền rút tối thiểu 10.000đ
   bank_name text not null,
   bank_account_no text not null,
   bank_account_name text not null,

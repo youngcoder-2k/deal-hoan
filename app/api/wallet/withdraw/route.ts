@@ -132,24 +132,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Chưa đăng nhập" }, { status: 401 });
     }
 
-    // Rule 5: Kiểm tra lệnh rút đang chờ duyệt (Pending Withdrawal Check)
-    const { data: pendingRequests } = await supabase
-      .from("withdrawal_requests")
-      .select("id, amount, created_at")
-      .eq("user_id", user.id)
-      .eq("status", "pending")
-      .limit(1);
-
-    if (pendingRequests && pendingRequests.length > 0) {
-      const pending = pendingRequests[0];
-      return NextResponse.json(
-        {
-          error: `Bạn đang có 1 lệnh rút ${Number(pending.amount).toLocaleString("vi-VN")}đ đang chờ xử lý. Vui lòng đợi hoàn tất trước khi tạo lệnh mới.`,
-        },
-        { status: 400 }
-      );
-    }
-
     // Lấy thông tin ví & ngân hàng của user (ưu tiên user_wallets, fallback user_metadata)
     const { data: wallet } = await supabase
       .from("user_wallets")

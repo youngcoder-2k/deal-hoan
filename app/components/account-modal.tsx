@@ -301,12 +301,6 @@ export default function AccountModal({
     if (!isBankReady) {
       return { isValid: false, error: "Vui lòng lưu thông tin ngân hàng trước khi rút tiền." };
     }
-    if (pendingWithdrawal) {
-      return {
-        isValid: false,
-        error: `Bạn đang có 1 lệnh rút ${formatVnd(pendingWithdrawal.amount)} đang chờ xử lý. Vui lòng đợi hoàn tất.`,
-      };
-    }
     if (wallet.balance < 10000) {
       return {
         isValid: false,
@@ -343,7 +337,7 @@ export default function AccountModal({
     if (parsedAmount % 1000 !== 0) {
       return {
         isValid: false,
-        error: "Số tiền rút phải là bội số của 1.000đ (Ví dụ: 50.000đ, 60.000đ, 100.000đ...).",
+        error: "Số tiền rút phải là bội số của 1.000đ (Ví dụ: 10.000đ, 20.000đ, 50.000đ...).",
       };
     }
     return {
@@ -588,8 +582,30 @@ export default function AccountModal({
               <form className={s.withdrawForm} onSubmit={handleWithdraw}>
                 <div className={s.amountLabel}><label htmlFor={`${tabId}-amount`}>Số tiền muốn rút</label><span>Tối thiểu 10.000đ</span></div>
                 <div className={s.amountInput}><input id={`${tabId}-amount`} inputMode="numeric" autoComplete="off" placeholder="Nhập số tiền" value={withdrawAmount ? Number(withdrawAmount).toLocaleString("vi-VN") : ""} disabled={busyWallet || withdrawing} aria-describedby={withdrawError ? `${tabId}-feedback` : undefined} onChange={event => { setWithdrawAmount(event.target.value.replace(/\D/g, "")); setWithdrawError(""); }} /><span>đ</span></div>
-                <div className={s.presets}>{[10000, 50000, 100000].map(amount => <button type="button" key={amount} disabled={busyWallet || withdrawing || Boolean(pendingWithdrawal) || wallet.balance < amount} onClick={() => setPresetAmount(amount)}>{formatVnd(amount)}</button>)}<button type="button" disabled={busyWallet || withdrawing || Boolean(pendingWithdrawal) || wallet.balance < 10000} onClick={() => setPresetAmount(Math.floor(Math.min(wallet.balance, 50000000) / 1000) * 1000)}>Tất cả</button></div>
-                {withdrawError && <p id={`${tabId}-feedback`} className={`${s.feedback} ${s.feedbackError}`} aria-live="polite"><Info size={17} /><span>{withdrawError}</span></p>}
+                <div className={s.presets}>
+                  {[50000, 100000].map(amount => (
+                    <button
+                      type="button"
+                      key={amount}
+                      disabled={busyWallet || withdrawing || wallet.balance < amount}
+                      onClick={() => setPresetAmount(amount)}
+                    >
+                      {formatVnd(amount)}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={busyWallet || withdrawing || wallet.balance < 10000}
+                    onClick={() => setPresetAmount(Math.floor(Math.min(wallet.balance, 50000000) / 1000) * 1000)}
+                  >
+                    Tất cả
+                  </button>
+                </div>
+                {(withdrawError || (withdrawAmount && amountValidation.error)) && (
+                  <p id={`${tabId}-feedback`} className={`${s.feedback} ${s.feedbackError}`} aria-live="polite">
+                    <Info size={17} /><span>{withdrawError || amountValidation.error}</span>
+                  </p>
+                )}
                 <button type="submit" className={s.primary} disabled={busyWallet || loading.history || Boolean(loadErrors.history) || withdrawing || !amountValidation.isValid}>{withdrawing ? "Đang gửi yêu cầu…" : "Rút tiền"}</button>
 
               </form>
