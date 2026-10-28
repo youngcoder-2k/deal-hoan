@@ -19,7 +19,7 @@ const questions = [
   ["Tiền hoàn của DealHoàn đến từ đâu?", "DealHoàn lấy từ phần tiền Affiliate của Shopee. Chúng tôi gửi cho bạn phần lớn và chỉ giữ lại một phần nhỏ để duy trì website."],
   ["Tôi có cần đăng nhập trước khi mua?", "Bạn có thể kiểm tra link trước. Hãy đăng nhập trước khi mua để gắn liên kết với tài khoản và theo dõi đơn, số dư."],
   ["Khoản hoàn dự kiến có phải số tiền cuối cùng?", "Chưa. Mức hoàn dự kiến giúp bạn tham khảo trước khi mua. Khoản thực nhận phụ thuộc giá trị thanh toán hợp lệ, điều kiện chương trình và kết quả đối soát."],
-  ["Khi nào tôi có thể rút tiền hoàn?", "Sau khi đơn được đối soát và khoản hoàn được duyệt, bạn có thể yêu cầu rút về ngân hàng khi số dư đã duyệt đạt tối thiểu 50.000đ."],
+  ["Khi nào tôi có thể rút tiền hoàn?", "Sau khi đơn được đối soát và khoản hoàn được duyệt, bạn có thể yêu cầu rút về ngân hàng khi số dư đã duyệt đạt tối thiểu 10.000đ."],
   ["Đơn hủy hoặc trả hàng có được hoàn không?", "Đơn hủy, hoàn trả hoặc không đáp ứng điều kiện chương trình có thể bị loại. Chỉ giao dịch được xác nhận hợp lệ mới có khoản hoàn được duyệt."],
   ["Mua qua link nào để được ghi nhận?", "Dùng nút Mua ngay hoặc link nhận hoàn mới được tạo từ kết quả của bạn. Đọc lưu ý trước khi mua và hoàn tất đặt hàng trên sàn."],
 ];

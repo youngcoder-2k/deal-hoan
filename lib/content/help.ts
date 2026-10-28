@@ -34,7 +34,7 @@ export const helpArticles: HelpArticle[] = [
         "id": "phan-4",
         "title": "Theo dõi và rút tiền",
         "paragraphs": [
-          "Đơn cần được sàn và đối tác đối soát. Chỉ số dư đã được duyệt mới dùng để rút; mức yêu cầu tối thiểu hiện tại là 50.000đ. Đơn hủy hoặc trả hàng có thể bị loại."
+          "Đơn cần được sàn và đối tác đối soát. Chỉ số dư đã được duyệt mới dùng để rút; mức yêu cầu tối thiểu hiện tại là 10.000đ. Đơn hủy hoặc trả hàng có thể bị loại."
         ]
       }
     ]
@@ -475,7 +475,7 @@ export const helpArticles: HelpArticle[] = [
         "id": "phan-1",
         "title": "Điều kiện yêu cầu rút",
         "paragraphs": [
-          "Tài khoản cần có số dư đã duyệt từ 50.000đ. Tiền chờ đối soát hoặc số tiền chỉ được ước tính trước khi mua chưa dùng để rút."
+          "Tài khoản cần có số dư đã duyệt từ 10.000đ. Tiền chờ đối soát hoặc số tiền chỉ được ước tính trước khi mua chưa dùng để rút."
         ]
       },
       {
@@ -525,7 +525,7 @@ export const helpArticles: HelpArticle[] = [
         "id": "phan-4",
         "title": "4. Rút số dư đã duyệt",
         "paragraphs": [
-          "Khi số dư đã duyệt đủ 50.000đ, bạn có thể yêu cầu rút về ngân hàng. Giữ mã đơn và kiểm tra lịch sử nếu cần đối chiếu."
+          "Khi số dư đã duyệt đủ 10.000đ, bạn có thể yêu cầu rút về ngân hàng. Giữ mã đơn và kiểm tra lịch sử nếu cần đối chiếu."
         ]
       }
     ]

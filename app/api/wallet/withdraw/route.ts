@@ -78,10 +78,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rule 2: Số tiền rút tối thiểu 50.000đ
-    if (amount < 50000) {
+    // Rule 2: Số tiền rút tối thiểu 10.000đ
+    if (amount < 10000) {
       return NextResponse.json(
-        { error: "Số tiền rút tối thiểu là 50.000đ." },
+        { error: "Số tiền rút tối thiểu là 10.000đ." },
         { status: 400 }
       );
     }
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     // Rule 4: Bội số của 1.000đ
     if (amount % 1000 !== 0) {
       return NextResponse.json(
-        { error: "Số tiền rút phải là bội số của 1.000đ (Ví dụ: 50.000đ, 60.000đ, 100.000đ...)." },
+        { error: "Số tiền rút phải là bội số của 1.000đ (Ví dụ: 10.000đ, 20.000đ, 50.000đ...)." },
         { status: 400 }
       );
     }
@@ -183,9 +183,9 @@ export async function POST(request: NextRequest) {
 
     // Rule 7: Kiểm tra số dư ví
     const currentBalance = Number(wallet?.balance ?? 0);
-    if (currentBalance < 50000) {
+    if (currentBalance < 10000) {
       return NextResponse.json(
-        { error: `Số dư khả dụng hiện tại (${currentBalance.toLocaleString("vi-VN")}đ) chưa đạt mức tối thiểu 50.000đ để rút.` },
+        { error: `Số dư khả dụng hiện tại (${currentBalance.toLocaleString("vi-VN")}đ) chưa đạt mức tối thiểu 10.000đ để rút.` },
         { status: 400 }
       );
     }
