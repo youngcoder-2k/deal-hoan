@@ -2112,7 +2112,7 @@ export default function AdminUsersClient({
                     <label className="block text-[11px] font-bold text-stone-700 mb-1">Shopee App ID:</label>
                     <input
                       type="text"
-                      placeholder="Dán App ID (ví dụ: 17351320644)..."
+                      placeholder="Dán App ID (ví dụ: 17333200656)..."
                       value={shopeeAppId}
                       onChange={(e) => setShopeeAppId(e.target.value)}
                       className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"

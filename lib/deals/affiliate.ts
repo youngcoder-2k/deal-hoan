@@ -8,7 +8,7 @@ export const DEFAULT_SHOPEE_AFFILIATE_ID =
   process.env.NEXT_PUBLIC_SHOPEE_AFFILIATE_ID ||
   process.env.SHOPEE_AFFILIATE_ID ||
   process.env.DEFAULT_SHOPEE_AFFILIATE_ID ||
-  "17351320644";
+  "17333200656";
 
 /**
  * Extracts a clean URL from a string that may contain text around it.

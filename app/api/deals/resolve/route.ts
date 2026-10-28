@@ -331,7 +331,7 @@ export async function POST(request: NextRequest) {
 
     // NOTE ON COMMISSION ATTRIBUTION:
     // We intentionally route outbound clicks through our DIRECT Shopee Affiliate link:
-    // https://s.shopee.vn/an_redir?affiliate_id=17351320644
+    // https://s.shopee.vn/an_redir?affiliate_id=17333200656
     // AccessTrade is used SOLELY as a read-only data source for product prices and images.
     // 100% of all affiliate commissions go directly to DealHoàn without any intermediary.
     const requestHost = request.headers.get("x-forwarded-host") || request.headers.get("host");
@@ -342,7 +342,7 @@ export async function POST(request: NextRequest) {
     let trackedLink: string;
     if (isCurrentShopeeFood) {
       trackedLink = buildShopeeFoodAffiliateUrl(canonicalUrl, {
-        affiliateId: "17351320644",
+        affiliateId: "17333200656",
         subId,
       });
     } else if (isShopee) {
@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
           ? `https://shopee.vn/product/${hoanNgayProduct.shopId}/${hoanNgayProduct.itemId}`
           : cleanShopeeUrl(canonicalUrl);
       trackedLink = buildShopeeAffiliateUrl(cleanShopeeLink, {
-        affiliateId: "17351320644",
+        affiliateId: "17333200656",
         subId,
       });
     } else if (isCurrentTikTok) {

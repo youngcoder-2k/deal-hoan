@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     if (isShopeeFoodUrl(rawUrl)) {
       const cleanUrl = cleanShopeeUrl(rawUrl);
       const affiliateUrl = buildShopeeFoodAffiliateUrl(cleanUrl, {
-        affiliateId: "17351320644",
+        affiliateId: "17333200656",
         subId,
       });
       const customShortLink = buildCustomShortUrl(cleanUrl, {
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     if (isShopeeUrl(rawUrl)) {
       const cleanUrl = cleanShopeeUrl(rawUrl);
       const affiliateUrl = buildShopeeAffiliateUrl(cleanUrl, {
-        affiliateId: "17351320644",
+        affiliateId: "17333200656",
         subId,
       });
       const customShortLink = buildCustomShortUrl(cleanUrl, {

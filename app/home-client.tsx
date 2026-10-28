@@ -509,7 +509,7 @@ export default function HomeClient({
     const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
     const subId = user ? formatSubIdForUser(user.id) : "dealhoan";
     if (isShopeeUrl(url)) {
-      return buildShopeeAffiliateUrl(url, { affiliateId: "17351320644", subId });
+      return buildShopeeAffiliateUrl(url, { affiliateId: "17333200656", subId });
     }
     return buildCustomShortUrl(url, { baseUrl, subId });
   };
