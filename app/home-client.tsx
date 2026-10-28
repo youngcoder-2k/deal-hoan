@@ -438,9 +438,9 @@ export default function HomeClient({
   const handleRequireAuth = (source?: "copy" | "link" | "buy") => {
     showTopToast({
       type: "warning",
-      message: "Vui lòng đăng nhập trước để hệ thống ghi nhận tiền hoàn khi mua hàng!",
+      message: "Vui lòng đăng nhập để nhận hoàn tiền",
     });
-    notify("Vui lòng đăng nhập trước để hệ thống ghi nhận tiền hoàn khi mua hàng!");
+    notify("Vui lòng đăng nhập để nhận hoàn tiền");
     if (source === "buy") {
       void signInWithGoogle(false);
     }

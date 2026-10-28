@@ -134,5 +134,5 @@ test('home-client.tsx passes isLoggedIn and onRequireAuth, guards copy and link 
   const code = fs.readFileSync(path.resolve(__dirname, '../app/home-client.tsx'), 'utf8');
   assert.ok(code.includes('isLoggedIn={Boolean(user)}'), 'CashbackReceipt must receive isLoggedIn prop');
   assert.ok(code.includes('onRequireAuth={handleRequireAuth}'), 'CashbackReceipt must receive onRequireAuth prop');
-  assert.ok(code.includes('Vui lòng đăng nhập trước để hệ thống ghi nhận tiền hoàn khi mua hàng!'));
+  assert.ok(code.includes('Vui lòng đăng nhập để nhận hoàn tiền'));
 });

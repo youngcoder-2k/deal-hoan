@@ -209,7 +209,7 @@ export function CashbackReceipt({
               <button
                 type="button"
                 className={styles.linkRowUnauth}
-                title="Vui lòng đăng nhập trước để nhận hoàn tiền"
+                title="Vui lòng đăng nhập để nhận hoàn tiền"
                 onClick={() => onRequireAuth?.("link")}
               >
                 {trackedLink}
