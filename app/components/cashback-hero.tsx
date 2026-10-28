@@ -258,21 +258,17 @@ export function CashbackReceipt({
                           ) : (
                             <>
                               <CopyIcon size={12} />
-                              {mv.coupon.code}
+                              Chép mã
                             </>
                           )}
                         </button>
-                        {mv.coupon.url && (
-                          <a
-                            href={mv.coupon.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className={styles.voucherSaveLink}
-                            title="Mở trang lưu mã trên Shopee"
-                          >
-                            Lưu mã
-                          </a>
-                        )}
+                        <span
+                          className={styles.voucherCodeBadge}
+                          onClick={() => handleCopyVoucher(mv.coupon.code)}
+                          title="Bấm để sao chép mã Shopee"
+                        >
+                          {mv.coupon.code}
+                        </span>
                       </div>
                     </div>
                   ) : (
