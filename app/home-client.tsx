@@ -272,17 +272,10 @@ export default function HomeClient({
   };
 
   const allCoupons = useMemo(() => {
-    const fallback = getDailyShopeeCoupons();
-    if (!initialVouchers || initialVouchers.length === 0) return fallback;
-    const hasSocial = initialVouchers.some(
-      (c) => c.category === "facebook" || c.socialType === "facebook",
-    );
-    if (!hasSocial) {
-      const fallbackIds = new Set(fallback.map((c) => c.id));
-      const extra = initialVouchers.filter((c) => !fallbackIds.has(c.id));
-      return [...fallback, ...extra];
+    if (initialVouchers && initialVouchers.length > 0) {
+      return initialVouchers;
     }
-    return initialVouchers;
+    return getDailyShopeeCoupons();
   }, [initialVouchers]);
 
   const displayedCoupons =
