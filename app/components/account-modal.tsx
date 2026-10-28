@@ -127,11 +127,6 @@ export default function AccountModal({
   });
   const [history, setHistory] = useState<WithdrawalItem[]>([]);
   const [orders, setOrders] = useState<CashbackOrderItem[]>([]);
-  const [showClaimForm, setShowClaimForm] = useState(false);
-  const [claimOrderId, setClaimOrderId] = useState("");
-  const [claimPlatform, setClaimPlatform] = useState<"Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada">("Shopee");
-  const [claimOrderValue, setClaimOrderValue] = useState("");
-  const [claiming, setClaiming] = useState(false);
 
   // Form Ngân hàng
   const [bankName, setBankName] = useState(() => {
@@ -471,39 +466,6 @@ export default function AccountModal({
     }
   };
 
-  const handleSubmitClaim = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!claimOrderId.trim()) {
-      return onNotify("⚠️ Vui lòng nhập mã đơn hàng!");
-    }
-    try {
-      setClaiming(true);
-      const res = await fetch("/api/wallet/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId: claimOrderId.trim(),
-          platform: claimPlatform,
-          orderValue: Number(claimOrderValue.replace(/\D/g, "")) || 0,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.order) {
-        setOrders((prev) => [data.order, ...prev]);
-        setClaimOrderId("");
-        setClaimOrderValue("");
-        setShowClaimForm(false);
-        onNotify("✅ Đã tiếp nhận tra cứu đơn hàng!");
-      } else {
-        onNotify("⚠️ " + (data.error || "Không thể gửi tra cứu"));
-      }
-    } catch {
-      onNotify("⚠️ Lỗi kết nối máy chủ");
-    } finally {
-      setClaiming(false);
-    }
-  };
-
   const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
   const displayName = user.user_metadata?.full_name || user.user_metadata?.name || user.email?.split("@")[0] || "Tài khoản của bạn";
   const isAdmin = isAdminUser(user);
@@ -579,19 +541,14 @@ export default function AccountModal({
           {activeTab === "orders" && <>
             <div className={s.notice}><Clock size={18} /> Đơn hàng thường được cập nhật trong 1–24 giờ.</div>
             {loading.orders ? <p className={s.loading} role="status">Đang tải đơn hoàn tiền…</p> : loadErrors.orders ? null : orders.length === 0 ? <div className={s.empty}>
-              <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span><h3>Chưa có đơn hoàn tiền</h3><p>Mua qua link DealHoàn để đơn hàng và khoản hoàn xuất hiện tại đây.</p>
+              <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span><h3>Chưa có đơn hoàn tiền</h3>
               <Link href="/#deals" onClick={onClose} className={s.primary}>Tìm sản phẩm nhận hoàn <ArrowRight size={19} /></Link>
             </div> : <div className={s.list}>{orders.map(order => <article className={s.record} key={order.id}>
               <div className={s.recordTop}><span>{order.platform} · #{order.order_id}</span><span className={s.status} data-status={order.status}>{statusLabel(order.status)}</span></div>
               <div className={s.recordMain}><strong>{order.product_name || "Sản phẩm mua qua DealHoàn"}</strong><b>+{formatVnd(order.cashback_amount)}</b></div>
               <div className={s.recordMeta}><span>Giá trị đơn: {formatVnd(order.order_value)}</span><time>{formatDate(order.ordered_at)}</time></div>{order.note && <p>{order.note}</p>}
             </article>)}</div>}
-            {!showClaimForm ? <button type="button" className={s.claimLink} onClick={() => setShowClaimForm(true)}>Đã mua nhưng chưa thấy đơn?</button> : <form onSubmit={handleSubmitClaim} className={s.bankForm}>
-              <h3>Tra cứu mã đơn hàng</h3><p>Nếu đã mua qua link DealHoàn hơn 24 giờ mà chưa thấy đơn, hãy gửi mã đơn để đối soát.</p>
-              <label>Sàn mua sắm<select value={claimPlatform} onChange={event => setClaimPlatform(event.target.value as typeof claimPlatform)}><option>Shopee</option><option>ShopeeFood</option><option>TikTok Shop</option><option>Lazada</option></select></label>
-              <div className={s.formRow}><label>Mã đơn hàng<input required value={claimOrderId} onChange={event => setClaimOrderId(event.target.value)} placeholder="Nhập mã đơn hàng" /></label><label>Giá trị đơn hàng (VNĐ)<input inputMode="numeric" value={claimOrderValue} onChange={event => setClaimOrderValue(event.target.value.replace(/\D/g, ""))} placeholder="Ví dụ: 250000" /></label></div>
-              <div className={s.actions}><button type="button" className={s.secondary} disabled={claiming} onClick={() => setShowClaimForm(false)}>Hủy</button><button type="submit" disabled={claiming} className={s.primary}>{claiming ? "Đang gửi…" : "Gửi yêu cầu tra cứu"}</button></div>
-            </form>}
+
           </>}
           {activeTab === "withdraw" && <>
             <h3 className={s.sectionTitle}>Rút tiền về ngân hàng</h3>
@@ -608,12 +565,12 @@ export default function AccountModal({
                 <div className={s.presets}>{[50000, 100000].map(amount => <button type="button" key={amount} disabled={busyWallet || withdrawing || Boolean(pendingWithdrawal) || wallet.balance < amount} onClick={() => setPresetAmount(amount)}>{formatVnd(amount)}</button>)}<button type="button" disabled={busyWallet || withdrawing || Boolean(pendingWithdrawal) || wallet.balance < 50000} onClick={() => setPresetAmount(Math.floor(Math.min(wallet.balance, 50000000) / 1000) * 1000)}>Tất cả</button></div>
                 <p id={`${tabId}-feedback`} className={`${s.feedback} ${withdrawError ? s.feedbackError : ""}`} aria-live="polite"><Info size={17} /><span>{feedback}</span></p>
                 <button type="submit" className={s.primary} disabled={busyWallet || loading.history || Boolean(loadErrors.history) || withdrawing || !amountValidation.isValid}>{withdrawing ? "Đang gửi yêu cầu…" : "Rút tiền"}</button>
-                <p className={s.processing}><Clock size={17} /> Xử lý trong 24–48 giờ làm việc (trừ T7 & CN).</p>
+
               </form>
             </>}
           </>}
           {activeTab === "history" && (loading.history ? <p className={s.loading} role="status">Đang tải lịch sử rút tiền…</p> : loadErrors.history ? null : history.length === 0 ? <div className={s.empty}>
-            <span className={s.emptyIcon}><Receipt size={36} weight="light" /></span><h3>Chưa có giao dịch rút tiền</h3><p>Lịch sử sẽ xuất hiện sau khi bạn tạo yêu cầu rút tiền.</p><p className={s.minimum}>Số dư tối thiểu để rút: 50.000đ</p><button type="button" className={s.secondary} onClick={() => switchTab("orders")}>Xem đơn hoàn tiền <ArrowRight size={18} /></button>
+            <span className={s.emptyIcon}><Receipt size={36} weight="light" /></span><h3>Chưa có giao dịch rút tiền</h3><button type="button" className={s.secondary} onClick={() => switchTab("orders")}>Xem đơn hoàn tiền <ArrowRight size={18} /></button>
           </div> : <div className={s.list}>{history.map(item => <article className={s.record} key={item.id}><div className={s.recordTop}><strong>{formatVnd(item.amount)}</strong><span className={s.status} data-status={item.status}>{item.status === "completed" ? "Đã chuyển" : item.status === "pending" ? "Chờ xử lý" : "Bị từ chối"}</span></div><div className={s.recordMeta}><span>{item.bank_name} · •••• {item.bank_account_no.slice(-4)}</span><time>{formatDate(item.created_at)}</time></div>{item.note && <p>{item.note}</p>}</article>)}</div>)}
         </div>
         <footer className={s.footer}><Link href="/#contact" onClick={onClose}><Question size={19} /> Cần hỗ trợ?</Link></footer>
