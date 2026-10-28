@@ -889,6 +889,8 @@ export default function HomeClient({
           </div>
         </div>
       </section>
+      {/* Tạm thời ẩn phần Deal chớp nhoáng */}
+      {false && (
       <section className="container flash-section" id="flash">
         <div className="flash" data-motion="rise">
           <div className="flash-top">
@@ -1017,6 +1019,7 @@ export default function HomeClient({
           </div>
         </div>
       </section>
+      )}
       {/* Tạm thời ẩn phần Deal hot hôm nay */}
       {false && (
       <section className="container block" id="deals">
