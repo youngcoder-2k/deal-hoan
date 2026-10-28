@@ -48,7 +48,17 @@ try {
   console.warn("⚠️  Lỗi làm mới Xtra deals:", err.message);
 }
 
-// 3. Kích hoạt Next.js revalidation nếu server đang chạy
+// 3. Đồng bộ kho voucher Shopee thật
+try {
+  console.log("\n3️⃣  Đang đồng bộ kho mã giảm giá Shopee thật...");
+  const { syncShopeeVouchers } = await import("./sync-shopee-vouchers.mjs");
+  const vouchers = await syncShopeeVouchers();
+  console.log(`✅ Đã đồng bộ ${vouchers.length} mã giảm giá Shopee thật!`);
+} catch (err) {
+  console.warn("⚠️  Lỗi đồng bộ voucher Shopee:", err.message);
+}
+
+// 4. Kích hoạt Next.js revalidation nếu server đang chạy
 try {
   const res = await fetch("http://localhost:3000/api/cron/sync-deals", {
     signal: AbortSignal.timeout(3000),

@@ -16,9 +16,9 @@ test("voucher matching logic: matches applicable vouchers for 300k Shopee produc
   const applicable = matched.filter((m) => m.isApplicable);
   assert.ok(applicable.length > 0, "Phải có ít nhất 1 mã thỏa mãn điều kiện");
 
-  // Đơn 300k phải thỏa mãn đơn từ 150k (Facebook, Instagram)
-  const fbCoupon = applicable.find((m) => m.coupon.code === "FACEBOOK250");
-  assert.ok(fbCoupon, "FACEBOOK250 phải áp dụng được cho đơn 300k");
+  // Đơn 300k phải thỏa mãn mã Freeship
+  const fsCoupon = applicable.find((m) => m.coupon.category === "freeship");
+  assert.ok(fsCoupon, "Voucher Freeship phải áp dụng được cho đơn 300k");
 });
 
 test("voucher matching logic: rejects mall coupons for non-mall product", () => {

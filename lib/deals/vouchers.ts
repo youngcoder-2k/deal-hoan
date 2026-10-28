@@ -28,32 +28,31 @@ async function readFromSupabase(): Promise<Coupon[] | null> {
 }
 
 export async function getVouchers(): Promise<Coupon[]> {
-  const curated = getDailyShopeeCoupons();
-
-  // 1. Đọc thêm từ Supabase Cloud (được cập nhật bởi GitHub Actions) nếu có
-  let extraVouchers: Coupon[] = [];
+  // 1. Đọc từ Supabase Cloud nếu có
+  let liveVouchers: Coupon[] = [];
   try {
     const cloudVouchers = await readFromSupabase();
     if (cloudVouchers && cloudVouchers.length > 0) {
-      extraVouchers = cloudVouchers;
+      liveVouchers = cloudVouchers;
     }
   } catch {}
 
-  // 2. Đọc từ file cache cục bộ nếu không có từ cloud
-  if (extraVouchers.length === 0) {
+  // 2. Đọc từ file cache cục bộ shopee-vouchers.json (được đồng bộ bởi scripts/sync-shopee-vouchers.mjs)
+  if (liveVouchers.length === 0) {
     try {
       const raw = await readFile(VOUCHER_CACHE_PATH, "utf-8");
       const local = JSON.parse(raw);
       if (Array.isArray(local) && local.length > 0) {
-        extraVouchers = local;
+        liveVouchers = local;
       }
     } catch {}
   }
 
-  // 3. Luôn đảm bảo các mã cố định và mã MXH (Facebook, Instagram, Youtube, Freeship, Mall, VIP)
-  // luôn xuất hiện đầu tiên, sau đó nối thêm các mã độc nhất khác từ cache/cloud
-  const curatedIds = new Set(curated.map((c) => c.id));
-  const uniqueExtras = extraVouchers.filter((v) => !curatedIds.has(v.id));
+  // 3. Nếu đã có kho voucher thật từ đồng bộ, ưu tiên dùng mã thật
+  if (liveVouchers.length > 0) {
+    return liveVouchers;
+  }
 
-  return [...curated, ...uniqueExtras];
+  // 4. Fallback chỉ dùng khi chưa đồng bộ được dữ liệu
+  return getDailyShopeeCoupons();
 }
