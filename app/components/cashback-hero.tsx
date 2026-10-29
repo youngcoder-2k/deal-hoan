@@ -155,7 +155,6 @@ export function CashbackReceipt({
 }) {
   const { price, cashback } = product;
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [showAllVouchers, setShowAllVouchers] = useState(false);
 
   const handleCopyVoucher = (code: string) => {
     try {
@@ -218,15 +217,15 @@ export function CashbackReceipt({
             <div className={styles.voucherHeadingLeft}>
               <TicketIcon size={16} weight="bold" />
               <span>
-                Mã giảm giá có thể áp dụng ({product.matchedVouchers.filter((v) => v.isApplicable).length})
+                Toàn bộ mã Shopee ({product.matchedVouchers.filter((v) => v.isApplicable).length} mã có thể dùng)
               </span>
             </div>
             <span className={styles.voucherHeadingHint}>
-              Áp dụng kết hợp Freeship + Mã Shopee
+              Thử mã kế tiếp nếu mã trước hết lượt
             </span>
           </div>
           <div className={styles.voucherList}>
-            {(showAllVouchers ? product.matchedVouchers : product.matchedVouchers.slice(0, 3)).map((mv, idx) => {
+            {product.matchedVouchers.map((mv, idx) => {
               const isCopied = copiedCode === mv.coupon.code;
               const isFreeship = mv.tier === "freeship" || mv.coupon.category === "freeship";
               const isMall = mv.tier === "mall" || mv.coupon.category === "mall";
@@ -238,7 +237,7 @@ export function CashbackReceipt({
 
               return (
                 <div
-                  key={mv.coupon.id || idx}
+                  key={mv.coupon.id || `${mv.coupon.code}-${idx}`}
                   className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""}`}
                 >
                   <div className={styles.voucherInfo}>
@@ -282,17 +281,6 @@ export function CashbackReceipt({
               );
             })}
           </div>
-          {product.matchedVouchers.length > 3 && (
-            <button
-              type="button"
-              className={styles.voucherToggleBtn}
-              onClick={() => setShowAllVouchers(!showAllVouchers)}
-            >
-              {showAllVouchers
-                ? "Thu gọn danh sách mã ▴"
-                : `Xem thêm ${product.matchedVouchers.length - 3} mã khác ▾`}
-            </button>
-          )}
         </div>
       )}
 

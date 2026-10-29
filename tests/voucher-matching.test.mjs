@@ -44,14 +44,14 @@ test("voucher matching logic: rejects mall coupons for non-mall product", () => 
   assert.equal(evalMall.isApplicable, true, "Shopee Mall phải áp được mã Mall");
 });
 
-test("voucher matching logic: matches between 3 and 8 vouchers and calculates percentage discounts", () => {
+test("voucher matching logic: returns all vouchers and calculates percentage discounts", () => {
   const coupons = getDailyShopeeCoupons();
   const price = 500000;
   const platform = "Shopee";
 
   const { matched, bestDiscount } = matchVouchersForProduct(price, platform, coupons);
 
-  assert.ok(matched.length >= 3 && matched.length <= 8, `Số lượng mã phải dao động 3 - 8 mã, thực tế: ${matched.length}`);
+  assert.equal(matched.length, coupons.length, "Phải giữ toàn bộ danh sách mã để người dùng dự phòng");
   assert.ok(bestDiscount > 0, "Phải tính được mức giảm");
   assert.ok(matched.some((m) => m.tier === "freeship"), "Phải có tầng Freeship");
 });

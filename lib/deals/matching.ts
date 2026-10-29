@@ -126,8 +126,9 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
 }
 
 /**
- * Lọc và so khớp danh sách voucher tối ưu nhất cho sản phẩm
- * Giới hạn thông minh trong khoảng 3 đến 8 mã phù hợp nhất (gồm Freeship, Shopee/Mall, và cận điều kiện)
+ * Lọc và so khớp toàn bộ danh sách voucher cho sản phẩm
+ * Trả về 100% kho voucher có thể áp dụng, sắp xếp mã giảm cao nhất lên đầu
+ * Giúp người dùng có toàn bộ mã để dự phòng nếu mã tốt nhất đã hết lượt sử dụng.
  */
 export function matchVouchersForProduct(
   price: number,
@@ -135,56 +136,29 @@ export function matchVouchersForProduct(
   vouchers: Coupon[] = [],
 ): { matched: MatchedCoupon[]; bestDiscount: number } {
   const isMall = platform?.toLowerCase().includes("mall");
-  const evals: MatchedCoupon[] = [];
+  const results: MatchedCoupon[] = [];
+  let bestDiscount = 0;
 
   for (const c of vouchers) {
-    evals.push(evaluateCoupon(c, price, isMall));
+    const evaluated = evaluateCoupon(c, price, isMall);
+    if (evaluated.isApplicable && evaluated.calculatedDiscount > bestDiscount) {
+      bestDiscount = evaluated.calculatedDiscount;
+    }
+    results.push(evaluated);
   }
 
-  const applicable = evals.filter((e) => e.isApplicable);
-
-  // 1. Tối đa 2 mã Freeship tốt nhất
-  const freeship = applicable
-    .filter((e) => e.tier === "freeship")
-    .sort((a, b) => b.calculatedDiscount - a.calculatedDiscount)
-    .slice(0, 2);
-
-  // 2. Tối đa 2 mã Shopee Mall tốt nhất (nếu là shop Mall)
-  const mall = isMall
-    ? applicable
-        .filter((e) => e.tier === "mall")
-        .sort((a, b) => b.calculatedDiscount - a.calculatedDiscount)
-        .slice(0, 2)
-    : [];
-
-  // 3. Tối đa 3-4 mã Shopee Toàn sàn giảm sâu nhất
-  const maxShopeeCount = 6 - freeship.length - mall.length;
-  const shopee = applicable
-    .filter((e) => e.tier === "shopee")
-    .sort((a, b) => b.calculatedDiscount - a.calculatedDiscount)
-    .slice(0, Math.max(3, maxShopeeCount));
-
-  // 4. Gợi ý 1 mã cận điều kiện (đơn tối thiểu nhỉnh hơn giá hiện tại để kích cầu)
-  const near = evals
-    .filter((e) => !e.isApplicable && e.minSpend > price && e.minSpend <= price * 2.5)
-    .sort((a, b) => a.minSpend - b.minSpend)
-    .slice(0, 1);
-
-  // Tổng hợp danh sách phù hợp nhất, dao động từ 3 đến 8 mã
-  const results = [...freeship, ...mall, ...shopee, ...near].slice(0, 8);
-
-  // Sắp xếp: Mã dùng được lên trước, mã giảm nhiều nhất đứng đầu
+  // Sắp xếp:
+  // 1. Mã dùng được ngay (isApplicable: true) lên trước, sắp xếp mức giảm cao nhất đứng đầu
+  // 2. Mã chưa đủ điều kiện (isApplicable: false) xếp sau, sắp xếp theo đơn tối thiểu tăng dần
   results.sort((a, b) => {
     if (a.isApplicable !== b.isApplicable) {
       return a.isApplicable ? -1 : 1;
     }
-    return b.calculatedDiscount - a.calculatedDiscount;
+    if (a.isApplicable && b.isApplicable) {
+      return b.calculatedDiscount - a.calculatedDiscount;
+    }
+    return a.minSpend - b.minSpend;
   });
-
-  const bestDiscount = Math.max(
-    0,
-    ...results.filter((r) => r.isApplicable).map((r) => r.calculatedDiscount),
-  );
 
   return { matched: results, bestDiscount };
 }
