@@ -41,83 +41,130 @@ function getDynamicTTL(): number {
   return baseMs + jitterMs;
 }
 
+/**
+ * Kiểm tra xem từ lần đồng bộ cuối đến nay đã bước qua khung giờ vàng mới của Shopee chưa:
+ * Các khung giờ vàng Shopee tung mã và mở lại lượt dùng: 0h, 9h, 12h, 18h, 21h (GMT+7).
+ */
+export function hasEnteredNewShopeeSlot(lastSyncedMs: number): boolean {
+  if (!lastSyncedMs || lastSyncedMs <= 0) return true;
+
+  const vnNow = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+  const vnLast = new Date(new Date(lastSyncedMs).toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+
+  // Nếu đã sang ngày khác -> Chắc chắn đã bước qua khung giờ 0h của ngày mới
+  if (vnNow.toDateString() !== vnLast.toDateString()) {
+    return true;
+  }
+
+  const currentHour = vnNow.getHours();
+  const lastHour = vnLast.getHours();
+  const SHOPEE_SLOTS = [0, 9, 12, 18, 21];
+
+  // Khung giờ vàng gần nhất trong ngày hiện tại
+  const latestSlot = [...SHOPEE_SLOTS].reverse().find((slot) => currentHour >= slot) ?? 0;
+
+  // Nếu lần đồng bộ trước diễn ra trước khung giờ vàng này -> Phải đồng bộ ngay gói mã mới
+  return lastHour < latestSlot;
+}
+
 const DEALHOAN_AFFILIATE_ID = "17333200656";
 
 let inFlightSync: Promise<Coupon[]> | null = null;
 
 /**
- * Tự động cào mã giảm giá thật đang chạy trên hệ thống Shopee
+ * Tự động cào mã giảm giá thật đang chạy trong thời gian thực trên hệ thống Shopee
  */
 export async function fetchLiveShopeeVouchers(): Promise<Coupon[]> {
-  const endpoint = "https://riokupon.com/api/vn/voucher/data/voucher-list-today_list.txt?v=" + Date.now();
-  const res = await fetch(endpoint, {
-    headers: getStealthHeaders(),
-    signal: AbortSignal.timeout(12000),
-  });
+  const endpoints = [
+    "https://api.riokupon.com/vn/htm/home.php?store_merchant=shopee&voucher_main=all&type=&layout=voucher-list&limit=150",
+    "https://api.riokupon.com/vn/htm/home.php?store_merchant=shopee&voucher_main=freeship&type=&layout=voucher-list&limit=50",
+  ];
 
-  if (!res.ok) {
-    throw new Error(`HTTP ${res.status} khi tải danh sách voucher Shopee`);
-  }
-
-  const html = await res.text();
-  const items = html.match(/<li[^>]*class="bc_voucher_item"[^>]*>[\s\S]*?<\/li>/g) || [];
-  if (items.length === 0) return [];
+  const results = await Promise.allSettled(
+    endpoints.map((url) =>
+      fetch(url, {
+        headers: getStealthHeaders(),
+        signal: AbortSignal.timeout(12000),
+      }).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.text();
+      })
+    )
+  );
 
   const parsed: Coupon[] = [];
   const seenCodes = new Set<string>();
 
-  for (const item of items) {
-    const codeMatch = item.match(/data-code=["']([A-Z0-9]+)["']/i);
-    if (!codeMatch) continue;
-    const code = codeMatch[1].trim();
-    if (seenCodes.has(code)) continue;
-    seenCodes.add(code);
+  for (const res of results) {
+    if (res.status !== "fulfilled") continue;
+    const html = res.value;
+    const items = html.match(/<li[^>]*class="bc_voucher_item"[^>]*>[\s\S]*?<\/li>/g) || [];
 
-    const labelMatch = item.match(/class="bc_voucher_label"[^>]*>([\s\S]*?)<\/span>/i);
-    const label = labelMatch ? labelMatch[1].replace(/<[^>]+>/g, "").trim() : "Giảm giá";
+    for (const item of items) {
+      const codeMatch = item.match(/data-code=["']([A-Z0-9\-_]+)["']/i);
+      if (!codeMatch) continue;
+      const code = codeMatch[1].trim();
+      if (seenCodes.has(code)) continue;
+      seenCodes.add(code);
 
-    const titleMatch = item.match(/class="bc_voucher_title"[^>]*>[\s\S]*?<\/span>([\s\S]*?)<\/div>/i);
-    const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : label;
+      const labelMatch = item.match(/class="bc_voucher_label"[^>]*>([\s\S]*?)<\/span>/i);
+      const label = labelMatch ? labelMatch[1].replace(/<[^>]+>/g, "").trim() : "Giảm giá";
 
-    const descMatch = item.match(/title=["']([^"']*Chỉ áp dụng[^"']*)["']/i) || item.match(/title=["']([^"']*HSD[^"']*)["']/i);
-    const desc = descMatch ? descMatch[1].trim() : title;
+      const titleMatch = item.match(/class="bc_voucher_title"[^>]*>[\s\S]*?<\/span>([\s\S]*?)<\/div>/i);
+      const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : label;
 
-    const useMatch = item.match(/width:\s*(\d+)%/i);
-    const usagePercent = useMatch ? parseInt(useMatch[1], 10) : 50;
+      const descMatch =
+        item.match(/class="bc_voucher_desc_item[^"]*"[^>]*>([\s\S]*?)<\/div>/i) ||
+        item.match(/title=["']([^"']*Chỉ áp dụng[^"']*)["']/i) ||
+        item.match(/title=["']([^"']*HSD[^"']*)["']/i);
+      const desc = descMatch ? descMatch[1].replace(/<[^>]+>/g, "").trim() : title;
 
-    let targetUrl = "https://shopee.vn";
-    const urlMatch = item.match(/href=["'][^"']*url=([^"&']+)/i);
-    if (urlMatch) {
-      targetUrl = decodeURIComponent(urlMatch[1]);
+      const useMatch = item.match(/width:\s*(\d+)%/i);
+      const usagePercent = useMatch ? parseInt(useMatch[1], 10) : 50;
+
+      let targetUrl = "https://shopee.vn";
+      const urlMatch = item.match(/href=["'][^"']*url=([^"'&]+)/i);
+      if (urlMatch) {
+        targetUrl = decodeURIComponent(urlMatch[1]);
+      }
+
+      // Bọc link affiliate của DealHoàn
+      const trackedUrl = `https://s.shopee.vn/an_redir?affiliate_id=${DEALHOAN_AFFILIATE_ID}&url=${encodeURIComponent(targetUrl)}`;
+
+      const amtMatch =
+        title.match(/(\d+%(?:\s+tối\s+đa\s+\d+k)?|\d+k|\d+,\d+đ|\d+đ)/i) ||
+        desc.match(/giảm\s+(\d+%(?:\s+tối\s+đa\s+\d+k)?|\d+k|\d+,\d+đ|\d+đ)/i);
+      const amount = amtMatch ? amtMatch[1].toUpperCase() : "HOT";
+
+      const condMatch =
+        title.match(/(Đơn\s+tối\s+thiểu\s+[^·\n\+]+)/i) ||
+        desc.match(/(đơn\s+hàng\s+hợp\s+lệ\s+từ\s+[^·\n\+]+)/i) ||
+        title.match(/(hợp\s+lệ\s+từ\s+[^·\n\+]+)/i);
+      const condition = condMatch ? condMatch[1].trim() : "Đơn từ 0đ";
+
+      const isMall = label.toLowerCase().includes("mall") || desc.toLowerCase().includes("shopee mall");
+      const isFreeship =
+        label.toLowerCase().includes("freeship") ||
+        title.toLowerCase().includes("vận chuyển") ||
+        label.toLowerCase().includes("vận chuyển") ||
+        item.includes("Mã vận chuyển");
+
+      parsed.push({
+        id: `shopee-live-${code.toLowerCase()}`,
+        code,
+        amount,
+        unit: isFreeship ? "ship" : "giảm",
+        title: `${label}: ${title.slice(0, 75)}`,
+        subtitle: desc.slice(0, 80),
+        condition,
+        color: isMall ? "orange" : isFreeship ? "green" : "red",
+        category: isMall ? "mall" : isFreeship ? "freeship" : "toan_san",
+        platform: isMall ? "Shopee Mall" : "Shopee",
+        url: trackedUrl,
+        badge: isFreeship ? "FREESHIP" : isMall ? "SHOPEE MALL" : label.toUpperCase(),
+        usagePercent,
+      });
     }
-
-    // Bọc link affiliate của DealHoàn
-    const trackedUrl = `https://s.shopee.vn/an_redir?affiliate_id=${DEALHOAN_AFFILIATE_ID}&url=${encodeURIComponent(targetUrl)}`;
-
-    const amtMatch = title.match(/(\d+%(?:\s+tối\s+đa\s+\d+k)?|\d+k)/i) || desc.match(/giảm\s+(\d+%(?:\s+tối\s+đa\s+\d+k)?|\d+k)/i);
-    const amount = amtMatch ? amtMatch[1].toUpperCase() : "HOT";
-
-    const condMatch = title.match(/(Đơn\s+tối\s+thiểu\s+[^·\n]+)/i) || desc.match(/(đơn\s+hàng\s+hợp\s+lệ\s+từ\s+[^·\n]+)/i);
-    const condition = condMatch ? condMatch[1].trim() : "Đơn từ 0đ";
-
-    const isMall = label.toLowerCase().includes("mall") || desc.toLowerCase().includes("shopee mall");
-    const isFreeship = label.toLowerCase().includes("freeship") || title.toLowerCase().includes("vận chuyển");
-
-    parsed.push({
-      id: `shopee-live-${code.toLowerCase()}`,
-      code,
-      amount,
-      unit: "giảm",
-      title: `${label}: ${title}`,
-      subtitle: desc.slice(0, 80),
-      condition,
-      color: isMall ? "orange" : isFreeship ? "green" : "red",
-      category: isMall ? "mall" : isFreeship ? "freeship" : "toan_san",
-      platform: isMall ? "Shopee Mall" : "Shopee",
-      url: trackedUrl,
-      badge: label.toUpperCase(),
-      usagePercent,
-    });
   }
 
   return parsed;
@@ -159,7 +206,10 @@ export async function getVouchers(): Promise<Coupon[]> {
     if (existsSync(VOUCHER_CACHE_PATH)) {
       const stats = await stat(VOUCHER_CACHE_PATH);
       const age = Date.now() - stats.mtimeMs;
-      if (age < getDynamicTTL()) {
+      const isNewSlot = hasEnteredNewShopeeSlot(stats.mtimeMs);
+
+      // Nếu chưa hết hạn TTL VÀ chưa bước qua khung giờ vàng mới của Shopee
+      if (age < getDynamicTTL() && !isNewSlot) {
         isCacheStale = false;
       }
       const raw = await readFile(VOUCHER_CACHE_PATH, "utf-8");
