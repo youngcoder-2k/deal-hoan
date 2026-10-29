@@ -13,10 +13,8 @@ import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { PercentIcon } from "@phosphor-icons/react/dist/csr/Percent";
-import { TicketIcon } from "@phosphor-icons/react/dist/csr/Ticket";
-import { ClockIcon } from "@phosphor-icons/react/dist/csr/Clock";
 import { formatPrice } from "@/lib/deals/format";
-import { getCurrentShopeeSlotInfo } from "@/lib/deals/matching";
+import CouponSheet from "./coupon-sheet";
 import type { CalculatedProduct } from "@/lib/deals/resolve";
 import styles from "../home-redesign.module.css";
 
@@ -213,111 +211,7 @@ export function CashbackReceipt({
         </div>}
       </div>
 
-      {product.matchedVouchers && product.matchedVouchers.length > 0 && (() => {
-        const slotInfo = getCurrentShopeeSlotInfo();
-        const activeVouchers = product.matchedVouchers.filter((v) => !v.isSlotExhausted);
-        if (activeVouchers.length === 0) return null;
-        const availableCount = activeVouchers.filter((v) => v.isApplicable).length;
-
-        return (
-          <div className={styles.voucherSection}>
-            <div className={styles.voucherHeading}>
-              <div className={styles.voucherHeadingLeft}>
-                <TicketIcon size={16} weight="bold" />
-                <span>
-                  Kho mã Shopee ({availableCount} mã còn slot)
-                </span>
-              </div>
-              <div className={styles.voucherSlotNotice}>
-                <span className={styles.voucherActiveSlotBadge}>
-                  <ClockIcon size={12} weight="bold" /> Đợt {slotInfo.activeSlot}
-                </span>
-                <span className={styles.voucherNextSlotHint}>
-                  Mở đợt mới: {slotInfo.nextSlot} (sau {slotInfo.countdown})
-                </span>
-              </div>
-            </div>
-            <div className={styles.voucherList}>
-              {activeVouchers.map((mv, idx) => {
-                const isCopied = copiedCode === mv.coupon.code;
-                const isFreeship = mv.tier === "freeship" || mv.coupon.category === "freeship";
-                const isMall = mv.tier === "mall" || mv.coupon.category === "mall";
-                const badgeClass = isFreeship
-                  ? styles.voucherBadgeFreeship
-                  : isMall
-                  ? styles.voucherBadgeMall
-                  : styles.voucherBadgeShopee;
-
-                return (
-                  <div
-                    key={mv.coupon.id || `${mv.coupon.code}-${idx}`}
-                    className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""}`}
-                  >
-                    <div className={styles.voucherInfo}>
-                      <div className={styles.voucherBadgeRow}>
-                        <span className={`${styles.voucherBadge} ${badgeClass}`}>
-                          {mv.coupon.badge || (isFreeship ? "FREESHIP" : isMall ? "SHOPEE MALL" : "GIẢM GIÁ")}
-                        </span>
-                        <span className={`${styles.voucherSlotPill} ${styles[`slot_${mv.slotLevel}`]}`}>
-                          {mv.slotLabel}
-                        </span>
-                      </div>
-                      <p className={styles.voucherTitle} title={mv.coupon.title}>
-                        {mv.coupon.title}
-                      </p>
-                      <div className={styles.voucherMetaRow}>
-                        <span className={styles.voucherCondition}>
-                          {mv.isApplicable ? mv.coupon.condition : mv.reason || mv.coupon.condition}
-                        </span>
-                        <span className={styles.voucherTimeTag}>
-                          <ClockIcon size={11} /> {mv.timeSlotLabel}
-                        </span>
-                      </div>
-                      {mv.isApplicable && (
-                        <div
-                          className={styles.voucherMiniProgress}
-                          title={`Tiến độ sử dụng: đã dùng ${mv.coupon.usagePercent ?? 50}%`}
-                        >
-                          <div
-                            className={`${styles.voucherMiniProgressFill} ${styles[`progress_${mv.slotLevel}`]}`}
-                            style={{ width: `${Math.min(100, mv.coupon.usagePercent ?? 50)}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    {mv.isApplicable ? (
-                      <div style={{ textAlign: "right", flexShrink: 0 }}>
-                        <span className={styles.voucherSavings}>
-                          -{formatPrice(mv.calculatedDiscount)}
-                        </span>
-                        <div className={styles.voucherActions}>
-                          <button
-                            type="button"
-                            className={`${styles.voucherCodeBtn} ${isCopied ? styles.voucherCodeBtnCopied : ""}`}
-                            onClick={() => handleCopyVoucher(mv.coupon.code)}
-                            title={isCopied ? "Đã chép mã Shopee" : "Bấm để sao chép mã Shopee"}
-                          >
-                            <span className={styles.voucherCodeText}>{mv.coupon.code}</span>
-                            {isCopied ? (
-                              <CheckIcon size={12} weight="bold" className={styles.voucherCodeIcon} />
-                            ) : (
-                              <CopyIcon size={12} className={styles.voucherCodeIcon} />
-                            )}
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <span className={styles.voucherCodeDisabled} title={mv.reason}>
-                        {mv.coupon.code}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
+      {product.matchedVouchers && <CouponSheet key={product.matchedVouchers.map(v => v.coupon.code).join("|")} vouchers={product.matchedVouchers} copiedCode={copiedCode} onCopy={handleCopyVoucher} />}
 
       {trackedLink && (
         <div className={styles.linkSection}>
