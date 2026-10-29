@@ -94,7 +94,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       platform: "Shopee",
       badge: "HOT DEAL",
       url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn",
-      usagePercent: 92,
+      usagePercent: 78,
     },
     {
       id: "shopee-live-svipddv0110m900c1000",

@@ -118,8 +118,9 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
   const rawTitle = (coupon.title || "").toLowerCase();
   const hasExhaustedText = rawSub.includes("hết lượt") || rawTitle.includes("hết lượt");
 
-  // Nếu đã dùng từ 95% trở lên hoặc ghi rõ hết lượt => Coi như đã hết slot
-  const isSlotExhausted = usage >= 95 || hasExhaustedText;
+  // Ngưỡng an toàn cao: Đã dùng từ 90% trở lên (còn < 10% slot) hoặc ghi rõ hết lượt
+  // => Lập tức coi là cạn slot và ẩn đi để người dùng không bị hụt mã khi thanh toán.
+  const isSlotExhausted = usage >= 90 || hasExhaustedText;
 
   let slotLabel = "";
   let slotLevel: "high" | "medium" | "low" | "empty" = "high";
@@ -128,16 +129,16 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
   if (isSlotExhausted) {
     slotLabel = "Đã hết lượt";
     slotLevel = "empty";
-  } else if (usage >= 85) {
+  } else if (usage >= 75) {
     const remaining = Math.max(1, 100 - usage);
     slotLabel = `Sắp hết (Còn ${remaining}% lượt)`;
     slotLevel = "low";
-  } else if (usage >= 60) {
+  } else if (usage >= 50) {
     slotLabel = `Đã dùng ${usage}%`;
     slotLevel = "medium";
   } else {
     const remaining = Math.max(1, 100 - usage);
-    slotLabel = `Còn ${remaining}% lượt`;
+    slotLabel = `Còn nhiều (${remaining}% lượt)`;
     slotLevel = "high";
   }
 

@@ -56,18 +56,18 @@ test("voucher matching logic: returns all vouchers and calculates percentage dis
   assert.ok(matched.some((m) => m.tier === "freeship"), "Phải có tầng Freeship");
 });
 
-test("voucher matching logic: filters out exhausted codes completely and avoids tilde character", () => {
+test("voucher matching logic: filters out exhausted codes completely (usage >= 90%) and avoids tilde character", () => {
   const coupons = [
     {
       id: "v-exhausted",
-      code: "EXHAUSTED99",
+      code: "EXHAUSTED92",
       amount: "50K",
       unit: "giảm",
       title: "Mã giảm 50k",
       condition: "Đơn từ 100K",
       color: "red",
       category: "toan_san",
-      usagePercent: 99,
+      usagePercent: 92,
     },
     {
       id: "v-available",
@@ -83,8 +83,8 @@ test("voucher matching logic: filters out exhausted codes completely and avoids 
   ];
 
   const { matched } = matchVouchersForProduct(200000, "Shopee", coupons);
-  assert.equal(matched.length, 1, "Mã đã cạn slot (usage >= 95%) phải bị loại bỏ hoàn toàn, không hiển thị");
+  assert.equal(matched.length, 1, "Mã có usage >= 90% phải bị loại bỏ hoàn toàn, không hiển thị");
   assert.equal(matched[0].coupon.code, "AVAILABLE20");
   assert.equal(matched[0].slotLabel.includes("~"), false, "Tuyệt đối không có ký tự ~ gây hiểu nhầm âm %");
-  assert.equal(matched[0].slotLabel, "Còn 80% lượt");
+  assert.equal(matched[0].slotLabel, "Còn nhiều (80% lượt)");
 });
