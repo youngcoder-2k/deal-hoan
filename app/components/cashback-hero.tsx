@@ -14,7 +14,9 @@ import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { LinkIcon } from "@phosphor-icons/react/dist/csr/Link";
 import { PercentIcon } from "@phosphor-icons/react/dist/csr/Percent";
 import { TicketIcon } from "@phosphor-icons/react/dist/csr/Ticket";
+import { ClockIcon } from "@phosphor-icons/react/dist/csr/Clock";
 import { formatPrice } from "@/lib/deals/format";
+import { getCurrentShopeeSlotInfo } from "@/lib/deals/matching";
 import type { CalculatedProduct } from "@/lib/deals/resolve";
 import styles from "../home-redesign.module.css";
 
@@ -211,78 +213,115 @@ export function CashbackReceipt({
         </div>}
       </div>
 
-      {product.matchedVouchers && product.matchedVouchers.length > 0 && (
-        <div className={styles.voucherSection}>
-          <div className={styles.voucherHeading}>
-            <div className={styles.voucherHeadingLeft}>
-              <TicketIcon size={16} weight="bold" />
-              <span>
-                Toàn bộ mã Shopee ({product.matchedVouchers.filter((v) => v.isApplicable).length} mã có thể dùng)
-              </span>
-            </div>
-            <span className={styles.voucherHeadingHint}>
-              Thử mã kế tiếp nếu mã trước hết lượt
-            </span>
-          </div>
-          <div className={styles.voucherList}>
-            {product.matchedVouchers.map((mv, idx) => {
-              const isCopied = copiedCode === mv.coupon.code;
-              const isFreeship = mv.tier === "freeship" || mv.coupon.category === "freeship";
-              const isMall = mv.tier === "mall" || mv.coupon.category === "mall";
-              const badgeClass = isFreeship
-                ? styles.voucherBadgeFreeship
-                : isMall
-                ? styles.voucherBadgeMall
-                : styles.voucherBadgeShopee;
+      {product.matchedVouchers && product.matchedVouchers.length > 0 && (() => {
+        const slotInfo = getCurrentShopeeSlotInfo();
+        const availableCount = product.matchedVouchers.filter((v) => v.isApplicable && !v.isSlotExhausted).length;
 
-              return (
-                <div
-                  key={mv.coupon.id || `${mv.coupon.code}-${idx}`}
-                  className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""}`}
-                >
-                  <div className={styles.voucherInfo}>
-                    <span className={`${styles.voucherBadge} ${badgeClass}`}>
-                      {mv.coupon.badge || (isFreeship ? "FREESHIP" : isMall ? "SHOPEE MALL" : "GIẢM GIÁ")}
-                    </span>
-                    <p className={styles.voucherTitle} title={mv.coupon.title}>
-                      {mv.coupon.title}
-                    </p>
-                    <p className={styles.voucherCondition}>
-                      {mv.isApplicable ? mv.coupon.condition : mv.reason || mv.coupon.condition}
-                    </p>
-                  </div>
-                  {mv.isApplicable ? (
-                    <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <span className={styles.voucherSavings}>
-                        -{formatPrice(mv.calculatedDiscount)}
-                      </span>
-                      <div className={styles.voucherActions}>
-                        <button
-                          type="button"
-                          className={`${styles.voucherCodeBtn} ${isCopied ? styles.voucherCodeBtnCopied : ""}`}
-                          onClick={() => handleCopyVoucher(mv.coupon.code)}
-                          title={isCopied ? "Đã chép mã Shopee" : "Bấm để sao chép mã Shopee"}
-                        >
-                          <span className={styles.voucherCodeText}>{mv.coupon.code}</span>
-                          {isCopied ? (
-                            <CheckIcon size={12} weight="bold" className={styles.voucherCodeIcon} />
-                          ) : (
-                            <CopyIcon size={12} className={styles.voucherCodeIcon} />
-                          )}
-                        </button>
+        return (
+          <div className={styles.voucherSection}>
+            <div className={styles.voucherHeading}>
+              <div className={styles.voucherHeadingLeft}>
+                <TicketIcon size={16} weight="bold" />
+                <span>
+                  Kho mã Shopee ({availableCount} mã còn slot / {product.matchedVouchers.length} mã)
+                </span>
+              </div>
+              <div className={styles.voucherSlotNotice}>
+                <span className={styles.voucherActiveSlotBadge}>
+                  <ClockIcon size={12} weight="bold" /> Đợt {slotInfo.activeSlot}
+                </span>
+                <span className={styles.voucherNextSlotHint}>
+                  Mở đợt mới: {slotInfo.nextSlot} (sau {slotInfo.countdown})
+                </span>
+              </div>
+            </div>
+            <div className={styles.voucherList}>
+              {product.matchedVouchers.map((mv, idx) => {
+                const isCopied = copiedCode === mv.coupon.code;
+                const isFreeship = mv.tier === "freeship" || mv.coupon.category === "freeship";
+                const isMall = mv.tier === "mall" || mv.coupon.category === "mall";
+                const badgeClass = isFreeship
+                  ? styles.voucherBadgeFreeship
+                  : isMall
+                  ? styles.voucherBadgeMall
+                  : styles.voucherBadgeShopee;
+
+                return (
+                  <div
+                    key={mv.coupon.id || `${mv.coupon.code}-${idx}`}
+                    className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""} ${mv.isSlotExhausted ? styles.voucherItemExhausted : ""}`}
+                  >
+                    <div className={styles.voucherInfo}>
+                      <div className={styles.voucherBadgeRow}>
+                        <span className={`${styles.voucherBadge} ${badgeClass}`}>
+                          {mv.coupon.badge || (isFreeship ? "FREESHIP" : isMall ? "SHOPEE MALL" : "GIẢM GIÁ")}
+                        </span>
+                        <span className={`${styles.voucherSlotPill} ${styles[`slot_${mv.slotLevel}`]}`}>
+                          {mv.slotLabel}
+                        </span>
                       </div>
+                      <p className={styles.voucherTitle} title={mv.coupon.title}>
+                        {mv.coupon.title}
+                      </p>
+                      <div className={styles.voucherMetaRow}>
+                        <span className={styles.voucherCondition}>
+                          {mv.isApplicable ? mv.coupon.condition : mv.reason || mv.coupon.condition}
+                        </span>
+                        <span className={styles.voucherTimeTag}>
+                          <ClockIcon size={11} /> {mv.timeSlotLabel}
+                        </span>
+                      </div>
+                      {mv.isApplicable && (
+                        <div
+                          className={styles.voucherMiniProgress}
+                          title={`Tiến độ sử dụng: đã dùng ${mv.coupon.usagePercent ?? 50}%`}
+                        >
+                          <div
+                            className={`${styles.voucherMiniProgressFill} ${styles[`progress_${mv.slotLevel}`]}`}
+                            style={{ width: `${Math.min(100, mv.coupon.usagePercent ?? 50)}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    <span className={styles.voucherCodeDisabled} title={mv.reason}>
-                      {mv.coupon.code}
-                    </span>
-                  )}
-                </div>
-              );
-            })}
+                    {mv.isApplicable ? (
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <span className={styles.voucherSavings}>
+                          -{formatPrice(mv.calculatedDiscount)}
+                        </span>
+                        <div className={styles.voucherActions}>
+                          <button
+                            type="button"
+                            className={`${styles.voucherCodeBtn} ${isCopied ? styles.voucherCodeBtnCopied : ""} ${mv.isSlotExhausted ? styles.voucherCodeBtnExhausted : ""}`}
+                            onClick={() => handleCopyVoucher(mv.coupon.code)}
+                            title={
+                              isCopied
+                                ? "Đã chép mã Shopee"
+                                : mv.isSlotExhausted
+                                ? "Mã này có thể đã hết lượt trên Shopee - thử nếu cần"
+                                : "Bấm để sao chép mã Shopee"
+                            }
+                          >
+                            <span className={styles.voucherCodeText}>{mv.coupon.code}</span>
+                            {isCopied ? (
+                              <CheckIcon size={12} weight="bold" className={styles.voucherCodeIcon} />
+                            ) : (
+                              <CopyIcon size={12} className={styles.voucherCodeIcon} />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <span className={styles.voucherCodeDisabled} title={mv.reason}>
+                        {mv.coupon.code}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {trackedLink && (
         <div className={styles.linkSection}>

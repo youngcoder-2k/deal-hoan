@@ -73,5 +73,7 @@ export type Coupon = {
   socialType?: "facebook" | "instagram" | "youtube";
   badge?: string;
   usagePercent?: number;
+  timeSlot?: string;
+  startTime?: string;
 };
 

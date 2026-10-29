@@ -556,14 +556,117 @@
   font-weight: 700;
   color: #ea580c;
 }
-.voucherHeadingHint {
-  font-size: 10px;
-  font-weight: 600;
+.voucherSlotNotice {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.voucherActiveSlotBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
   color: #c2410c;
   background: #ffedd5;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 999px;
-  letter-spacing: -0.1px;
+}
+.voucherNextSlotHint {
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 999px;
+}
+.voucherBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  flex-wrap: wrap;
+}
+.voucherSlotPill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1.5px 5.5px;
+  border-radius: 4px;
+  letter-spacing: 0.1px;
+}
+.slot_high {
+  background: #dcfce7;
+  color: #15803d;
+}
+.slot_medium {
+  background: #fef3c7;
+  color: #b45309;
+}
+.slot_low {
+  background: #ffedd5;
+  color: #c2410c;
+}
+.slot_empty {
+  background: #fee2e2;
+  color: #dc2626;
+  font-weight: 800;
+}
+.voucherMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+.voucherTimeTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: #64748b;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.voucherMiniProgress {
+  width: 100%;
+  max-width: 140px;
+  height: 3.5px;
+  background: #f1f5f9;
+  border-radius: 999px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+.voucherMiniProgressFill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.progress_high {
+  background: #22c55e;
+}
+.progress_medium {
+  background: #f59e0b;
+}
+.progress_low {
+  background: #f97316;
+}
+.progress_empty {
+  background: #ef4444;
+}
+.voucherItemExhausted {
+  opacity: 0.72;
+  background: #fffbfa;
+  border-color: #fee2e2;
+}
+.voucherCodeBtnExhausted {
+  background: #fef2f2 !important;
+  border-color: #fca5a5 !important;
+  color: #b91c1c !important;
 }
 .voucherBadgeFreeship {
   background: #dcfce7 !important;
@@ -576,27 +679,6 @@
 .voucherBadgeShopee {
   background: #ffedd5 !important;
   color: #ea580c !important;
-}
-.voucherToggleBtn {
-  width: 100%;
-  margin-top: 8px;
-  padding: 6px 10px;
-  background: #ffffff;
-  border: 1px dashed #fdba74;
-  border-radius: 8px;
-  color: #ea580c;
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  transition: all 0.15s ease;
-}
-.voucherToggleBtn:hover {
-  background: #fff7ed;
-  border-color: #ea580c;
 }
 .voucherList {
   display: flex;
@@ -747,9 +829,16 @@
   .voucherHeadingLeft {
     font-size: 12px;
   }
-  .voucherHeadingHint {
+  .voucherSlotNotice {
+    gap: 4px;
+  }
+  .voucherActiveSlotBadge {
     font-size: 9.5px;
-    padding: 1px 6px;
+    padding: 1.5px 5.5px;
+  }
+  .voucherNextSlotHint {
+    font-size: 9px;
+    padding: 1.5px 5.5px;
   }
   .voucherList {
     max-height: 320px;

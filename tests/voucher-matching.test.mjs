@@ -55,3 +55,36 @@ test("voucher matching logic: returns all vouchers and calculates percentage dis
   assert.ok(bestDiscount > 0, "Phải tính được mức giảm");
   assert.ok(matched.some((m) => m.tier === "freeship"), "Phải có tầng Freeship");
 });
+
+test("voucher matching logic: prioritizes codes with available slots over exhausted ones", () => {
+  const coupons = [
+    {
+      id: "v-exhausted",
+      code: "EXHAUSTED99",
+      amount: "50K",
+      unit: "giảm",
+      title: "Mã giảm 50k",
+      condition: "Đơn từ 100K",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 99,
+    },
+    {
+      id: "v-available",
+      code: "AVAILABLE20",
+      amount: "30K",
+      unit: "giảm",
+      title: "Mã giảm 30k",
+      condition: "Đơn từ 100K",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 20,
+    },
+  ];
+
+  const { matched } = matchVouchersForProduct(200000, "Shopee", coupons);
+  assert.equal(matched[0].coupon.code, "AVAILABLE20", "Mã còn slot phải xếp trên mã đã cạn slot 99%");
+  assert.equal(matched[0].isSlotExhausted, false);
+  assert.equal(matched[1].isSlotExhausted, true);
+  assert.match(matched[0].slotLabel, /Còn/);
+});

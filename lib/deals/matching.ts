@@ -7,7 +7,58 @@ export type MatchedCoupon = {
   reason?: string;
   minSpend: number;
   tier?: "freeship" | "shopee" | "mall";
+  slotLabel: string;
+  slotLevel: "high" | "medium" | "low" | "empty";
+  timeSlotLabel: string;
+  isSlotExhausted: boolean;
 };
+
+/**
+ * Trả về thông tin khung giờ vàng Shopee hiện tại và đợt mở mã kế tiếp
+ */
+export function getCurrentShopeeSlotInfo() {
+  const vnDate = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Ho_Chi_Minh" }));
+  const hour = vnDate.getHours();
+  const minutes = vnDate.getMinutes();
+
+  let activeSlot = "0h";
+  let nextSlot = "9h";
+  let nextSlotHour = 9;
+
+  if (hour >= 21) {
+    activeSlot = "21h";
+    nextSlot = "0h ngày mai";
+    nextSlotHour = 24;
+  } else if (hour >= 18) {
+    activeSlot = "18h";
+    nextSlot = "21h";
+    nextSlotHour = 21;
+  } else if (hour >= 12) {
+    activeSlot = "12h";
+    nextSlot = "18h";
+    nextSlotHour = 18;
+  } else if (hour >= 9) {
+    activeSlot = "9h";
+    nextSlot = "12h";
+    nextSlotHour = 12;
+  } else {
+    activeSlot = "0h";
+    nextSlot = "9h";
+    nextSlotHour = 9;
+  }
+
+  const minsUntilNext = (nextSlotHour * 60) - (hour * 60 + minutes);
+  const hoursLeft = Math.floor(minsUntilNext / 60);
+  const minsLeft = minsUntilNext % 60;
+  const countdown = hoursLeft > 0 ? `${hoursLeft}h ${minsLeft}p` : `${minsLeft} phút`;
+
+  return {
+    activeSlot,
+    nextSlot,
+    countdown,
+    formattedCurrentTime: `${String(hour).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`,
+  };
+}
 
 /**
  * Trích xuất số tiền từ text (VD: "Đơn từ 150K" -> 150000, "500K" -> 500000, "1tr" -> 1000000)
@@ -40,7 +91,7 @@ export function parseAmountFromText(text: string): number {
 }
 
 /**
- * Phân tích điều kiện và số tiền giảm của một Coupon
+ * Phân tích điều kiện, tiến độ slot và số tiền giảm của một Coupon
  */
 export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = false): MatchedCoupon {
   const cond = coupon.condition || "";
@@ -61,7 +112,32 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
 
   const tier: "freeship" | "mall" | "shopee" = isFreeship ? "freeship" : isMallCoupon ? "mall" : "shopee";
 
-  // 1. Tìm đơn tối thiểu từ condition hoặc title (VD: "Đơn tối thiểu 50,000đ", "Đơn từ 150K")
+  // 1. Phân tích tiến độ lượt dùng & còn slot hay không
+  const usage = coupon.usagePercent ?? 50;
+  let slotLabel = `Còn ~${Math.max(1, 100 - usage)}% lượt`;
+  let slotLevel: "high" | "medium" | "low" | "empty" = "high";
+  let isSlotExhausted = false;
+
+  if (usage >= 98) {
+    slotLabel = "Nguy cơ hết lượt (Đã dùng 98%+)";
+    slotLevel = "empty";
+    isSlotExhausted = true;
+  } else if (usage >= 85) {
+    slotLabel = `Sắp hết (Còn ~${100 - usage}% lượt)`;
+    slotLevel = "low";
+  } else if (usage >= 60) {
+    slotLabel = `Đã dùng ${usage}%`;
+    slotLevel = "medium";
+  } else {
+    slotLabel = `Còn ~${100 - usage}% lượt`;
+    slotLevel = "high";
+  }
+
+  // 2. Phân tích khung giờ hiệu lực / bắt đầu
+  const slotInfo = getCurrentShopeeSlotInfo();
+  const timeSlotLabel = coupon.timeSlot || coupon.startTime || `Khung ${slotInfo.activeSlot}`;
+
+  // 3. Tìm đơn tối thiểu từ condition hoặc title (VD: "Đơn tối thiểu 50,000đ", "Đơn từ 150K")
   let minSpend = 0;
   const minSpendMatch =
     cond.match(/(?:[đd]ơn(?:\s+hàng)?(?:\s+hợp\s+lệ)?\s*(?:từ|tối\s+thiểu))\s*([^·,\n\+]+)/i) ||
@@ -70,7 +146,7 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
     minSpend = parseAmountFromText(minSpendMatch[1]);
   }
 
-  // 2. Tìm giá trị giảm
+  // 4. Tìm giá trị giảm
   let discountVal = 0;
   const pctMatch = (coupon.amount || "").match(/(\d+)\s*%/i) || title.match(/(\d+)\s*%/i);
   const capMatch =
@@ -89,7 +165,7 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
     discountVal = parseAmountFromText(coupon.amount) || parseAmountFromText(title) || parseAmountFromText(cond);
   }
 
-  // 3. Kiểm tra tính khả dụng
+  // 5. Kiểm tra tính khả dụng
   if (minSpend > 0 && price < minSpend) {
     const diff = minSpend - price;
     return {
@@ -99,6 +175,10 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
       reason: `Cần thêm ${diff.toLocaleString("vi-VN")}đ để đạt đơn tối thiểu ${minSpend.toLocaleString("vi-VN")}đ`,
       minSpend,
       tier,
+      slotLabel,
+      slotLevel,
+      timeSlotLabel,
+      isSlotExhausted,
     };
   }
 
@@ -110,6 +190,10 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
       reason: "Chỉ áp dụng cho gian hàng Shopee Mall chính hãng",
       minSpend,
       tier: "mall",
+      slotLabel,
+      slotLevel,
+      timeSlotLabel,
+      isSlotExhausted,
     };
   }
 
@@ -122,13 +206,19 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
     reason: "Thỏa mãn điều kiện áp dụng",
     minSpend,
     tier,
+    slotLabel,
+    slotLevel,
+    timeSlotLabel,
+    isSlotExhausted,
   };
 }
 
 /**
  * Lọc và so khớp toàn bộ danh sách voucher cho sản phẩm
- * Trả về 100% kho voucher có thể áp dụng, sắp xếp mã giảm cao nhất lên đầu
- * Giúp người dùng có toàn bộ mã để dự phòng nếu mã tốt nhất đã hết lượt sử dụng.
+ * Trả về 100% kho voucher có thể áp dụng, sắp xếp thông minh:
+ * 1. Mã dùng được VÀ CÒN SLOT lên đầu tiên (giảm sâu nhất đứng trước)
+ * 2. Mã sắp hết / nguy cơ hết slot xếp sau kèm cảnh báo
+ * 3. Mã chưa đủ đơn tối thiểu xếp cuối
  */
 export function matchVouchersForProduct(
   price: number,
@@ -147,14 +237,18 @@ export function matchVouchersForProduct(
     results.push(evaluated);
   }
 
-  // Sắp xếp:
-  // 1. Mã dùng được ngay (isApplicable: true) lên trước, sắp xếp mức giảm cao nhất đứng đầu
-  // 2. Mã chưa đủ điều kiện (isApplicable: false) xếp sau, sắp xếp theo đơn tối thiểu tăng dần
+  // Sắp xếp ưu tiên an toàn cao nhất cho người dùng:
+  // 1. Mã dùng được và còn slot (!isSlotExhausted) -> giảm nhiều nhất đứng đầu
+  // 2. Mã dùng được nhưng đã cạn slot (isSlotExhausted) -> xếp sau
+  // 3. Mã chưa đủ điều kiện -> xếp cuối
   results.sort((a, b) => {
     if (a.isApplicable !== b.isApplicable) {
       return a.isApplicable ? -1 : 1;
     }
     if (a.isApplicable && b.isApplicable) {
+      if (a.isSlotExhausted !== b.isSlotExhausted) {
+        return a.isSlotExhausted ? 1 : -1;
+      }
       return b.calculatedDiscount - a.calculatedDiscount;
     }
     return a.minSpend - b.minSpend;
