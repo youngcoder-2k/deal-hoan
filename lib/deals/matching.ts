@@ -114,22 +114,30 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
 
   // 1. Phân tích tiến độ lượt dùng & còn slot hay không
   const usage = coupon.usagePercent ?? 50;
-  let slotLabel = `Còn ~${Math.max(1, 100 - usage)}% lượt`;
-  let slotLevel: "high" | "medium" | "low" | "empty" = "high";
-  let isSlotExhausted = false;
+  const rawSub = (coupon.subtitle || "").toLowerCase();
+  const rawTitle = (coupon.title || "").toLowerCase();
+  const hasExhaustedText = rawSub.includes("hết lượt") || rawTitle.includes("hết lượt");
 
-  if (usage >= 98) {
-    slotLabel = "Nguy cơ hết lượt (Đã dùng 98%+)";
+  // Nếu đã dùng từ 95% trở lên hoặc ghi rõ hết lượt => Coi như đã hết slot
+  const isSlotExhausted = usage >= 95 || hasExhaustedText;
+
+  let slotLabel = "";
+  let slotLevel: "high" | "medium" | "low" | "empty" = "high";
+
+  // Tuyệt đối không dùng ký tự '~' tránh gây hiểu nhầm thành dấu trừ '-' (âm %)
+  if (isSlotExhausted) {
+    slotLabel = "Đã hết lượt";
     slotLevel = "empty";
-    isSlotExhausted = true;
   } else if (usage >= 85) {
-    slotLabel = `Sắp hết (Còn ~${100 - usage}% lượt)`;
+    const remaining = Math.max(1, 100 - usage);
+    slotLabel = `Sắp hết (Còn ${remaining}% lượt)`;
     slotLevel = "low";
   } else if (usage >= 60) {
     slotLabel = `Đã dùng ${usage}%`;
     slotLevel = "medium";
   } else {
-    slotLabel = `Còn ~${100 - usage}% lượt`;
+    const remaining = Math.max(1, 100 - usage);
+    slotLabel = `Còn ${remaining}% lượt`;
     slotLevel = "high";
   }
 
@@ -231,24 +239,24 @@ export function matchVouchersForProduct(
 
   for (const c of vouchers) {
     const evaluated = evaluateCoupon(c, price, isMall);
+    // Bỏ hoàn toàn mã đã hết lượt, tuyệt đối không hiển thị lên giao diện
+    if (evaluated.isSlotExhausted) {
+      continue;
+    }
     if (evaluated.isApplicable && evaluated.calculatedDiscount > bestDiscount) {
       bestDiscount = evaluated.calculatedDiscount;
     }
     results.push(evaluated);
   }
 
-  // Sắp xếp ưu tiên an toàn cao nhất cho người dùng:
-  // 1. Mã dùng được và còn slot (!isSlotExhausted) -> giảm nhiều nhất đứng đầu
-  // 2. Mã dùng được nhưng đã cạn slot (isSlotExhausted) -> xếp sau
-  // 3. Mã chưa đủ điều kiện -> xếp cuối
+  // Sắp xếp ưu tiên:
+  // 1. Mã dùng được ngay lên đầu (giảm nhiều nhất đứng trước)
+  // 2. Mã chưa đủ đơn tối thiểu xếp cuối
   results.sort((a, b) => {
     if (a.isApplicable !== b.isApplicable) {
       return a.isApplicable ? -1 : 1;
     }
     if (a.isApplicable && b.isApplicable) {
-      if (a.isSlotExhausted !== b.isSlotExhausted) {
-        return a.isSlotExhausted ? 1 : -1;
-      }
       return b.calculatedDiscount - a.calculatedDiscount;
     }
     return a.minSpend - b.minSpend;

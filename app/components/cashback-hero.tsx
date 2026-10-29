@@ -215,7 +215,9 @@ export function CashbackReceipt({
 
       {product.matchedVouchers && product.matchedVouchers.length > 0 && (() => {
         const slotInfo = getCurrentShopeeSlotInfo();
-        const availableCount = product.matchedVouchers.filter((v) => v.isApplicable && !v.isSlotExhausted).length;
+        const activeVouchers = product.matchedVouchers.filter((v) => !v.isSlotExhausted);
+        if (activeVouchers.length === 0) return null;
+        const availableCount = activeVouchers.filter((v) => v.isApplicable).length;
 
         return (
           <div className={styles.voucherSection}>
@@ -223,7 +225,7 @@ export function CashbackReceipt({
               <div className={styles.voucherHeadingLeft}>
                 <TicketIcon size={16} weight="bold" />
                 <span>
-                  Kho mã Shopee ({availableCount} mã còn slot / {product.matchedVouchers.length} mã)
+                  Kho mã Shopee ({availableCount} mã còn slot)
                 </span>
               </div>
               <div className={styles.voucherSlotNotice}>
@@ -236,7 +238,7 @@ export function CashbackReceipt({
               </div>
             </div>
             <div className={styles.voucherList}>
-              {product.matchedVouchers.map((mv, idx) => {
+              {activeVouchers.map((mv, idx) => {
                 const isCopied = copiedCode === mv.coupon.code;
                 const isFreeship = mv.tier === "freeship" || mv.coupon.category === "freeship";
                 const isMall = mv.tier === "mall" || mv.coupon.category === "mall";
@@ -249,7 +251,7 @@ export function CashbackReceipt({
                 return (
                   <div
                     key={mv.coupon.id || `${mv.coupon.code}-${idx}`}
-                    className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""} ${mv.isSlotExhausted ? styles.voucherItemExhausted : ""}`}
+                    className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""}`}
                   >
                     <div className={styles.voucherInfo}>
                       <div className={styles.voucherBadgeRow}>
@@ -291,15 +293,9 @@ export function CashbackReceipt({
                         <div className={styles.voucherActions}>
                           <button
                             type="button"
-                            className={`${styles.voucherCodeBtn} ${isCopied ? styles.voucherCodeBtnCopied : ""} ${mv.isSlotExhausted ? styles.voucherCodeBtnExhausted : ""}`}
+                            className={`${styles.voucherCodeBtn} ${isCopied ? styles.voucherCodeBtnCopied : ""}`}
                             onClick={() => handleCopyVoucher(mv.coupon.code)}
-                            title={
-                              isCopied
-                                ? "Đã chép mã Shopee"
-                                : mv.isSlotExhausted
-                                ? "Mã này có thể đã hết lượt trên Shopee - thử nếu cần"
-                                : "Bấm để sao chép mã Shopee"
-                            }
+                            title={isCopied ? "Đã chép mã Shopee" : "Bấm để sao chép mã Shopee"}
                           >
                             <span className={styles.voucherCodeText}>{mv.coupon.code}</span>
                             {isCopied ? (
