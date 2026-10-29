@@ -5,9 +5,12 @@ const fs = require('node:fs');
 const loadTs = require('./helpers/load-ts.cjs');
 
 test('CashbackReceipt unauthenticated behavior vs authenticated behavior', () => {
+  const react = require('react');
+  const reactStub = { ...react, useState: (init) => [typeof init === 'function' ? init() : init, () => {}] };
   const iconStub = (props) => ({ type: 'icon', props });
   const cssProxy = new Proxy({}, { get: (_, prop) => (prop === 'default' || prop === '__esModule') ? cssProxy : String(prop) });
   const load = loadTs({
+    react: reactStub,
     'next/image': (props) => ({ type: 'img', props }),
     '@/public/brand/shopeefood-logo.png': '/brand/shopeefood-logo.png',
     '@phosphor-icons/react/dist/csr/ArrowRight': { ArrowRightIcon: iconStub },
@@ -20,6 +23,10 @@ test('CashbackReceipt unauthenticated behavior vs authenticated behavior', () =>
     '@phosphor-icons/react/dist/csr/ShoppingCart': { ShoppingCartIcon: iconStub },
     '@phosphor-icons/react/dist/csr/Link': { LinkIcon: iconStub },
     '@phosphor-icons/react/dist/csr/Percent': { PercentIcon: iconStub },
+    '@phosphor-icons/react/dist/csr/Ticket': { TicketIcon: iconStub },
+    '@phosphor-icons/react/dist/csr/CaretRight': { CaretRightIcon: iconStub },
+    '@phosphor-icons/react/dist/csr/X': { XIcon: iconStub },
+    [path.resolve(__dirname, '../app/components/coupon-sheet.module.css')]: cssProxy,
     [path.resolve(__dirname, '../app/home-redesign.module.css')]: cssProxy,
     '@/lib/deals/format': {
       formatPrice: (num) => `${(num || 0).toLocaleString('vi-VN')}đ`,

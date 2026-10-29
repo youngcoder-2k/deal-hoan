@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchVouchersForProduct, evaluateCoupon } from "../lib/deals/matching.ts";
+import { matchVouchersForProduct, evaluateCoupon, isPaymentRestrictedCoupon } from "../lib/deals/matching.ts";
 import { getDailyShopeeCoupons } from "../lib/deals/coupons-static.ts";
 
 test("voucher matching logic: matches applicable vouchers for 300k Shopee product", () => {
@@ -87,4 +87,75 @@ test("voucher matching logic: filters out exhausted codes completely (usage >= 9
   assert.equal(matched[0].coupon.code, "AVAILABLE20");
   assert.equal(matched[0].slotLabel.includes("~"), false, "Tuyệt đối không có ký tự ~ gây hiểu nhầm âm %");
   assert.equal(matched[0].slotLabel, "Còn nhiều (80% lượt)");
+});
+
+test("voucher matching logic: strictly filters out SPayLater and ShopeePay vouchers and prioritizes Shopee App vouchers", () => {
+  const mixedCoupons = [
+    {
+      id: "spl-150k",
+      code: "SPLOCT0131A",
+      amount: "150K",
+      unit: "giảm",
+      title: "Mã ưu đãi Shopee: Giảm 150,000đ",
+      condition: "Đơn tối thiểu 0đ",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 10,
+    },
+    {
+      id: "spp-5pct",
+      code: "SPPAPPSVIPDT61",
+      amount: "5%",
+      unit: "giảm",
+      title: "Mã giảm 5% thanh toán ShopeePay",
+      condition: "Đơn tối thiểu 0đ",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 20,
+    },
+    {
+      id: "shopee-app-20pct",
+      code: "OCT26ID17",
+      amount: "20%",
+      unit: "giảm",
+      title: "Mã giảm giá Shopee: Giảm 20% toàn sàn",
+      condition: "Đơn tối thiểu 150,000đ",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 30,
+    },
+    {
+      id: "shopee-app-25pct",
+      code: "GFSWQM",
+      amount: "25%",
+      unit: "giảm",
+      title: "Mã giảm giá Shopee: Giảm 25% đơn từ 50k",
+      condition: "Đơn tối thiểu 50,000đ",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 50,
+    },
+  ];
+
+  // Kiểm tra hàm nhận diện mã giới hạn phương thức thanh toán
+  assert.equal(isPaymentRestrictedCoupon(mixedCoupons[0]), true, "SPLOCT0131A phải là mã SPayLater");
+  assert.equal(isPaymentRestrictedCoupon(mixedCoupons[1]), true, "SPPAPPSVIPDT61 phải là mã ShopeePay");
+  assert.equal(isPaymentRestrictedCoupon(mixedCoupons[2]), false, "OCT26ID17 phải là mã Shopee App chuẩn");
+  assert.equal(isPaymentRestrictedCoupon(mixedCoupons[3]), false, "GFSWQM phải là mã Shopee App chuẩn");
+
+  // So khớp cho đơn hàng 200k
+  const { matched, bestDiscount } = matchVouchersForProduct(200000, "Shopee", mixedCoupons);
+
+  // Không có bất kỳ mã SPL hoặc SPP nào lọt vào kết quả
+  assert.equal(
+    matched.some((m) => m.coupon.code.startsWith("SPL") || m.coupon.code.startsWith("SPP")),
+    false,
+    "Tuyệt đối không được chứa mã SPayLater hoặc ShopeePay",
+  );
+
+  // Chỉ còn đúng 2 mã Shopee App
+  assert.equal(matched.length, 2, "Chỉ giữ lại mã dùng trực tiếp trên Shopee App");
+  assert.equal(matched[0].coupon.code, "GFSWQM", "Mã giảm sâu nhất (25% = 50k) đứng đầu");
+  assert.equal(matched[1].coupon.code, "OCT26ID17", "Mã 20% đứng thứ hai");
+  assert.equal(bestDiscount, 50000, "Mức giảm tốt nhất phải là 50,000đ từ mã Shopee App");
 });

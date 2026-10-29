@@ -11,7 +11,46 @@ export type MatchedCoupon = {
   slotLevel: "high" | "medium" | "low" | "empty";
   timeSlotLabel: string;
   isSlotExhausted: boolean;
+  isPaymentRestricted?: boolean;
 };
+
+/**
+ * Kiểm tra xem mã có yêu cầu phương thức thanh toán đặc thù (SPayLater, ShopeePay, ngân hàng...) hay không.
+ * Người dùng thông thường mua hàng trên app Shopee không có các tài khoản/ví này,
+ * nên hệ thống ưu tiên 100% mã dùng trực tiếp trên app Shopee cho mọi phương thức thanh toán.
+ */
+export function isPaymentRestrictedCoupon(coupon: Coupon): boolean {
+  const code = (coupon.code || "").toUpperCase().trim();
+  const text = `${coupon.code} ${coupon.title || ""} ${coupon.subtitle || ""} ${coupon.condition || ""} ${coupon.badge || ""} ${coupon.url || ""}`.toLowerCase();
+
+  // 1. Kiểm tra prefix đặc trưng của ShopeePay & SPayLater
+  if (
+    code.startsWith("SPL") ||      // SPayLater (vd: SPLOCT0131A, SPLSVIPTV1, SPLSVIPTV3)
+    code.startsWith("SPP") ||      // ShopeePay (vd: SPPAPPSVIPDT61, SPPDPSVIPMVI61, SPPAPPSVIPHD7)
+    code.startsWith("SPAY") ||     // SPayLater/ShopeePay
+    code.startsWith("SHPEEPAY") ||
+    code.startsWith("SHOPEEPAY") ||
+    code.startsWith("AIRPAY")
+  ) {
+    return true;
+  }
+
+  // 2. Kiểm tra từ khóa trong nội dung và điều kiện mã
+  return (
+    text.includes("spaylater") ||
+    text.includes("spay later") ||
+    text.includes("shopeepay") ||
+    text.includes("shopee pay") ||
+    text.includes("ví shopeepay") ||
+    text.includes("ví shopee") ||
+    text.includes("airpay") ||
+    text.includes("ví điện tử") ||
+    text.includes("thẻ tín dụng") ||
+    text.includes("ngân hàng") ||
+    text.includes("thanh toán qua") ||
+    text.includes("credit card")
+  );
+}
 
 /**
  * Trả về thông tin khung giờ vàng Shopee hiện tại và đợt mở mã kế tiếp
@@ -111,6 +150,7 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
     title.toLowerCase().includes("shopee mall");
 
   const tier: "freeship" | "mall" | "shopee" = isFreeship ? "freeship" : isMallCoupon ? "mall" : "shopee";
+  const isPaymentRestricted = isPaymentRestrictedCoupon(coupon);
 
   // 1. Phân tích tiến độ lượt dùng & còn slot hay không
   const usage = coupon.usagePercent ?? 50;
@@ -188,6 +228,7 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
       slotLevel,
       timeSlotLabel,
       isSlotExhausted,
+      isPaymentRestricted,
     };
   }
 
@@ -203,6 +244,7 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
       slotLevel,
       timeSlotLabel,
       isSlotExhausted,
+      isPaymentRestricted,
     };
   }
 
@@ -219,15 +261,16 @@ export function evaluateCoupon(coupon: Coupon, price: number, isMall: boolean = 
     slotLevel,
     timeSlotLabel,
     isSlotExhausted,
+    isPaymentRestricted,
   };
 }
 
 /**
  * Lọc và so khớp toàn bộ danh sách voucher cho sản phẩm
- * Trả về 100% kho voucher có thể áp dụng, sắp xếp thông minh:
- * 1. Mã dùng được VÀ CÒN SLOT lên đầu tiên (giảm sâu nhất đứng trước)
- * 2. Mã sắp hết / nguy cơ hết slot xếp sau kèm cảnh báo
- * 3. Mã chưa đủ đơn tối thiểu xếp cuối
+ * Trả về 100% kho voucher có thể áp dụng:
+ * 1. Ưu tiên tuyệt đối mã dùng trực tiếp trên app Shopee (loại bỏ hoàn toàn mã SPayLater / ShopeePay)
+ * 2. Ẩn hoàn toàn mã cạn slot (đã dùng >= 90%)
+ * 3. Sắp xếp mã dùng được lên trước (giảm nhiều nhất đứng đầu)
  */
 export function matchVouchersForProduct(
   price: number,
@@ -239,6 +282,11 @@ export function matchVouchersForProduct(
   let bestDiscount = 0;
 
   for (const c of vouchers) {
+    // Loại bỏ mã yêu cầu phương thức thanh toán đặc thù (SPayLater, ShopeePay)
+    if (isPaymentRestrictedCoupon(c)) {
+      continue;
+    }
+
     const evaluated = evaluateCoupon(c, price, isMall);
     // Bỏ hoàn toàn mã đã hết lượt, tuyệt đối không hiển thị lên giao diện
     if (evaluated.isSlotExhausted) {
