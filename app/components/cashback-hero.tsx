@@ -155,6 +155,7 @@ export function CashbackReceipt({
 }) {
   const { price, cashback } = product;
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [showAllVouchers, setShowAllVouchers] = useState(false);
 
   const handleCopyVoucher = (code: string) => {
     try {
@@ -214,22 +215,35 @@ export function CashbackReceipt({
       {product.matchedVouchers && product.matchedVouchers.length > 0 && (
         <div className={styles.voucherSection}>
           <div className={styles.voucherHeading}>
-            <TicketIcon size={16} weight="bold" />
-            <span>
-              Mã giảm giá có thể áp dụng ({product.matchedVouchers.filter((v) => v.isApplicable).length})
+            <div className={styles.voucherHeadingLeft}>
+              <TicketIcon size={16} weight="bold" />
+              <span>
+                Mã giảm giá có thể áp dụng ({product.matchedVouchers.filter((v) => v.isApplicable).length})
+              </span>
+            </div>
+            <span className={styles.voucherHeadingHint}>
+              Áp dụng kết hợp Freeship + Mã Shopee
             </span>
           </div>
           <div className={styles.voucherList}>
-            {product.matchedVouchers.slice(0, 4).map((mv, idx) => {
+            {(showAllVouchers ? product.matchedVouchers : product.matchedVouchers.slice(0, 3)).map((mv, idx) => {
               const isCopied = copiedCode === mv.coupon.code;
+              const isFreeship = mv.tier === "freeship" || mv.coupon.category === "freeship";
+              const isMall = mv.tier === "mall" || mv.coupon.category === "mall";
+              const badgeClass = isFreeship
+                ? styles.voucherBadgeFreeship
+                : isMall
+                ? styles.voucherBadgeMall
+                : styles.voucherBadgeShopee;
+
               return (
                 <div
                   key={mv.coupon.id || idx}
                   className={`${styles.voucherItem} ${!mv.isApplicable ? styles.voucherItemInapplicable : ""}`}
                 >
                   <div className={styles.voucherInfo}>
-                    <span className={styles.voucherBadge}>
-                      {mv.coupon.badge || (mv.isApplicable ? "Shopee" : "Chưa đủ ĐK")}
+                    <span className={`${styles.voucherBadge} ${badgeClass}`}>
+                      {mv.coupon.badge || (isFreeship ? "FREESHIP" : isMall ? "SHOPEE MALL" : "GIẢM GIÁ")}
                     </span>
                     <p className={styles.voucherTitle} title={mv.coupon.title}>
                       {mv.coupon.title}
@@ -268,6 +282,17 @@ export function CashbackReceipt({
               );
             })}
           </div>
+          {product.matchedVouchers.length > 3 && (
+            <button
+              type="button"
+              className={styles.voucherToggleBtn}
+              onClick={() => setShowAllVouchers(!showAllVouchers)}
+            >
+              {showAllVouchers
+                ? "Thu gọn danh sách mã ▴"
+                : `Xem thêm ${product.matchedVouchers.length - 3} mã khác ▾`}
+            </button>
+          )}
         </div>
       )}
 
