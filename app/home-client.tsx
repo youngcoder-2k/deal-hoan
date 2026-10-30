@@ -320,12 +320,31 @@ export default function HomeClient({
 
   useEffect(() => {
     if (!user) return;
+    try {
+      const cached = localStorage.getItem("dealhoan_wallet_cache_" + user.id);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (typeof parsed.balance === "number") {
+          setUserBalance(parsed.balance);
+        }
+      }
+    } catch {}
     let mounted = true;
     fetch("/api/wallet")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (mounted && data?.wallet && typeof data.wallet.balance === "number") {
           setUserBalance(data.wallet.balance);
+          try {
+            localStorage.setItem(
+              "dealhoan_wallet_cache_" + user.id,
+              JSON.stringify({
+                balance: data.wallet.balance,
+                pending_balance: data.wallet.pending_balance,
+                total_withdrawn: data.wallet.total_withdrawn,
+              })
+            );
+          } catch {}
         }
       })
       .catch(() => {});
@@ -502,6 +521,9 @@ export default function HomeClient({
     if (!supabase) return;
 
     let mounted = true;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (mounted && session?.user) setUser(session.user);
+    });
     supabase.auth.getUser().then(({ data }) => {
       if (mounted) setUser(data.user);
     });
@@ -1381,6 +1403,7 @@ export default function HomeClient({
         <AccountModal
           key={user.id}
           user={user}
+          initialBalance={userBalance ?? undefined}
           onClose={() => {
             setAccountOpen(false);
             fetchUserBalance();

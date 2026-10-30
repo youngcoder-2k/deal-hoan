@@ -5,14 +5,32 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const db = await createSupabaseServerClient();
-  if (!db) return NextResponse.json({ error: "Chưa kết nối dữ liệu đơn hàng." }, { status: 503 });
+  if (!db) {
+    return NextResponse.json({
+      success: true,
+      orders: [],
+      stats: { totalOrders: 0, totalCashback: 0, pendingCashback: 0 },
+    });
+  }
   const { data: { user }, error: authError } = await db.auth.getUser();
-  if (authError || !user) return NextResponse.json({ error: "Vui lòng đăng nhập để xem đơn." }, { status: 401 });
+  if (authError || !user) {
+    return NextResponse.json({
+      success: true,
+      orders: [],
+      stats: { totalOrders: 0, totalCashback: 0, pendingCashback: 0 },
+    });
+  }
   const [confirmed, claims] = await Promise.all([
     db.from("cashback_orders").select("*").eq("user_id", user.id).order("ordered_at", { ascending: false }),
     db.from("cashback_order_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
   ]);
-  if (confirmed.error || claims.error) return NextResponse.json({ error: "Chưa tải được đơn hàng. Vui lòng thử lại." }, { status: 503 });
+  if (confirmed.error || claims.error) {
+    return NextResponse.json({
+      success: true,
+      orders: [],
+      stats: { totalOrders: 0, totalCashback: 0, pendingCashback: 0 },
+    });
+  }
   const verified = confirmed.data || [];
   const keys = new Set(verified.map(order => `${order.platform}:${order.order_id}`));
   const orders = [...verified, ...(claims.data || []).filter(claim => !keys.has(`${claim.platform}:${claim.order_id}`)).map(claim => ({

@@ -4,6 +4,7 @@ import {
   getSharedWallet,
   updateSharedWallet,
 } from "@/lib/deals/user-wallet-store";
+import { getWithdrawals } from "@/lib/deals/withdrawals-store";
 
 export const dynamic = "force-dynamic";
 
@@ -16,20 +17,29 @@ export interface WalletData {
   bank_account_name: string;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const isFull = request.nextUrl.searchParams.get("full") === "1";
     const supabase = await createSupabaseServerClient();
     if (!supabase) {
       const sw = getSharedWallet();
+      const fallbackWallet = {
+        balance: sw.balance,
+        pending_balance: sw.pendingBalance,
+        total_withdrawn: sw.totalWithdrawn,
+        bank_name: sw.bankName,
+        bank_account_no: sw.bankAccountNo,
+        bank_account_name: sw.bankAccountName,
+      };
+      if (isFull) {
+        return NextResponse.json({
+          wallet: fallbackWallet,
+          orders: [],
+          history: getWithdrawals("usr_dh_001"),
+        });
+      }
       return NextResponse.json({
-        wallet: {
-          balance: sw.balance,
-          pending_balance: sw.pendingBalance,
-          total_withdrawn: sw.totalWithdrawn,
-          bank_name: sw.bankName,
-          bank_account_no: sw.bankAccountNo,
-          bank_account_name: sw.bankAccountName,
-        },
+        wallet: fallbackWallet,
       });
     }
 
@@ -40,15 +50,74 @@ export async function GET() {
 
     if (authError || !user) {
       const sw = getSharedWallet();
+      const fallbackWallet = {
+        balance: sw.balance,
+        pending_balance: sw.pendingBalance,
+        total_withdrawn: sw.totalWithdrawn,
+        bank_name: sw.bankName,
+        bank_account_no: sw.bankAccountNo,
+        bank_account_name: sw.bankAccountName,
+      };
+      if (isFull) {
+        return NextResponse.json({
+          wallet: fallbackWallet,
+          orders: [],
+          history: getWithdrawals("usr_dh_001"),
+        });
+      }
       return NextResponse.json({
-        wallet: {
-          balance: sw.balance,
-          pending_balance: sw.pendingBalance,
-          total_withdrawn: sw.totalWithdrawn,
-          bank_name: sw.bankName,
-          bank_account_no: sw.bankAccountNo,
-          bank_account_name: sw.bankAccountName,
-        },
+        wallet: fallbackWallet,
+      });
+    }
+
+    const metaBankName = String(user.user_metadata?.bank_name || "");
+    const metaAccountNo = String(user.user_metadata?.bank_account_no || "");
+    const metaAccountName = String(user.user_metadata?.bank_account_name || "");
+
+    if (isFull) {
+      const [walletRes, confirmedRes, claimsRes, historyRes] = await Promise.all([
+        supabase.from("user_wallets").select("*").eq("user_id", user.id).maybeSingle(),
+        supabase.from("cashback_orders").select("*").eq("user_id", user.id).order("ordered_at", { ascending: false }),
+        supabase.from("cashback_order_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+      ]);
+
+      const wallet = walletRes.data;
+      let mergedWallet: WalletData;
+      if (!wallet) {
+        mergedWallet = {
+          balance: 0,
+          pending_balance: 0,
+          total_withdrawn: 0,
+          bank_name: metaBankName,
+          bank_account_no: metaAccountNo,
+          bank_account_name: metaAccountName,
+        };
+        void supabase.from("user_wallets").insert({ user_id: user.id, ...mergedWallet }).then(null, () => {});
+      } else {
+        mergedWallet = {
+          balance: Number(wallet.balance ?? 0),
+          pending_balance: Number(wallet.pending_balance ?? 0),
+          total_withdrawn: Number(wallet.total_withdrawn ?? 0),
+          bank_name: wallet.bank_name || metaBankName,
+          bank_account_no: wallet.bank_account_no || metaAccountNo,
+          bank_account_name: wallet.bank_account_name || metaAccountName,
+        };
+      }
+
+      const verified = confirmedRes.data || [];
+      const keys = new Set(verified.map(order => `${order.platform}:${order.order_id}`));
+      const orders = [...verified, ...(claimsRes.data || []).filter(claim => !keys.has(`${claim.platform}:${claim.order_id}`)).map(claim => ({
+        ...claim, status: "pending", cashback_amount: 0, commission_amount: 0, ordered_at: claim.created_at,
+        note: "Yêu cầu tra cứu — chưa có xác nhận và hoa hồng từ sàn.",
+      }))].sort((a,b) => Date.parse(b.ordered_at)-Date.parse(a.ordered_at));
+
+      const history = (historyRes.data && historyRes.data.length > 0) ? historyRes.data : getWithdrawals(user.id);
+
+      return NextResponse.json({
+        wallet: mergedWallet,
+        orders,
+        history,
       });
     }
 
@@ -57,10 +126,6 @@ export async function GET() {
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
-
-    const metaBankName = String(user.user_metadata?.bank_name || "");
-    const metaAccountNo = String(user.user_metadata?.bank_account_no || "");
-    const metaAccountName = String(user.user_metadata?.bank_account_name || "");
 
     if (dbError) {
       console.warn("user_wallets query fallback:", dbError.message);

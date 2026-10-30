@@ -91,36 +91,47 @@ function formatDate(iso: string) {
 
 export default function AccountModal({
   user,
+  initialBalance,
   onClose,
   onSignOut,
   onNotify,
 }: {
   user: User;
+  initialBalance?: number;
   onClose: () => void;
   onSignOut: () => void;
   onNotify: (msg: string) => void;
 }) {
   const [activeTab, setActiveTab] = useState<"orders" | "withdraw" | "history">("orders");
   const [wallet, setWallet] = useState<WalletData>(() => {
-    // Hydrate initial bank info from localStorage if available
     let savedBank = { bank_name: "", bank_account_no: "", bank_account_name: "" };
+    let savedStats = {
+      balance: initialBalance ?? 0,
+      pending_balance: 0,
+      total_withdrawn: 0,
+    };
     if (typeof window !== "undefined") {
       try {
-        const stored = localStorage.getItem("dealhoan_bank_info_" + user.id);
-        if (stored) {
-          const parsed = JSON.parse(stored);
+        const storedBank = localStorage.getItem("dealhoan_bank_info_" + user.id);
+        if (storedBank) {
+          const parsed = JSON.parse(storedBank);
           savedBank = {
             bank_name: parsed.bank_name || "",
             bank_account_no: parsed.bank_account_no || "",
             bank_account_name: parsed.bank_account_name || "",
           };
         }
+        const storedWallet = localStorage.getItem("dealhoan_wallet_cache_" + user.id);
+        if (storedWallet) {
+          const parsed = JSON.parse(storedWallet);
+          if (typeof parsed.balance === "number" && initialBalance === undefined) savedStats.balance = parsed.balance;
+          if (typeof parsed.pending_balance === "number") savedStats.pending_balance = parsed.pending_balance;
+          if (typeof parsed.total_withdrawn === "number") savedStats.total_withdrawn = parsed.total_withdrawn;
+        }
       } catch {}
     }
     return {
-      balance: 0,
-      pending_balance: 0,
-      total_withdrawn: 0,
+      ...savedStats,
       ...savedBank,
     };
   });
@@ -167,7 +178,6 @@ export default function AccountModal({
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState({ wallet: true, orders: true, history: true });
   const [loadErrors, setLoadErrors] = useState<Record<string, string>>({});
-  const ready = !Object.values(loading).some(Boolean) && Object.keys(loadErrors).length === 0;
   const openerRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
@@ -175,16 +185,14 @@ export default function AccountModal({
 
   useEffect(() => {
     openerRef.current = document.activeElement as HTMLElement | null;
-    return () => { openerRef.current?.focus(); };
-  }, []);
-
-  useEffect(() => {
-    if (!ready) return;
     const oldOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
-    return () => { document.body.style.overflow = oldOverflow; };
-  }, [ready]);
+    return () => {
+      document.body.style.overflow = oldOverflow;
+      openerRef.current?.focus();
+    };
+  }, []);
 
   const refCode = `u_${user.id.slice(0, 8)}`;
 
@@ -192,92 +200,110 @@ export default function AccountModal({
   useEffect(() => {
     let cancelled = false;
     const controller = new AbortController();
-    const deadline = setTimeout(() => controller.abort(), 15000);
-    let remaining = 3;
-    const finish = (key: "wallet" | "orders" | "history") => { if (--remaining === 0) clearTimeout(deadline); if (!cancelled) setLoading(prev => ({ ...prev, [key]: false })); };
-    const failed = (key: string) => { if (!cancelled) setLoadErrors(prev => ({ ...prev, [key]: "Tải dữ liệu chưa thành công. Vui lòng thử lại." })); };
+    const deadline = setTimeout(() => controller.abort(), 12000);
 
-    fetch("/api/wallet", { cache: "no-store", signal: controller.signal })
-      .then((res) => { if (!res.ok) throw new Error("Request failed"); return res.json(); })
-      .then((data) => {
-        if (!data.wallet || ![data.wallet.balance, data.wallet.pending_balance, data.wallet.total_withdrawn].every(value => typeof value === "number" && Number.isFinite(value) && value >= 0)) throw new Error("Invalid wallet data");
-        if (!cancelled) {
-          const serverW: WalletData = {
-            ...data.wallet,
-            bank_name: typeof data.wallet.bank_name === "string" ? data.wallet.bank_name : "",
-            bank_account_no: typeof data.wallet.bank_account_no === "string" ? data.wallet.bank_account_no : "",
-            bank_account_name: typeof data.wallet.bank_account_name === "string" ? data.wallet.bank_account_name : "",
-          };
-
-          // Nếu server có thông tin ngân hàng thì cập nhật state & localStorage
-          if (serverW.bank_account_no) {
-            setWallet(serverW);
-            setBankName(serverW.bank_name || VN_BANKS[0]);
-            setAccountNo(serverW.bank_account_no);
-            setAccountName(serverW.bank_account_name || "");
-            try {
-              localStorage.setItem(
-                "dealhoan_bank_info_" + user.id,
-                JSON.stringify({
-                  bank_name: serverW.bank_name || VN_BANKS[0],
-                  bank_account_no: serverW.bank_account_no,
-                  bank_account_name: serverW.bank_account_name || "",
-                })
-              );
-            } catch {}
-          } else {
-            // Nếu server chưa có nhưng localStorage có thì giữ nguyên và sync lên server
-            try {
-              const stored = localStorage.getItem("dealhoan_bank_info_" + user.id);
-              if (stored) {
-                const parsed = JSON.parse(stored);
-                if (parsed.bank_account_no) {
-                  setWallet((prev) => ({
-                    ...prev,
-                    ...serverW,
-                    bank_name: parsed.bank_name || VN_BANKS[0],
-                    bank_account_no: parsed.bank_account_no,
-                    bank_account_name: parsed.bank_account_name || "",
-                  }));
-                  setBankName(parsed.bank_name || VN_BANKS[0]);
-                  setAccountNo(parsed.bank_account_no);
-                  setAccountName(parsed.bank_account_name || "");
-
-                  // Sync ngầm lên server
-                  fetch("/api/wallet", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(parsed),
-                  }).catch(() => {});
-                  return;
-                }
-              }
-            } catch {}
-            setWallet(serverW);
+    const applyWalletData = (serverW: WalletData) => {
+      if (serverW.bank_account_no) {
+        setWallet(serverW);
+        setBankName(serverW.bank_name || VN_BANKS[0]);
+        setAccountNo(serverW.bank_account_no);
+        setAccountName(serverW.bank_account_name || "");
+        try {
+          localStorage.setItem(
+            "dealhoan_bank_info_" + user.id,
+            JSON.stringify({
+              bank_name: serverW.bank_name || VN_BANKS[0],
+              bank_account_no: serverW.bank_account_no,
+              bank_account_name: serverW.bank_account_name || "",
+            })
+          );
+        } catch {}
+      } else {
+        try {
+          const stored = localStorage.getItem("dealhoan_bank_info_" + user.id);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            if (parsed.bank_account_no) {
+              setWallet((prev) => ({
+                ...prev,
+                ...serverW,
+                bank_name: parsed.bank_name || VN_BANKS[0],
+                bank_account_no: parsed.bank_account_no,
+                bank_account_name: parsed.bank_account_name || "",
+              }));
+              setBankName(parsed.bank_name || VN_BANKS[0]);
+              setAccountNo(parsed.bank_account_no);
+              setAccountName(parsed.bank_account_name || "");
+              fetch("/api/wallet", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(parsed),
+              }).catch(() => {});
+              return;
+            }
           }
-        }
-      })
-      .catch(() => failed("wallet")).finally(() => finish("wallet"));
+        } catch {}
+        setWallet(serverW);
+      }
+      try {
+        localStorage.setItem(
+          "dealhoan_wallet_cache_" + user.id,
+          JSON.stringify({
+            balance: serverW.balance,
+            pending_balance: serverW.pending_balance,
+            total_withdrawn: serverW.total_withdrawn,
+          })
+        );
+      } catch {}
+    };
 
-    fetch("/api/wallet/withdraw", { cache: "no-store", signal: controller.signal })
-      .then((res) => { if (!res.ok) throw new Error("Request failed"); return res.json(); })
+    // 1. Cố gắng lấy toàn bộ dữ liệu trong 1 request duy nhất (rút ngắn thời gian tối đa)
+    fetch("/api/wallet?full=1", { cache: "no-store", signal: controller.signal })
+      .then((res) => { if (!res.ok) throw new Error("Full fetch failed"); return res.json(); })
       .then((data) => {
-        if (!Array.isArray(data.history)) throw new Error("Invalid history data");
-        if (!cancelled) {
-          setHistory(data.history);
-        }
+        if (cancelled) return;
+        if (data.wallet) applyWalletData(data.wallet);
+        if (Array.isArray(data.orders)) setOrders(data.orders);
+        if (Array.isArray(data.history)) setHistory(data.history);
+        clearTimeout(deadline);
+        setLoading({ wallet: false, orders: false, history: false });
       })
-      .catch(() => failed("history")).finally(() => finish("history"));
+      .catch(() => {
+        if (cancelled) return;
+        // Fallback: Tải song song từng endpoint nếu unified endpoint gặp sự cố
+        let remaining = 3;
+        const finish = (key: "wallet" | "orders" | "history") => {
+          if (--remaining === 0) clearTimeout(deadline);
+          if (!cancelled) setLoading((prev) => ({ ...prev, [key]: false }));
+        };
+        const failed = (key: string) => {
+          if (!cancelled) setLoadErrors((prev) => ({ ...prev, [key]: "Tải dữ liệu chưa thành công. Vui lòng thử lại." }));
+        };
 
-    fetch("/api/wallet/orders", { cache: "no-store", signal: controller.signal })
-      .then((res) => { if (!res.ok) throw new Error("Request failed"); return res.json(); })
-      .then((data) => {
-        if (!Array.isArray(data.orders)) throw new Error("Invalid orders data");
-        if (!cancelled) {
-          setOrders(data.orders);
-        }
-      })
-      .catch(() => failed("orders")).finally(() => finish("orders"));
+        fetch("/api/wallet", { cache: "no-store", signal: controller.signal })
+          .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
+          .then((data) => {
+            if (!cancelled && data.wallet) applyWalletData(data.wallet);
+          })
+          .catch(() => failed("wallet"))
+          .finally(() => finish("wallet"));
+
+        fetch("/api/wallet/withdraw", { cache: "no-store", signal: controller.signal })
+          .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
+          .then((data) => {
+            if (!cancelled && Array.isArray(data.history)) setHistory(data.history);
+          })
+          .catch(() => failed("history"))
+          .finally(() => finish("history"));
+
+        fetch("/api/wallet/orders", { cache: "no-store", signal: controller.signal })
+          .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
+          .then((data) => {
+            if (!cancelled && Array.isArray(data.orders)) setOrders(data.orders);
+          })
+          .catch(() => failed("orders"))
+          .finally(() => finish("orders"));
+      });
 
     return () => {
       cancelled = true;
@@ -536,14 +562,6 @@ export default function AccountModal({
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   };
 
-  if (!ready) {
-    const failed = Object.keys(loadErrors).length > 0;
-    return <aside className={s.opening} aria-label="Tải ví hoàn tiền">
-      <span role={failed ? "alert" : "status"}>{failed ? "Chưa tải được thông tin ví. Vui lòng thử lại." : "Đang tải thông tin ví…"}</span>
-      {failed && <button type="button" disabled={Object.values(loading).some(Boolean)} onClick={() => { setLoading({ wallet: true, orders: true, history: true }); setLoadErrors({}); setRefreshKey(key => key + 1); }}>Thử lại</button>}
-      <button type="button" onClick={onClose} aria-label="Hủy mở ví">Hủy</button>
-    </aside>;
-  }
 
   return (
     <div className={s.overlay} onClick={onClose}>
