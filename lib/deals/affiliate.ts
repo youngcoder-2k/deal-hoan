@@ -103,7 +103,7 @@ export function buildShopeeAffiliateUrl(
 ): string {
   const cleanUrl = cleanShopeeUrl(rawUrl);
   const affiliateId = options?.affiliateId || DEFAULT_SHOPEE_AFFILIATE_ID;
-  const subId = options?.subId || "dealhoan";
+  const subId = toShopeeSubId(options?.subId);
 
   const target = new URL("https://s.shopee.vn/an_redir");
   target.searchParams.set("origin_link", cleanUrl);
@@ -201,7 +201,7 @@ export function buildShopeeFoodAffiliateUrl(
   try {
     const parsed = new URL(targetUrl);
     if (options?.subId) {
-      parsed.searchParams.set("sub_id", options.subId);
+      parsed.searchParams.set("sub_id", toShopeeSubId(options.subId));
     }
     if (options?.affiliateId) {
       parsed.searchParams.set("affiliate_id", options.affiliateId);
@@ -422,29 +422,53 @@ export function buildCustomShortUrl(
   }
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * Standardizes subId format for tracking user cashbacks.
- * Format: u_{userId} (e.g. u_1f162a51-8baa-404e-b16a-ca4e2d2c4b8d)
+ *
+ * Shopee Affiliate only accepts letters and digits inside a sub_id and uses "-"
+ * to split up to 5 sub_id levels. The old `u_{uuid}` format therefore broke:
+ * "_" is rejected and the UUID's hyphens were split into sub_id1..sub_id5, so
+ * conversion reports could not be matched back to the customer.
+ *
+ * Format: dh{uuid-without-hyphens} (e.g. dh1f162a518baa404eb16aca4e2d2c4b8d)
  */
 export function formatSubIdForUser(userId?: string | null): string {
   if (!userId) return "dealhoan";
   const cleanId = userId.trim();
   if (!cleanId || cleanId === "calc" || cleanId === "dealhoan") return "dealhoan";
-  if (cleanId.startsWith("u_")) return cleanId;
-  return `u_${cleanId}`;
+  const parsed = parseUserIdFromSubId(cleanId);
+  if (parsed && UUID_PATTERN.test(parsed)) return `dh${parsed.replace(/-/g, "")}`;
+  const alnum = cleanId.replace(/[^A-Za-z0-9]/g, "");
+  return alnum ? `dh${alnum}`.slice(0, 50) : "dealhoan";
+}
+
+/** Makes any tracking value safe for Shopee's alphanumeric sub_id field. */
+export function toShopeeSubId(subId?: string | null): string {
+  const clean = subId?.trim();
+  if (!clean || clean === "dealhoan" || clean === "calc") return clean || "dealhoan";
+  return formatSubIdForUser(clean);
 }
 
 /**
  * Extracts userId from a tracking subId string.
- * Handles u_{uuid}, raw {uuid}, or prefixes.
+ * Handles dh{32 hex}, legacy u_{uuid}, raw {uuid}, legacy split reports
+ * (sub_id1..5 joined by "-") and legacy short hex prefixes.
  */
 export function parseUserIdFromSubId(subId?: string | null): string | null {
   if (!subId) return null;
   const clean = subId.trim();
   if (!clean || clean === "dealhoan" || clean === "calc") return null;
-  if (clean.startsWith("u_")) {
-    return clean.slice(2);
+  const uuid = clean.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  if (uuid) return uuid[0].toLowerCase();
+  const first = clean.split("-")[0];
+  const match = first.match(/^(?:dh|u_?)?([0-9a-f]{8,32})$/i);
+  if (!match) return null;
+  const hex = match[1].toLowerCase();
+  if (hex.length === 32) {
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
   }
-  return clean;
+  return hex;
 }
 
