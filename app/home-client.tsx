@@ -29,6 +29,7 @@ import {
   extractUrlFromText,
   formatSubIdForUser,
 } from "@/lib/deals/affiliate";
+import { saveShoppingSession } from "@/lib/deals/shopping-sessions";
 import { cashbackFor } from "@/lib/deals/score";
 import { type CalculatedProduct } from "@/lib/deals/resolve";
 
@@ -547,6 +548,20 @@ export default function HomeClient({
     return buildCustomShortUrl(url, { baseUrl, subId });
   };
 
+  const recordDealClick = (deal: Deal) => {
+    if (user) {
+      saveShoppingSession({
+        user_id: user.id,
+        platform: "Shopee",
+        product_name: deal.name,
+        product_image: deal.imageUrl,
+        order_value: deal.price || 0,
+        cashback_amount: deal.cashback || 0,
+        note: "Đã chuyển sang Shopee · Sàn đang đối soát và sẽ gửi đơn trong 15–45 phút.",
+      });
+    }
+  };
+
   const executeCalculation = async (targetUrl: string) => {
     // Invalidate old requests and receipts even when the next pasted URL is invalid.
     const calculationId = ++calculationIdRef.current;
@@ -908,6 +923,21 @@ export default function HomeClient({
                         return false;
                       }
                       notify(`Đang chuyển tới ${result || "Shopee"} để nhận hoàn tiền!`);
+                      if (calculatedProduct) {
+                        saveShoppingSession({
+                          user_id: user.id,
+                          platform: (calculatedProduct.platform?.toLowerCase().includes("food")
+                            ? "ShopeeFood"
+                            : calculatedProduct.platform?.toLowerCase().includes("tiktok")
+                            ? "TikTok Shop"
+                            : "Shopee") as any,
+                          product_name: calculatedProduct.name,
+                          product_image: calculatedProduct.imageUrl,
+                          order_value: calculatedProduct.price || 0,
+                          cashback_amount: calculatedProduct.cashback || 0,
+                          note: "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút).",
+                        });
+                      }
                     }}
                     onClear={() => resetCalculation()}
                     isLoggedIn={Boolean(user)}
@@ -1040,6 +1070,7 @@ export default function HomeClient({
                         rel="noopener noreferrer nofollow"
                         className="deal-image-link"
                         aria-label={deal.name}
+                        onClick={() => recordDealClick(deal)}
                       >
                         {deal.imageUrl ? (
                           // Scraped deal images come from unpredictable CDN hosts, so
@@ -1056,6 +1087,7 @@ export default function HomeClient({
                         href={getAffiliateUrl(deal.productUrl)}
                         target="_blank"
                         rel="noopener noreferrer nofollow"
+                        onClick={() => recordDealClick(deal)}
                       >
                         {deal.name}
                       </a>
@@ -1131,6 +1163,7 @@ export default function HomeClient({
                   rel="noopener noreferrer nofollow"
                   className="deal-image-link"
                   aria-label={deal.name}
+                  onClick={() => recordDealClick(deal)}
                 >
                   {deal.imageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element -- see flash-grid note above
@@ -1152,6 +1185,7 @@ export default function HomeClient({
                     href={getAffiliateUrl(deal.productUrl)}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
+                    onClick={() => recordDealClick(deal)}
                   >
                     {deal.name}
                   </a>
@@ -1168,6 +1202,7 @@ export default function HomeClient({
                     href={getAffiliateUrl(deal.productUrl)}
                     target="_blank"
                     rel="noopener noreferrer nofollow"
+                    onClick={() => recordDealClick(deal)}
                   >
                     Mua ngay →
                   </a>
@@ -1380,6 +1415,21 @@ export default function HomeClient({
                   className="primary"
                   onClick={() => {
                     setBuyOpen(false);
+                    if (user && calculatedProduct) {
+                      saveShoppingSession({
+                        user_id: user.id,
+                        platform: (calculatedProduct.platform?.toLowerCase().includes("food")
+                          ? "ShopeeFood"
+                          : calculatedProduct.platform?.toLowerCase().includes("tiktok")
+                          ? "TikTok Shop"
+                          : "Shopee") as any,
+                        product_name: calculatedProduct.name,
+                        product_image: calculatedProduct.imageUrl,
+                        order_value: calculatedProduct.price || 0,
+                        cashback_amount: calculatedProduct.cashback || 0,
+                        note: "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút).",
+                      });
+                    }
                     window.open(
                       currentTrackedLink || (link ? getAffiliateUrl(link) : "https://shopee.vn"),
                       "_blank",

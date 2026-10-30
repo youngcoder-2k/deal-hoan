@@ -9,4 +9,24 @@
 
 .header h2,.sectionTitle,.empty h3,.bankForm h3,.bankForm h4{font-weight:700}
 
+.status[data-status=tracking]{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;font-weight:600}
+.trackingRecord{border-color:#fed7aa;background:#fffdfa}
+.estimatePill{font-size:10px;font-weight:600;color:#c2410c;background:#ffedd5;padding:2px 5px;border-radius:4px;margin-left:5px}
+.trackingNote{color:#ea580c!important;font-weight:500}
+.orderNotice{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;font-size:12px;color:#475569;margin-bottom:14px;flex-wrap:wrap}
+.orderNotice button{background:none;border:0;color:var(--orange);font-weight:600;cursor:pointer;text-decoration:underline;padding:0;font-size:12px}
+.claimBar{display:flex;gap:8px;margin-bottom:14px}
+.claimBar input{flex:1;min-width:0;height:40px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
+.claimBar input:focus{border-color:var(--orange);outline:none}
+.claimBar button{flex-shrink:0;padding:0 14px;height:40px;background:var(--orange);color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:600}
+.claimBar button:disabled{opacity:0.6;cursor:not-allowed}
+.emptyHint{font-size:13px;color:var(--muted);line-height:1.6;max-width:440px;margin:0 auto}
+.claimBox{width:100%;max-width:440px;margin:4px 0 10px;padding:14px 16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;text-align:left}
+.claimBox p{font-size:12px;font-weight:600;color:#334155;margin:0 0 8px}
+.claimRow{display:flex;gap:8px}
+.claimRow input{flex:1;min-width:0;height:38px;padding:0 12px;border:1px solid #cbd5e1;border-radius:8px;font-size:13px;background:#fff;color:var(--ink)}
+.claimRow input:focus{border-color:var(--orange);outline:none}
+.claimRow button{flex-shrink:0;padding:0 14px;height:38px;background:var(--orange);color:#fff;border:0;border-radius:8px;font-size:12px;font-weight:600}
+.claimRow button:disabled{opacity:0.6;cursor:not-allowed}
+
 .opening{position:fixed;z-index:210;top:22px;right:22px;max-width:calc(100vw - 44px);display:flex;align-items:center;gap:12px;padding:14px 18px;border:1px solid #e0e5eb;border-radius:12px;background:white;color:#334155;box-shadow:0 8px 30px #17212f24;font:13px/1.5 var(--font-app),sans-serif}.opening button{flex-shrink:0;min-height:36px;padding:5px 10px;border:1px solid #dce2e9;border-radius:7px;background:#fff;color:#c83f1c;font:inherit;cursor:pointer}.opening button:disabled{opacity:.5;cursor:wait}.opening button:focus-visible{outline:2px solid #ec4b23;outline-offset:3px}@media(max-width:640px){.opening{top:12px;right:12px;max-width:calc(100vw - 24px);gap:8px;padding:12px;flex-wrap:wrap}}

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Wallet, Clock, Bank, ShoppingBag, Receipt, CreditCard, X, CaretDown, ArrowRight, Question, CheckCircle, Info, SignOut, Copy } from "@phosphor-icons/react";
 import s from "./account-wallet.module.css";
 import type { User } from "@supabase/supabase-js";
+import { getShoppingSessions, mergeOrdersWithSessions } from "@/lib/deals/shopping-sessions";
 
 export interface WalletData {
   balance: number;
@@ -35,9 +36,10 @@ export interface CashbackOrderItem {
   product_image?: string | null;
   order_value: number;
   cashback_amount: number;
-  status: "pending" | "completed" | "rejected";
+  status: "tracking" | "pending" | "completed" | "rejected";
   note?: string | null;
   ordered_at: string;
+  is_tracking_session?: boolean;
 }
 
 const VN_BANKS = [
@@ -136,7 +138,17 @@ export default function AccountModal({
     };
   });
   const [history, setHistory] = useState<WithdrawalItem[]>([]);
-  const [orders, setOrders] = useState<CashbackOrderItem[]>([]);
+  const [orders, setOrders] = useState<CashbackOrderItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return getShoppingSessions(user.id) as CashbackOrderItem[];
+      } catch {}
+    }
+    return [];
+  });
+  const [claimOrderId, setClaimOrderId] = useState("");
+  const [claimingOrder, setClaimingOrder] = useState(false);
+  const [showClaimForm, setShowClaimForm] = useState(false);
 
   // Form Ngân hàng
   const [bankName, setBankName] = useState(() => {
@@ -257,13 +269,19 @@ export default function AccountModal({
       } catch {}
     };
 
+    const applyOrdersData = (serverOrders: CashbackOrderItem[]) => {
+      const sessions = getShoppingSessions(user.id);
+      const merged = mergeOrdersWithSessions(serverOrders, sessions);
+      setOrders(merged as CashbackOrderItem[]);
+    };
+
     // 1. Cố gắng lấy toàn bộ dữ liệu trong 1 request duy nhất (rút ngắn thời gian tối đa)
     fetch("/api/wallet?full=1", { cache: "no-store", signal: controller.signal })
       .then((res) => { if (!res.ok) throw new Error("Full fetch failed"); return res.json(); })
       .then((data) => {
         if (cancelled) return;
         if (data.wallet) applyWalletData(data.wallet);
-        if (Array.isArray(data.orders)) setOrders(data.orders);
+        if (Array.isArray(data.orders)) applyOrdersData(data.orders);
         if (Array.isArray(data.history)) setHistory(data.history);
         clearTimeout(deadline);
         setLoading({ wallet: false, orders: false, history: false });
@@ -299,7 +317,7 @@ export default function AccountModal({
         fetch("/api/wallet/orders", { cache: "no-store", signal: controller.signal })
           .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
           .then((data) => {
-            if (!cancelled && Array.isArray(data.orders)) setOrders(data.orders);
+            if (!cancelled && Array.isArray(data.orders)) applyOrdersData(data.orders);
           })
           .catch(() => failed("orders"))
           .finally(() => finish("orders"));
@@ -540,12 +558,47 @@ export default function AccountModal({
     return name.slice(0, 2).toUpperCase();
   };
 
+  const handleClaimOrder = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const cleanId = claimOrderId.trim();
+    if (!cleanId) return onNotify("⚠️ Vui lòng nhập mã đơn hàng Shopee!");
+
+    try {
+      setClaimingOrder(true);
+      const res = await fetch("/api/wallet/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: cleanId, platform: "Shopee" }),
+      });
+      const data = await res.json();
+      if (res.ok && data.order) {
+        onNotify("🎉 Đã lưu mã đơn! Hệ thống đang đối soát cùng Shopee.");
+        setOrders((prev) => [data.order, ...prev.filter((o) => o.order_id !== cleanId)]);
+        setClaimOrderId("");
+        setShowClaimForm(false);
+      } else {
+        onNotify("⚠️ " + (data.error || "Không thể lưu mã đơn"));
+      }
+    } catch {
+      onNotify("⚠️ Lỗi kết nối khi gửi mã đơn");
+    } finally {
+      setClaimingOrder(false);
+    }
+  };
+
   const tabs = [
     { key: "orders", label: "Đơn hoàn tiền", Icon: ShoppingBag },
     { key: "withdraw", label: "Rút tiền", Icon: CreditCard },
     { key: "history", label: "Lịch sử rút", Icon: Receipt },
   ] as const;
-  const statusLabel = (status: string) => status === "completed" ? "Đã hoàn tất" : status === "pending" ? "Chờ duyệt" : "Bị từ chối";
+  const statusLabel = (status: string) =>
+    status === "completed"
+      ? "Đã hoàn tất"
+      : status === "pending"
+      ? "Chờ duyệt"
+      : status === "tracking"
+      ? "Chờ sàn gửi đơn"
+      : "Bị từ chối";
   const busyWallet = loading.wallet || Boolean(loadErrors.wallet);
   const switchTab = (key: typeof activeTab) => { setActiveTab(key); document.getElementById(`${tabId}-${key}`)?.focus(); };
   const onDialogKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
@@ -611,15 +664,84 @@ export default function AccountModal({
         <div className={s.content} role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${activeTab}`} tabIndex={0}>
           {(loadErrors.wallet || loadErrors[activeTab === "withdraw" ? "history" : activeTab]) && <div className={s.error} role="alert"><Info size={18} /><span>Tải dữ liệu chưa thành công. Vui lòng thử lại.</span><button type="button" onClick={() => { setLoading({ wallet: true, orders: true, history: true }); setLoadErrors({}); setRefreshKey(key => key + 1); }}>Thử lại</button></div>}
           {activeTab === "orders" && <>
-            {loading.orders ? <p className={s.loading} role="status">Đang tải đơn hoàn tiền…</p> : loadErrors.orders ? null : orders.length === 0 ? <div className={s.empty}>
-              <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span><h3>Chưa có đơn hoàn tiền</h3>
-              <Link href="/#deals" onClick={onClose} className={s.primary}>Tìm sản phẩm nhận hoàn <ArrowRight size={19} /></Link>
-            </div> : <div className={s.list}>{orders.map(order => <article className={s.record} key={order.id}>
-              <div className={s.recordTop}><span>{order.platform} · #{order.order_id}</span><span className={s.status} data-status={order.status}>{statusLabel(order.status)}</span></div>
-              <div className={s.recordMain}><strong>{order.product_name || "Sản phẩm mua qua DealHoàn"}</strong><b>+{formatVnd(order.cashback_amount)}</b></div>
-              <div className={s.recordMeta}><span>Giá trị đơn: {formatVnd(order.order_value)}</span><time>{formatDate(order.ordered_at)}</time></div>{order.note && <p>{order.note}</p>}
-            </article>)}</div>}
-
+            {orders.length > 0 && (
+              <div className={s.orderNotice}>
+                <span>💡 Sàn thường xuất đơn sau 15–45 phút kể từ khi bạn chốt đơn.</span>
+                <button type="button" onClick={() => setShowClaimForm((v) => !v)}>
+                  {showClaimForm ? "✕ Đóng" : "🔍 Nhập mã đơn Shopee"}
+                </button>
+              </div>
+            )}
+            {showClaimForm && (
+              <form onSubmit={handleClaimOrder} className={s.claimBar}>
+                <input
+                  placeholder="Dán mã đơn Shopee (Ví dụ: 241030ABC123)..."
+                  value={claimOrderId}
+                  onChange={(e) => setClaimOrderId(e.target.value.trim())}
+                  disabled={claimingOrder}
+                  autoFocus
+                />
+                <button type="submit" disabled={claimingOrder || !claimOrderId}>
+                  {claimingOrder ? "Đang gửi..." : "Ghi nhận"}
+                </button>
+              </form>
+            )}
+            {loading.orders && orders.length === 0 ? (
+              <p className={s.loading} role="status">Đang tải đơn hoàn tiền…</p>
+            ) : loadErrors.orders && orders.length === 0 ? null : orders.length === 0 ? (
+              <div className={s.empty}>
+                <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span>
+                <h3>Chưa có đơn hoàn tiền</h3>
+                <p className={s.emptyHint}>
+                  Khi bạn bấm <strong>Mua ngay</strong> qua DealHoàn và đặt đơn trên sàn, đơn hàng sẽ tự động xuất hiện tại đây sau <strong>15 – 45 phút</strong>.
+                </p>
+                <form onSubmit={handleClaimOrder} className={s.claimBox}>
+                  <p>Bạn vừa chốt đơn trên Shopee và đã có mã đơn hàng?</p>
+                  <div className={s.claimRow}>
+                    <input
+                      placeholder="Dán mã đơn Shopee (VD: 241030XYZ...)"
+                      value={claimOrderId}
+                      onChange={(e) => setClaimOrderId(e.target.value.trim())}
+                      disabled={claimingOrder}
+                    />
+                    <button type="submit" disabled={claimingOrder || !claimOrderId}>
+                      {claimingOrder ? "Đang gửi..." : "Ghi nhận ngay"}
+                    </button>
+                  </div>
+                </form>
+                <Link href="/#deals" onClick={onClose} className={s.primary}>Tìm sản phẩm nhận hoàn <ArrowRight size={19} /></Link>
+              </div>
+            ) : (
+              <div className={s.list}>
+                {orders.map((order) => {
+                  const isTracking = order.status === "tracking" || order.order_id === "ĐANG-CHỜ-SÀN";
+                  return (
+                    <article className={`${s.record} ${isTracking ? s.trackingRecord : ""}`} key={order.id}>
+                      <div className={s.recordTop}>
+                        <span>
+                          {order.platform} · {isTracking ? "Phiên mua vừa bấm" : `#${order.order_id}`}
+                        </span>
+                        <span className={s.status} data-status={order.status}>
+                          {isTracking ? "⏳ Chờ sàn gửi đơn (15-45p)" : statusLabel(order.status)}
+                        </span>
+                      </div>
+                      <div className={s.recordMain}>
+                        <strong>{order.product_name || "Sản phẩm mua qua DealHoàn"}</strong>
+                        <b>
+                          +{formatVnd(order.cashback_amount)}
+                          {isTracking && <small className={s.estimatePill}>Dự kiến</small>}
+                        </b>
+                      </div>
+                      <div className={s.recordMeta}>
+                        <span>Giá trị đơn: {formatVnd(order.order_value)}</span>
+                        <time>{formatDate(order.ordered_at)}</time>
+                      </div>
+                      {order.note && <p className={isTracking ? s.trackingNote : ""}>{order.note}</p>}
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </>}
           {activeTab === "withdraw" && <>
             <h3 className={s.sectionTitle}>Rút tiền về ngân hàng</h3>
