@@ -844,7 +844,7 @@ export default function HomeClient({
             }}
           >
             <MagnifyingGlassIcon size={19} aria-hidden="true" />
-            <input aria-label="Tìm sản phẩm, deal, mã giảm giá" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm sản phẩm, deal, mã giảm giá…" />
+            <input aria-label="Tìm sản phẩm, deal hoàn tiền" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Tìm sản phẩm, deal hoàn tiền…" />
             <button>Tìm deal</button>
           </form>
           <nav>

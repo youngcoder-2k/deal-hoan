@@ -211,7 +211,8 @@ export function CashbackReceipt({
         </div>}
       </div>
 
-      {product.matchedVouchers && <CouponSheet key={product.matchedVouchers.map(v => v.coupon.code).join("|")} vouchers={product.matchedVouchers} copiedCode={copiedCode} onCopy={handleCopyVoucher} />}
+      {/* Tạm thời ẩn phần voucher theo yêu cầu */}
+      {/* {product.matchedVouchers && <CouponSheet key={product.matchedVouchers.map(v => v.coupon.code).join("|")} vouchers={product.matchedVouchers} copiedCode={copiedCode} onCopy={handleCopyVoucher} />} */}
 
       {trackedLink && (
         <div className={styles.linkSection}>
