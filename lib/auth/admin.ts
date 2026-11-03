@@ -88,13 +88,8 @@ export function getSupabaseAdminClient() {
     });
   }
 
-  // Fallback sang publishable key
-  if (supabasePublishableKey) {
-    return createClient(supabaseUrl, supabasePublishableKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-  }
-
+  // Không fallback sang anon client ở đây vì anon client thiếu quyền Service Role
+  // và auth.uid() = null sẽ bị RLS chặn mọi truy vấn bảng nội bộ.
   return null;
 }
 

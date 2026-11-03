@@ -7459,3 +7459,142 @@ select.account-input.select-bank-field:focus {
   animation: topToastSlideUp 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
+/* ==========================================================================
+   Admin Withdrawals Approval Panel Styles
+   ========================================================================== */
+.admin-withdrawals-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.kpi-card-pending-alert {
+  background: #fffbeb !important;
+  border-color: #fde68a !important;
+}
+
+.admin-withdrawal-status-filters {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.w-filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.w-filter-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.w-filter-btn.active {
+  background: #fff0eb;
+  border-color: #ee4c23;
+  color: #ee4c23;
+  font-weight: 700;
+}
+
+.w-filter-btn.btn-filter-pending.active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+.btn-copy-stk {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #c2410b;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.btn-copy-stk:hover {
+  background: #ffedd5;
+  border-color: #fdba74;
+}
+
+.btn-approve-direct {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  border-radius: 6px;
+  border: 1px solid #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-approve-direct:hover:not(:disabled) {
+  background: #15803d;
+  border-color: #15803d;
+}
+
+.btn-reject-direct {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  background: #fff;
+  color: #dc2626;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.btn-reject-direct:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.btn-quick-approve-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #d97706;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  padding: 2px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-quick-approve-pill:hover {
+  background: #fde68a;
+  color: #b45309;
+}
+

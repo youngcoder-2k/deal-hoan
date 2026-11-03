@@ -66,3 +66,23 @@ from auth.users u
 left join public.user_wallets w on w.user_id = u.id
 left join public.withdrawal_requests wr on wr.user_id = u.id
 group by u.id, u.email, u.raw_user_meta_data, u.created_at, u.last_sign_in_at, w.balance, w.pending_balance, w.total_withdrawn, w.bank_name, w.bank_account_no, w.bank_account_name;
+
+-- 5. View tổng hợp chi tiết tất cả lệnh rút tiền (đầy đủ thông tin người nhận và tài khoản)
+create or replace view public.admin_withdrawals_overview as
+select
+  wr.id,
+  wr.user_id,
+  wr.amount,
+  wr.bank_name,
+  wr.bank_account_no,
+  wr.bank_account_name,
+  wr.status,
+  wr.note,
+  wr.created_at,
+  wr.updated_at,
+  u.email as user_email,
+  coalesce(u.raw_user_meta_data->>'full_name', u.raw_user_meta_data->>'name', split_part(u.email, '@', 1)) as user_name
+from public.withdrawal_requests wr
+left join auth.users u on u.id = wr.user_id
+order by wr.created_at desc;
+

@@ -158,6 +158,22 @@ function calcSimResult(hnRate: number, price: number, settings: CashbackBoosterS
   };
 }
 
+export interface AdminWithdrawalRecord {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userName: string;
+  userRefCode: string;
+  amount: number;
+  bankName: string;
+  bankAccountNo: string;
+  bankAccountName: string;
+  status: "pending" | "completed" | "rejected";
+  note: string | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export default function AdminUsersClient({
   initialUsers,
   initialStats,
@@ -167,7 +183,7 @@ export default function AdminUsersClient({
   initialUsers: AdminUserItem[];
   initialStats: AdminKPIStats;
   isInitialRealData: boolean;
-  initialTab?: "users" | "settings" | "sync" | "import";
+  initialTab?: "users" | "withdrawals" | "settings" | "sync" | "import";
 }) {
   const [users, setUsers] = useState<AdminUserItem[]>(() => applyLocalBalanceOverrides(initialUsers));
   const [stats, setStats] = useState<AdminKPIStats>(initialStats);
@@ -175,16 +191,26 @@ export default function AdminUsersClient({
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Tab điều hướng: "users" (Quản lý User), "settings" (Cấu hình % Hoàn tiền), "sync" (Tự Động Đồng Bộ Shopee)
-  const [activeTab, setActiveTab] = useState<"users" | "settings" | "sync" | "import">(() => {
+  // Tab điều hướng: "users" (Quản lý User), "withdrawals" (Duyệt rút tiền), "settings" (Cấu hình % Hoàn tiền), "sync" (Tự Động Đồng Bộ Shopee)
+  const [activeTab, setActiveTab] = useState<"users" | "withdrawals" | "settings" | "sync" | "import">(() => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
       const t = p.get("tab");
       if (t === "sync" || t === "import" || t === "shopee") return "sync";
       if (t === "settings") return "settings";
+      if (t === "withdrawals" || t === "rut-tien") return "withdrawals";
     }
     return initialTab === "import" ? "sync" : initialTab;
   });
+
+  // State quản lý danh sách yêu cầu rút tiền toàn hệ thống
+  const [allWithdrawals, setAllWithdrawals] = useState<AdminWithdrawalRecord[]>([]);
+  const [loadingAllWithdrawals, setLoadingAllWithdrawals] = useState(false);
+  const [withdrawalFilter, setWithdrawalFilter] = useState<"all" | "pending" | "completed" | "rejected">("all");
+  const [withdrawalSearch, setWithdrawalSearch] = useState("");
+  const [copiedSTK, setCopiedSTK] = useState<string | null>(null);
+  const [approvingWithdrawalId, setApprovingWithdrawalId] = useState<string | null>(null);
+
   const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -558,6 +584,147 @@ export default function AdminUsersClient({
     } catch (err) {
       console.warn("Reload users error:", err);
     }
+    loadAllWithdrawals();
+  };
+
+  // Tải danh sách tất cả yêu cầu rút tiền từ CSDL
+  const loadAllWithdrawals = async () => {
+    setLoadingAllWithdrawals(true);
+    try {
+      const res = await fetch("/api/admin/withdrawals", {
+        headers: getAdminFetchHeaders(),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.withdrawals)) {
+          setAllWithdrawals(data.withdrawals);
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to load all withdrawals:", err);
+    } finally {
+      setLoadingAllWithdrawals(false);
+    }
+  };
+
+  // Duyệt hoặc từ chối trực tiếp yêu cầu rút tiền
+  const handleApproveWithdrawalDirect = async (
+    item: AdminWithdrawalRecord,
+    action: "completed" | "rejected"
+  ) => {
+    let note = "Đã chuyển khoản Napas247 thành công";
+    if (action === "rejected") {
+      const reason = prompt(
+        `Nhập lý do từ chối lệnh rút ${formatVnd(item.amount)} của ${item.userName}:`,
+        "Thông tin tài khoản ngân hàng chưa chính xác"
+      );
+      if (!reason) return;
+      note = reason;
+    }
+
+    setApprovingWithdrawalId(item.id);
+    try {
+      const res = await fetch("/api/admin/withdrawals", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAdminFetchHeaders(),
+        },
+        body: JSON.stringify({
+          withdrawalId: item.id,
+          status: action,
+          note,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setToastMsg(
+          action === "completed"
+            ? `✅ Đã duyệt chuyển ${formatVnd(item.amount)} cho ${item.bankAccountName || item.userName}!`
+            : `❌ Đã từ chối lệnh rút và hoàn trả ${formatVnd(item.amount)} về ví người dùng!`
+        );
+        setTimeout(() => setToastMsg(null), 3500);
+        setAllWithdrawals((prev) =>
+          prev.map((w) => (w.id === item.id ? { ...w, status: action, note } : w))
+        );
+        reloadUsers();
+      } else {
+        setToastMsg("⚠️ " + (data.error || "Không thể cập nhật trạng thái lệnh rút"));
+        setTimeout(() => setToastMsg(null), 3500);
+      }
+    } catch {
+      setToastMsg("⚠️ Lỗi kết nối khi cập nhật lệnh rút");
+      setTimeout(() => setToastMsg(null), 3500);
+    } finally {
+      setApprovingWithdrawalId(null);
+    }
+  };
+
+  // Sao chép nhanh số tài khoản ngân hàng để dán vào App ngân hàng
+  const handleCopySTK = (stk: string, bank: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(stk);
+      setCopiedSTK(stk);
+      setToastMsg(`📋 Đã sao chép STK: ${stk} (${bank})`);
+      setTimeout(() => {
+        setCopiedSTK(null);
+        setToastMsg(null);
+      }, 2500);
+    }
+  };
+
+  // Xuất file CSV danh sách lệnh rút tiền
+  const exportWithdrawalsToCsv = () => {
+    if (filteredWithdrawals.length === 0) {
+      setToastMsg("⚠️ Không có dữ liệu để xuất file");
+      setTimeout(() => setToastMsg(null), 2500);
+      return;
+    }
+
+    const headers = [
+      "Mã Lệnh",
+      "Họ Tên",
+      "Email",
+      "Mã Ref",
+      "Số Tiền (VNĐ)",
+      "Ngân Hàng",
+      "Số Tài Khoản",
+      "Chủ Tài Khoản",
+      "Trạng Thái",
+      "Ghi Chú",
+      "Ngày Tạo",
+    ];
+
+    const rows = filteredWithdrawals.map((w) => [
+      w.id,
+      `"${w.userName.replace(/"/g, '""')}"`,
+      w.userEmail,
+      w.userRefCode,
+      w.amount,
+      `"${w.bankName.replace(/"/g, '""')}"`,
+      `'${w.bankAccountNo}`,
+      `"${w.bankAccountName.replace(/"/g, '""')}"`,
+      w.status === "completed" ? "Đã chuyển" : w.status === "pending" ? "Chờ duyệt" : "Bị từ chối",
+      `"${(w.note || "").replace(/"/g, '""')}"`,
+      w.createdAt,
+    ]);
+
+    const csvContent =
+      "\uFEFF" +
+      [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `DealHoan_LenhRutTien_${new Date().toISOString().slice(0, 10)}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setToastMsg("📥 Đã xuất file CSV lệnh rút tiền thành công!");
+    setTimeout(() => setToastMsg(null), 2500);
   };
 
   // Tự động tải dữ liệu thực tế mới nhất từ CSDL khi trang mount
@@ -595,10 +762,37 @@ export default function AdminUsersClient({
     }
     syncRealData();
     loadBoosterSettings();
+    loadAllWithdrawals();
     return () => {
       isMounted = false;
     };
   }, []);
+
+  // Tính toán số liệu thống kê rút tiền
+  const pendingWithdrawals = allWithdrawals.filter((w) => w.status === "pending");
+  const completedWithdrawals = allWithdrawals.filter((w) => w.status === "completed");
+  const rejectedWithdrawals = allWithdrawals.filter((w) => w.status === "rejected");
+  const pendingWithdrawalsCount = pendingWithdrawals.length;
+  const pendingWithdrawalsSum = pendingWithdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+  const completedWithdrawalsSum = completedWithdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+  const totalWithdrawalsSum = allWithdrawals.reduce((sum, w) => sum + (w.amount || 0), 0);
+
+  const filteredWithdrawals = allWithdrawals.filter((w) => {
+    if (withdrawalFilter !== "all" && w.status !== withdrawalFilter) {
+      return false;
+    }
+    if (withdrawalSearch.trim()) {
+      const q = withdrawalSearch.trim().toLowerCase();
+      const matchEmail = w.userEmail.toLowerCase().includes(q);
+      const matchName = w.userName.toLowerCase().includes(q);
+      const matchBank = w.bankName.toLowerCase().includes(q);
+      const matchSTK = w.bankAccountNo.toLowerCase().includes(q);
+      const matchAccName = w.bankAccountName.toLowerCase().includes(q);
+      const matchRef = w.userRefCode.toLowerCase().includes(q);
+      return matchEmail || matchName || matchBank || matchSTK || matchAccName || matchRef;
+    }
+    return true;
+  });
 
   // Bộ lọc
   const [searchQuery, setSearchQuery] = useState("");
@@ -717,7 +911,9 @@ export default function AdminUsersClient({
     setLoadingOrders(true);
 
     try {
-      const res = await fetch(`/api/admin/users/${user.id}/withdrawals`);
+      const res = await fetch(`/api/admin/users/${user.id}/withdrawals`, {
+        headers: getAdminFetchHeaders(),
+      });
       const data = await res.json();
       if (res.ok && Array.isArray(data.withdrawals)) {
         setUserWithdrawals(data.withdrawals);
@@ -731,7 +927,9 @@ export default function AdminUsersClient({
     }
 
     try {
-      const oRes = await fetch(`/api/admin/orders?userId=${user.id}`);
+      const oRes = await fetch(`/api/admin/orders?userId=${user.id}`, {
+        headers: getAdminFetchHeaders(),
+      });
       const oData = await oRes.json();
       if (oRes.ok && Array.isArray(oData.orders)) {
         setUserOrders(oData.orders);
@@ -821,7 +1019,7 @@ export default function AdminUsersClient({
     try {
       const res = await fetch(`/api/admin/users/${selectedUser.id}/withdrawals`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
         body: JSON.stringify({
           withdrawalId,
           status: newStatus,
@@ -832,7 +1030,7 @@ export default function AdminUsersClient({
         showToast(
           newStatus === "completed"
             ? "✅ Đã duyệt chuyển tiền"
-            : "❌ Đã từ chối lệnh rút"
+            : "❌ Đã từ chối lệnh rút và hoàn trả tiền vào ví"
         );
         setUserWithdrawals((prev) =>
           prev.map((w) =>
@@ -840,6 +1038,7 @@ export default function AdminUsersClient({
           )
         );
         refreshData();
+        loadAllWithdrawals();
       }
     } catch {
       showToast("⚠️ Lỗi cập nhật lệnh rút");
@@ -1120,9 +1319,25 @@ export default function AdminUsersClient({
           className={`admin-nav-tab-btn ${activeTab === "users" ? "active" : ""}`}
           onClick={() => setActiveTab("users")}
         >
-
           <span>Người dùng</span>
           <span className="tab-pill">{users.length}</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-nav-tab-btn ${activeTab === "withdrawals" ? "active" : ""}`}
+          onClick={() => {
+            setActiveTab("withdrawals");
+            loadAllWithdrawals();
+          }}
+        >
+          <span>Duyệt rút tiền</span>
+          {pendingWithdrawalsCount > 0 ? (
+            <span className="tab-pill tab-pill-pending-highlight animate-pulse">
+              ⏳ {pendingWithdrawalsCount} chờ duyệt
+            </span>
+          ) : (
+            <span className="tab-pill">{allWithdrawals.length}</span>
+          )}
         </button>
         <button
           type="button"
@@ -1381,7 +1596,25 @@ export default function AdminUsersClient({
                               )}
                               <span className="w-amount">{formatVnd(u.latestWithdrawal.amount)}</span>
                             </div>
-                            <span className="w-time">{formatDateShort(u.latestWithdrawal.createdAt)}</span>
+                            <div className="flex items-center justify-between gap-1 mt-1">
+                              <span className="w-time">{formatDateShort(u.latestWithdrawal.createdAt)}</span>
+                              {u.latestWithdrawal.status === "pending" && (
+                                <button
+                                  type="button"
+                                  className="btn-quick-approve-pill"
+                                  title="Mở tab duyệt lệnh rút tiền"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveTab("withdrawals");
+                                    setWithdrawalFilter("pending");
+                                    setWithdrawalSearch(u.email);
+                                    loadAllWithdrawals();
+                                  }}
+                                >
+                                  Duyệt ngay →
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ) : (
                           <span className="w-empty" aria-label="Chưa có lệnh rút">—</span>
@@ -1498,6 +1731,280 @@ export default function AdminUsersClient({
         )}
         </section>
         </>
+        )}
+
+        {activeTab === "withdrawals" && (
+          <section className="admin-withdrawals-section">
+            {/* Header & Actions */}
+            <div className={design.titleBar}>
+              <div>
+                <h1>Duyệt lệnh rút tiền</h1>
+                <span>{allWithdrawals.length} yêu cầu toàn hệ thống</span>
+              </div>
+              <div className="admin-actions-area">
+                <button
+                  type="button"
+                  className="admin-btn-secondary"
+                  onClick={loadAllWithdrawals}
+                  disabled={loadingAllWithdrawals}
+                >
+                  <ArrowClockwise size={18} className={loadingAllWithdrawals ? "animate-spin" : ""} />
+                  {loadingAllWithdrawals ? "Đang tải…" : "Làm mới"}
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn-primary"
+                  onClick={exportWithdrawalsToCsv}
+                >
+                  <DownloadSimple size={18} />
+                  Xuất CSV
+                </button>
+              </div>
+            </div>
+
+            {/* KPI Cards for Withdrawals */}
+            <section className="admin-kpi-grid admin-withdrawals-kpis" aria-label="Thống kê rút tiền">
+              <div className="admin-kpi-card kpi-card-pending-alert">
+                <span className="kpi-label">⏳ Lệnh chờ duyệt chi</span>
+                <strong className="kpi-value text-amber-600">
+                  {pendingWithdrawalsCount} <span className="text-sm font-normal text-stone-500">lệnh</span>
+                </strong>
+                <span className="text-xs font-semibold text-amber-700">
+                  Tổng: {formatVnd(pendingWithdrawalsSum)}
+                </span>
+              </div>
+
+              <div className="admin-kpi-card">
+                <span className="kpi-label">✅ Đã chi trả thành công</span>
+                <strong className="kpi-value text-green">
+                  {completedWithdrawals.length} <span className="text-sm font-normal text-stone-500">lệnh</span>
+                </strong>
+                <span className="text-xs font-semibold text-emerald-700">
+                  Tổng: {formatVnd(completedWithdrawalsSum)}
+                </span>
+              </div>
+
+              <div className="admin-kpi-card">
+                <span className="kpi-label">❌ Lệnh bị từ chối</span>
+                <strong className="kpi-value text-rose-600">
+                  {rejectedWithdrawals.length} <span className="text-sm font-normal text-stone-500">lệnh</span>
+                </strong>
+                <span className="text-xs text-stone-500">Đã hoàn lại số dư ví</span>
+              </div>
+
+              <div className="admin-kpi-card">
+                <span className="kpi-label">📊 Tổng tiền đã yêu cầu</span>
+                <strong className="kpi-value text-stone-800">
+                  {formatVnd(totalWithdrawalsSum)}
+                </strong>
+                <span className="text-xs text-stone-500">{allWithdrawals.length} lệnh toàn thời gian</span>
+              </div>
+            </section>
+
+            {/* Filters Bar */}
+            <section className="admin-filters-card">
+              <div className="admin-search-box">
+                <span className="admin-search-icon">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                </span>
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên, email, ngân hàng, STK…"
+                  aria-label="Tìm kiếm lệnh rút"
+                  value={withdrawalSearch}
+                  onChange={(e) => setWithdrawalSearch(e.target.value)}
+                  className="admin-search-input"
+                />
+              </div>
+
+              <div className="admin-withdrawal-status-filters">
+                <button
+                  type="button"
+                  className={`w-filter-btn ${withdrawalFilter === "all" ? "active" : ""}`}
+                  onClick={() => setWithdrawalFilter("all")}
+                >
+                  Tất cả ({allWithdrawals.length})
+                </button>
+                <button
+                  type="button"
+                  className={`w-filter-btn btn-filter-pending ${withdrawalFilter === "pending" ? "active" : ""}`}
+                  onClick={() => setWithdrawalFilter("pending")}
+                >
+                  ⏳ Chờ duyệt ({pendingWithdrawalsCount})
+                </button>
+                <button
+                  type="button"
+                  className={`w-filter-btn ${withdrawalFilter === "completed" ? "active" : ""}`}
+                  onClick={() => setWithdrawalFilter("completed")}
+                >
+                  ✅ Đã chi trả ({completedWithdrawals.length})
+                </button>
+                <button
+                  type="button"
+                  className={`w-filter-btn ${withdrawalFilter === "rejected" ? "active" : ""}`}
+                  onClick={() => setWithdrawalFilter("rejected")}
+                >
+                  ❌ Bị từ chối ({rejectedWithdrawals.length})
+                </button>
+              </div>
+            </section>
+
+            {/* Table of Withdrawals */}
+            <section className="admin-table-container">
+              {loadingAllWithdrawals && allWithdrawals.length === 0 ? (
+                <div className="p-8 text-center text-stone-500">
+                  <ArrowClockwise size={24} className="animate-spin inline-block mb-2 text-orange-500" />
+                  <p>Đang tải danh sách yêu cầu rút tiền...</p>
+                </div>
+              ) : filteredWithdrawals.length === 0 ? (
+                <div className="p-12 text-center text-stone-500">
+                  <div className="text-4xl mb-3">💸</div>
+                  <h3 className="text-base font-bold text-stone-700">Không tìm thấy yêu cầu rút tiền nào</h3>
+                  <p className="text-sm mt-1 text-stone-500">
+                    {withdrawalFilter !== "all"
+                      ? "Không có yêu cầu nào thuộc trạng thái này."
+                      : "Người dùng chưa gửi yêu cầu rút tiền nào hoặc các lệnh đã được xử lý xong."}
+                  </p>
+                </div>
+              ) : (
+                <div className="table-responsive">
+                  <table className="admin-data-table">
+                    <thead>
+                      <tr>
+                        <th>Thời gian &amp; Mã lệnh</th>
+                        <th>Người nhận</th>
+                        <th className="text-right">Số tiền rút</th>
+                        <th>Thông tin ngân hàng nhận tiền</th>
+                        <th>Trạng thái</th>
+                        <th className="text-right">Hành động duyệt</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredWithdrawals.map((w) => {
+                        const isApproving = approvingWithdrawalId === w.id;
+                        return (
+                          <tr key={w.id} className="admin-table-row">
+                            {/* Cột 1: Thời gian & Mã */}
+                            <td className="align-top">
+                              <div className="font-medium text-stone-800 text-xs">
+                                {formatDate(w.createdAt)}
+                              </div>
+                              <div className="text-[11px] font-mono text-stone-400 mt-0.5">
+                                #{w.id.slice(0, 8)}
+                              </div>
+                              {w.note && (
+                                <div className="text-[11px] text-stone-500 mt-1 italic max-w-xs">
+                                  💬 {w.note}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Cột 2: Người nhận */}
+                            <td className="align-top">
+                              <div className="font-semibold text-stone-900 text-sm">
+                                {w.userName}
+                              </div>
+                              <div className="text-xs text-stone-500">
+                                {w.userEmail}
+                              </div>
+                              <div className="text-[10px] text-stone-400 font-mono mt-0.5">
+                                Ref: {w.userRefCode}
+                              </div>
+                            </td>
+
+                            {/* Cột 3: Số tiền */}
+                            <td className="align-top text-right">
+                              <div className="text-base font-extrabold text-emerald-600">
+                                {formatVnd(w.amount)}
+                              </div>
+                            </td>
+
+                            {/* Cột 4: Thông tin ngân hàng */}
+                            <td className="align-top">
+                              <div className="bg-stone-50 border border-stone-200 rounded-lg p-2.5 max-w-sm">
+                                <div className="flex items-center gap-1.5 font-bold text-xs text-stone-800">
+                                  <Bank size={16} className="text-orange-600" />
+                                  <span>{w.bankName}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-2 mt-1.5 bg-white border border-stone-200 rounded px-2 py-1">
+                                  <span className="font-mono text-sm font-bold text-stone-900 tracking-wider">
+                                    {w.bankAccountNo}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopySTK(w.bankAccountNo, w.bankName)}
+                                    className="btn-copy-stk"
+                                    title="Sao chép số tài khoản để dán vào App ngân hàng"
+                                  >
+                                    {copiedSTK === w.bankAccountNo ? "✓ Đã copy" : "📋 Copy"}
+                                  </button>
+                                </div>
+                                <div className="text-xs font-semibold text-stone-700 uppercase tracking-wide mt-1">
+                                  {w.bankAccountName || w.userName}
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Cột 5: Trạng thái */}
+                            <td className="align-top">
+                              {w.status === "pending" && (
+                                <span className="w-badge w-pending">
+                                  ⏳ Chờ chuyển tiền
+                                </span>
+                              )}
+                              {w.status === "completed" && (
+                                <span className="w-badge w-completed">
+                                  ✅ Đã chi trả
+                                </span>
+                              )}
+                              {w.status === "rejected" && (
+                                <span className="w-badge w-rejected">
+                                  ❌ Đã từ chối
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Cột 6: Thao tác duyệt */}
+                            <td className="align-top text-right">
+                              {w.status === "pending" ? (
+                                <div className="flex flex-col items-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    disabled={isApproving}
+                                    onClick={() => handleApproveWithdrawalDirect(w, "completed")}
+                                    className="btn-approve-direct"
+                                    title="Xác nhận đã chuyển tiền thành công qua ngân hàng"
+                                  >
+                                    {isApproving ? "Đang xử lý…" : "✓ Duyệt chuyển tiền"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={isApproving}
+                                    onClick={() => handleApproveWithdrawalDirect(w, "rejected")}
+                                    className="btn-reject-direct"
+                                    title="Từ chối lệnh rút tiền và hoàn tiền về ví người dùng"
+                                  >
+                                    ✕ Từ chối
+                                  </button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-stone-400 italic">
+                                  Đã đối soát xong
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </section>
         )}
 
         {activeTab === "settings" && (

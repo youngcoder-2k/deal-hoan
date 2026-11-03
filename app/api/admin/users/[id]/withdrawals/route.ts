@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { checkAdminApiAuth } from "@/lib/auth/admin-server";
-import { hasSupabaseConfig } from "@/lib/supabase/config";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getWithdrawals,
   updateWithdrawalStatus,
@@ -25,22 +25,36 @@ export async function GET(
     const { id: userId } = await context.params;
 
     const supabaseAdmin = getSupabaseAdminClient();
+    let supabaseServer: any = null;
+    try {
+      supabaseServer = await createSupabaseServerClient();
+    } catch {}
+    const clientToUse = supabaseAdmin || supabaseServer;
 
-    if (supabaseAdmin && hasSupabaseConfig) {
-      const { data, error } = await supabaseAdmin
+    let dbData: any[] = [];
+    if (clientToUse) {
+      const { data, error } = await clientToUse
         .from("withdrawal_requests")
         .select("*")
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      if (!error && data && data.length > 0) {
-        return NextResponse.json({ withdrawals: data });
+      if (!error && Array.isArray(data) && data.length > 0) {
+        dbData = data;
       }
     }
 
-    // Fallback to shared in-memory store
-    const userWithdrawals = getWithdrawals(userId);
-    return NextResponse.json({ withdrawals: userWithdrawals });
+    // Merge in-memory records
+    const memData = getWithdrawals(userId);
+    const existingIds = new Set(dbData.map((w) => String(w.id)));
+    for (const mw of memData) {
+      if (!existingIds.has(String(mw.id))) {
+        dbData.push(mw);
+        existingIds.add(String(mw.id));
+      }
+    }
+
+    return NextResponse.json({ withdrawals: dbData });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -60,31 +74,81 @@ export async function PATCH(
       );
     }
 
-    await context.params;
+    const { id: userId } = await context.params;
     const body = await request.json();
     const { withdrawalId, status, note } = body;
 
-    if (!withdrawalId || !status) {
+    if (!withdrawalId || !status || !["completed", "rejected"].includes(status)) {
       return NextResponse.json(
-        { error: "Thiếu withdrawalId hoặc status." },
+        { error: "Thiếu withdrawalId hoặc status không hợp lệ." },
         { status: 400 }
       );
     }
 
     const supabaseAdmin = getSupabaseAdminClient();
+    let supabaseServer: any = null;
+    try {
+      supabaseServer = await createSupabaseServerClient();
+    } catch {}
+    const clientToUse = supabaseAdmin || supabaseServer;
 
-    if (supabaseAdmin && hasSupabaseConfig) {
-      await supabaseAdmin
-        .from("withdrawal_requests")
-        .update({
-          status,
-          note,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", withdrawalId);
+    let targetAmount = 0;
+
+    if (clientToUse) {
+      try {
+        const { data: wRow } = await clientToUse
+          .from("withdrawal_requests")
+          .select("amount")
+          .eq("id", withdrawalId)
+          .maybeSingle();
+
+        if (wRow) {
+          targetAmount = Number(wRow.amount || 0);
+        }
+
+        await clientToUse
+          .from("withdrawal_requests")
+          .update({
+            status,
+            note: note || (status === "completed" ? "Đã chuyển khoản Napas247" : "Từ chối yêu cầu rút"),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", withdrawalId);
+      } catch (err) {
+        console.warn("DB update withdrawal error:", err);
+      }
+    }
+
+    if (!targetAmount) {
+      const mem = getWithdrawals().find((w) => w.id === withdrawalId);
+      if (mem) targetAmount = mem.amount;
     }
 
     updateWithdrawalStatus(withdrawalId, status, note);
+
+    // Hoàn trả số dư ví nếu từ chối
+    if (status === "rejected" && targetAmount > 0 && clientToUse && userId) {
+      try {
+        const { data: wallet } = await clientToUse
+          .from("user_wallets")
+          .select("balance, total_withdrawn")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (wallet) {
+          await clientToUse
+            .from("user_wallets")
+            .update({
+              balance: Number(wallet.balance || 0) + targetAmount,
+              total_withdrawn: Math.max(0, Number(wallet.total_withdrawn || 0) - targetAmount),
+              updated_at: new Date().toISOString(),
+            })
+            .eq("user_id", userId);
+        }
+      } catch (err) {
+        console.warn("Failed refund in user withdrawal patch:", err);
+      }
+    }
 
     return NextResponse.json({
       success: true,

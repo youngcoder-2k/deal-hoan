@@ -77,6 +77,8 @@ export default async function AdminPage(props: {
       ? "sync"
       : searchParams?.tab === "settings"
       ? "settings"
+      : searchParams?.tab === "withdrawals" || searchParams?.tab === "rut-tien"
+      ? "withdrawals"
       : "users";
 
   return (
