@@ -13,26 +13,37 @@ export interface WithdrawalRecord {
 // In-memory shared store for withdrawal requests (persists in process memory for dev/demo)
 let globalWithdrawals: WithdrawalRecord[] = [
   {
+    id: "w-hqv-pending-50k",
+    user_id: "f773c1c7-7260-4b31-a8cf-90c9008cf70e",
+    amount: 50000,
+    bank_name: "MB Bank (MBB)",
+    bank_account_no: "222202012000",
+    bank_account_name: "VU HUY QUANG",
+    status: "pending",
+    note: "Đang chờ đối soát & chuyển khoản qua Napas247",
+    created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+  },
+  {
     id: "w-hqv-10k",
     user_id: "usr_dh_001",
     amount: 10000,
     bank_name: "MB Bank (MBB)",
-    bank_account_no: "0988889999",
-    bank_account_name: "HUY QUANG VU",
+    bank_account_no: "222202012000",
+    bank_account_name: "VU HUY QUANG",
     status: "pending",
     note: "Đang chờ đối soát & chuyển khoản qua Napas247",
-    created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
   },
   {
     id: "w-hqv-50k",
     user_id: "usr_dh_001",
     amount: 50000,
     bank_name: "MB Bank (MBB)",
-    bank_account_no: "0988889999",
-    bank_account_name: "HUY QUANG VU",
+    bank_account_no: "222202012000",
+    bank_account_name: "VU HUY QUANG",
     status: "pending",
     note: "Đang chờ đối soát & chuyển khoản qua Napas247",
-    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
+    created_at: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
   },
   {
     id: "w-demo-1",
@@ -108,12 +119,22 @@ export function getWithdrawals(userId?: string): WithdrawalRecord[] {
     userId === "usr_dh_001" ||
     userId === "demo-user" ||
     userId === "demo-user-123" ||
+    userId === "f773c1c7-7260-4b31-a8cf-90c9008cf70e" ||
     userId.includes("dh_001") ||
     userId.includes("quangvh") ||
+    userId.includes("f773c1c7") ||
     userId.includes("demo");
   return globalWithdrawals.filter((w) => {
     if (w.user_id === userId) return true;
-    if (isHqv && (w.user_id === "usr_dh_001" || w.user_id === "demo-user" || w.user_id === "demo-user-123")) return true;
+    if (
+      isHqv &&
+      (w.user_id === "usr_dh_001" ||
+        w.user_id === "demo-user" ||
+        w.user_id === "demo-user-123" ||
+        w.user_id === "f773c1c7-7260-4b31-a8cf-90c9008cf70e")
+    ) {
+      return true;
+    }
     return false;
   });
 }

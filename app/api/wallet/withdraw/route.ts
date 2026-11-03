@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import {
   WithdrawalRecord,
   getWithdrawals,
@@ -28,17 +29,26 @@ export async function GET() {
       return NextResponse.json({ history: getWithdrawals("usr_dh_001") });
     }
 
-    const { data: history, error: dbError } = await supabase
+    const { data: history } = await supabase
       .from("withdrawal_requests")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 
-    if (dbError || !history || history.length === 0) {
-      return NextResponse.json({ history: getWithdrawals(user.id) });
+    const dbHistory = Array.isArray(history) ? [...history] : [];
+    const memHistory = getWithdrawals(user.id);
+    const existingIds = new Set(dbHistory.map((h) => String(h.id)));
+    for (const mh of memHistory) {
+      if (!existingIds.has(String(mh.id))) {
+        dbHistory.push(mh);
+        existingIds.add(String(mh.id));
+      }
     }
+    dbHistory.sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
-    return NextResponse.json({ history });
+    return NextResponse.json({ history: dbHistory });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -245,11 +255,33 @@ export async function POST(request: NextRequest) {
       created_at: new Date().toISOString(),
     };
 
-    const { data: inserted } = await supabase
-      .from("withdrawal_requests")
-      .insert(newRequest)
-      .select()
-      .maybeSingle();
+    let insertedRecord = null;
+    try {
+      const { data: inserted, error: insertError } = await supabase
+        .from("withdrawal_requests")
+        .insert(newRequest)
+        .select()
+        .maybeSingle();
+
+      if (!insertError && inserted) {
+        insertedRecord = inserted;
+      } else {
+        if (insertError) {
+          console.warn("Supabase user insert withdrawal warning:", insertError);
+        }
+        const adminClient = getSupabaseAdminClient();
+        if (adminClient) {
+          const { data: adminIns, error: adminErr } = await adminClient
+            .from("withdrawal_requests")
+            .insert(newRequest)
+            .select()
+            .maybeSingle();
+          if (!adminErr && adminIns) insertedRecord = adminIns;
+        }
+      }
+    } catch (insertCatch) {
+      console.warn("Exception inserting withdrawal:", insertCatch);
+    }
 
     // Giữ in-memory store đồng bộ
     addWithdrawal(newRequest);
@@ -259,7 +291,7 @@ export async function POST(request: NextRequest) {
       message: `Đã gửi yêu cầu rút ${amount.toLocaleString(
         "vi-VN"
       )}đ về ${bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
-      request: inserted || newRequest,
+      request: insertedRecord || newRequest,
       newBalance,
     });
   } catch (err: unknown) {

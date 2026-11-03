@@ -42,6 +42,14 @@ create policy "Admins can update all withdrawals"
   on public.withdrawal_requests for update
   using (public.is_admin());
 
+create policy "Admins can insert all withdrawals"
+  on public.withdrawal_requests for insert
+  with check (public.is_admin());
+
+create policy "Users can create own withdrawal requests"
+  on public.withdrawal_requests for insert
+  with check (auth.uid() = user_id);
+
 -- 4. View tổng hợp thông tin User + Wallet + Lệnh rút tiền (Tiện lợi cho Admin truy vấn SQL)
 create or replace view public.admin_user_overview as
 select

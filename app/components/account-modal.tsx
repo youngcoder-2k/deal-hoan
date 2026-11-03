@@ -130,7 +130,15 @@ export default function AccountModal({
       ...savedBank,
     };
   });
-  const [history, setHistory] = useState<WithdrawalItem[]>([]);
+  const [history, setHistory] = useState<WithdrawalItem[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("dealhoan_pending_withdrawals_" + user.id);
+        if (raw) return JSON.parse(raw);
+      } catch {}
+    }
+    return [];
+  });
   const [orders, setOrders] = useState<CashbackOrderItem[]>(() => {
     if (typeof window !== "undefined") {
       try {
@@ -262,6 +270,31 @@ export default function AccountModal({
       setOrders(merged as CashbackOrderItem[]);
     };
 
+    const applyHistoryData = (serverHistory: WithdrawalItem[]) => {
+      let localPending: WithdrawalItem[] = [];
+      if (typeof window !== "undefined") {
+        try {
+          const raw = localStorage.getItem("dealhoan_pending_withdrawals_" + user.id);
+          if (raw) localPending = JSON.parse(raw);
+        } catch {}
+      }
+
+      const existingIds = new Set(serverHistory.map((s) => s.id));
+      const merged = [...serverHistory];
+      for (const item of localPending) {
+        if (!existingIds.has(item.id)) {
+          if (item.status === "pending") {
+            merged.push(item);
+            existingIds.add(item.id);
+          }
+        }
+      }
+      merged.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      setHistory(merged);
+    };
+
     // 1. Cố gắng lấy toàn bộ dữ liệu trong 1 request duy nhất (rút ngắn thời gian tối đa)
     fetch("/api/wallet?full=1", { cache: "no-store", signal: controller.signal })
       .then((res) => { if (!res.ok) throw new Error("Full fetch failed"); return res.json(); })
@@ -269,7 +302,7 @@ export default function AccountModal({
         if (cancelled) return;
         if (data.wallet) applyWalletData(data.wallet);
         if (Array.isArray(data.orders)) applyOrdersData(data.orders);
-        if (Array.isArray(data.history)) setHistory(data.history);
+        if (Array.isArray(data.history)) applyHistoryData(data.history);
         clearTimeout(deadline);
         setLoading({ wallet: false, orders: false, history: false });
       })
@@ -296,7 +329,7 @@ export default function AccountModal({
         fetch("/api/wallet/withdraw", { cache: "no-store", signal: controller.signal })
           .then((res) => { if (!res.ok) throw new Error(); return res.json(); })
           .then((data) => {
-            if (!cancelled && Array.isArray(data.history)) setHistory(data.history);
+            if (!cancelled && Array.isArray(data.history)) applyHistoryData(data.history);
           })
           .catch(() => failed("history"))
           .finally(() => finish("history"));
@@ -509,6 +542,14 @@ export default function AccountModal({
         });
         if (data.request) {
           setHistory((prev) => [data.request, ...prev]);
+          if (typeof window !== "undefined") {
+            try {
+              const raw = localStorage.getItem("dealhoan_pending_withdrawals_" + user.id);
+              const list: WithdrawalItem[] = raw ? JSON.parse(raw) : [];
+              const updated = [data.request, ...list.filter((x) => x.id !== data.request.id)];
+              localStorage.setItem("dealhoan_pending_withdrawals_" + user.id, JSON.stringify(updated));
+            } catch {}
+          }
         }
         onNotify(`✓ Đã gửi yêu cầu rút ${formatVnd(parsedAmount)}. Tiền sẽ được chuyển trong 24–48h.`);
       } else {

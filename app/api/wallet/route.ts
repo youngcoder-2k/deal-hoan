@@ -136,7 +136,20 @@ export async function GET(request: NextRequest) {
 
       const orders = [...verified, ...claims, ...activeSessions].sort((a,b) => Date.parse(b.ordered_at)-Date.parse(a.ordered_at));
 
-      const history = (historyRes.data && historyRes.data.length > 0) ? historyRes.data : getWithdrawals(user.id);
+      const dbHistory = Array.isArray(historyRes.data) ? [...historyRes.data] : [];
+      const memHistory = getWithdrawals(user.id);
+      const existingHistoryIds = new Set(dbHistory.map((h) => String(h.id)));
+      for (const mh of memHistory) {
+        if (!existingHistoryIds.has(String(mh.id))) {
+          dbHistory.push(mh);
+          existingHistoryIds.add(String(mh.id));
+        }
+      }
+      dbHistory.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const history = dbHistory;
 
       return NextResponse.json({
         wallet: mergedWallet,
