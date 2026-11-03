@@ -934,7 +934,7 @@ export default function HomeClient({
                           order_value: calculatedProduct.price || 0,
                           cashback_amount: calculatedProduct.cashback || 0,
                           sub_id: user ? formatSubIdForUser(user.id) : undefined,
-                          note: "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút).",
+                          note: "",
                         });
                       }
                     }}
@@ -1427,7 +1427,7 @@ export default function HomeClient({
                         order_value: calculatedProduct.price || 0,
                         cashback_amount: calculatedProduct.cashback || 0,
                         sub_id: user ? formatSubIdForUser(user.id) : undefined,
-                        note: "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút).",
+                        note: "",
                       });
                     }
                     window.open(

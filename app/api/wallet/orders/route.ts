@@ -49,7 +49,7 @@ export async function GET() {
     order_value: Number(s.order_value) || 0,
     cashback_amount: Number(s.cashback_amount) || 0,
     status: (s.status || "tracking") as "tracking" | "pending" | "completed" | "rejected",
-    note: String(s.note || "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút)."),
+    note: s.note ? String(s.note) : undefined,
     ordered_at: String(s.created_at || new Date().toISOString()),
     is_tracking_session: true,
   }));

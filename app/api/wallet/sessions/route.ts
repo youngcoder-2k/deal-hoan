@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     const cashbackAmount = Math.max(0, Math.round(Number(body.cashbackAmount) || 0));
     const subId = body.subId ? String(body.subId).slice(0, 128) : null;
     const note = String(
-      body.note || "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút)."
+      body.note || ""
     ).slice(0, 500);
 
     // Lưu phiên tracking trực tiếp vào Database Supabase theo user_id
