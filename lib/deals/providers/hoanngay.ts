@@ -168,9 +168,24 @@ async function getHoanNgaySession(forceRefresh = false): Promise<HoanNgaySession
 }
 
 /**
- * Expand shortlink (s.shopee.vn, vn.shp.ee) if needed
+ * Expand shortlink (s.shopee.vn, vn.shp.ee) if needed and normalize to canonical product URL.
  */
 async function expandShopeeShortLink(url: string): Promise<string> {
+  // If URL already embeds origin_link, unwrap directly with 0ms overhead
+  try {
+    const u = new URL(url.startsWith("http") ? url : `https://${url}`);
+    if (u.searchParams.has("origin_link")) {
+      const orig = u.searchParams.get("origin_link");
+      if (orig) return expandShopeeShortLink(decodeURIComponent(orig));
+    }
+    const mOpa = u.pathname.match(/\/(?:opaanlp|product)\/(\d+)\/(\d+)/i);
+    const mProd = u.pathname.match(/-i\.(\d+)\.(\d+)/i);
+    const m = mOpa || mProd;
+    if (m) {
+      return `https://shopee.vn/product/${m[1]}/${m[2]}`;
+    }
+  } catch {}
+
   const lower = url.toLowerCase();
   const isShort =
     lower.includes("s.shopee.vn") ||
@@ -191,9 +206,19 @@ async function expandShopeeShortLink(url: string): Promise<string> {
           "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       },
-      signal: AbortSignal.timeout(2500),
+      signal: AbortSignal.timeout(3000),
     });
-    return res.url || url;
+    const finalUrl = res.url || url;
+    try {
+      const u2 = new URL(finalUrl);
+      const m1 = u2.pathname.match(/\/(?:opaanlp|product)\/(\d+)\/(\d+)/i);
+      const m2 = u2.pathname.match(/-i\.(\d+)\.(\d+)/i);
+      const m = m1 || m2;
+      if (m) {
+        return `https://shopee.vn/product/${m[1]}/${m[2]}`;
+      }
+    } catch {}
+    return finalUrl;
   } catch {
     return url;
   }
@@ -333,31 +358,24 @@ export async function lookupHoanNgayProduct(
     return cached;
   }
 
-  // 1. Try HoanNgay first
-  let session = await getHoanNgaySession();
-  let hoanNgayData: HoanNgayRawData | null = null;
-
-  if (session) {
-    let q = await queryHoanNgay(cleanLink, session);
-    if (q.needsRefresh) {
-      cachedSession = null;
-      session = await getHoanNgaySession(true);
-      if (session) {
-        q = await queryHoanNgay(cleanLink, session);
+  const runHoanNgay = async (): Promise<HoanNgayProduct | null> => {
+    try {
+      let session = await getHoanNgaySession();
+      if (!session) return null;
+      let q = await queryHoanNgay(cleanLink, session);
+      if (q.needsRefresh) {
+        cachedSession = null;
+        session = await getHoanNgaySession(true);
+        if (session) q = await queryHoanNgay(cleanLink, session);
       }
-    }
-    if (q.success && q.data) {
-      hoanNgayData = q.data;
-    }
-  }
+      if (!q.success || !q.data) return null;
+      const hoanNgayData = q.data;
+      const upstreamPlatform = hoanNgayData.platform || hoanNgayData.platform_name;
+      if (isTikTok && upstreamPlatform && !upstreamPlatform.toLowerCase().includes("tiktok")) return null;
+      const price = Number(hoanNgayData.price);
+      const hasProductDetails = Boolean(String(hoanNgayData.product_name || "").trim());
+      if (!Number.isFinite(price) || (price <= 0 && (!isTikTok || !hasProductDetails))) return null;
 
-  if (hoanNgayData) {
-    // Reject mismatched upstream platforms rather than labeling Shopee data as TikTok.
-    const upstreamPlatform = hoanNgayData.platform || hoanNgayData.platform_name;
-    if (isTikTok && upstreamPlatform && !upstreamPlatform.toLowerCase().includes("tiktok")) return null;
-    const price = Number(hoanNgayData.price);
-    const hasProductDetails = Boolean(String(hoanNgayData.product_name || "").trim());
-    if (Number.isFinite(price) && (price > 0 || (isTikTok && price === 0 && hasProductDetails))) {
       const cashbackRate = Number(hoanNgayData.cashback_rate);
       const rawCashback = Number(hoanNgayData.cashback_amount);
       const commission =
@@ -379,7 +397,7 @@ export async function lookupHoanNgayProduct(
       const shopId = hoanNgayData.shop_id ? String(hoanNgayData.shop_id).trim() : undefined;
       const itemId = hoanNgayData.item_id ? String(hoanNgayData.item_id).trim() : undefined;
 
-      const result: HoanNgayProduct = {
+      return {
         name: String(hoanNgayData.product_name || "").trim(),
         price,
         originalPrice: originalPrice > price ? originalPrice : price,
@@ -395,24 +413,19 @@ export async function lookupHoanNgayProduct(
         platform: isTikTok ? "TikTok Shop" : hoanNgayData.platform_name || "Shopee",
         source: "hoanngay",
       };
-
-      setInCache(cacheKey, result);
-      if (isShopee && shopId && itemId) {
-        setInCache(`shopee_${shopId}_${itemId}`, result);
-      } else if (isTikTok && productLink) {
-        setInCache(getCacheKey(productLink), result);
-      }
-      return result;
+    } catch {
+      return null;
     }
-  }
+  };
 
-  if (!isShopee) return null;
+  const runLonghouse = async (): Promise<HoanNgayProduct | null> => {
+    if (!isShopee) return null;
+    try {
+      const lhInfo = await queryLonghouseFallback(cleanLink);
+      if (!lhInfo) return null;
+      const price = Number(lhInfo.price);
+      if (!Number.isFinite(price) || price <= 0) return null;
 
-  // 2. Secondary Shopee-only fallback to Longhouse if HoanNgay had an error
-  const lhInfo = await queryLonghouseFallback(cleanLink);
-  if (lhInfo) {
-    const price = Number(lhInfo.price);
-    if (Number.isFinite(price) && price > 0) {
       const rawCommission = Number(lhInfo.commission ?? lhInfo.shopeeComFinal);
       const rawCap = Number(lhInfo.cap);
       const commission = Number.isFinite(rawCommission) && rawCommission > 0 ? rawCommission : undefined;
@@ -441,7 +454,7 @@ export async function lookupHoanNgayProduct(
         }
       }
 
-      const result: HoanNgayProduct = {
+      return {
         name: String(lhInfo.productName || "").trim(),
         price,
         originalPrice: originalPrice > price ? originalPrice : price,
@@ -456,16 +469,46 @@ export async function lookupHoanNgayProduct(
         itemId,
         source: "longhouse",
       };
+    } catch {
+      return null;
+    }
+  };
 
-      setInCache(cacheKey, result);
-      if (shopId && itemId) {
-        setInCache(`shopee_${shopId}_${itemId}`, result);
-      }
-      return result;
+  let result: HoanNgayProduct | null = null;
+  if (isShopee) {
+    // Run both providers concurrently for Shopee: resolve immediately with whichever responds first
+    result = await new Promise<HoanNgayProduct | null>((resolve) => {
+      let resolved = false;
+      let finished = 0;
+      const tasks = [runLonghouse(), runHoanNgay()];
+      tasks.forEach((p) => {
+        p.then((res) => {
+          if (!resolved && res && res.price > 0 && res.name) {
+            resolved = true;
+            resolve(res);
+          }
+        }).catch(() => {}).finally(() => {
+          finished++;
+          if (finished === tasks.length && !resolved) {
+            resolve(null);
+          }
+        });
+      });
+    });
+  } else {
+    result = await runHoanNgay();
+  }
+
+  if (result) {
+    setInCache(cacheKey, result);
+    if (isShopee && result.shopId && result.itemId) {
+      setInCache(`shopee_${result.shopId}_${result.itemId}`, result);
+    } else if (isTikTok && result.productLink) {
+      setInCache(getCacheKey(result.productLink), result);
     }
   }
 
-  return null;
+  return result;
 }
 
 export const lookupFastShopeeProduct = lookupHoanNgayProduct;

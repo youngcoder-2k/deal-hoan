@@ -625,7 +625,7 @@ export default function HomeClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: trimmed, subId }),
-        signal: AbortSignal.timeout(6000),
+        signal: AbortSignal.timeout(15000),
       });
       if (res.ok) {
         const data = await res.json();

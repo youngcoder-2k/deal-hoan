@@ -53,6 +53,12 @@ export function cleanShopeeUrl(rawUrl: string): string {
       }
     }
 
+    // Normalize Shopee mobile redirect URLs /opaanlp/<shopId>/<itemId>
+    const mOpa = parsed.pathname.match(/\/opaanlp\/(\d+)\/(\d+)/i);
+    if (mOpa) {
+      parsed.pathname = `/product/${mOpa[1]}/${mOpa[2]}`;
+    }
+
     // Convert ShopeeFood URLs to clean shopeefood.vn so it opens ShopeeFood directly
     const host = parsed.hostname.toLowerCase();
     if (
