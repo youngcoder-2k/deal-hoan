@@ -46,6 +46,7 @@ export function saveShoppingSession(
     ordered_at?: string;
     order_id?: string;
     status?: ShoppingSession["status"];
+    sub_id?: string;
   }
 ): ShoppingSession {
   const newSession: ShoppingSession = {
@@ -67,9 +68,28 @@ export function saveShoppingSession(
 
   if (typeof window === "undefined") return newSession;
 
+  // 1. Gửi và lưu phiên tracking trực tiếp lên CSDL máy chủ (Supabase)
+  try {
+    fetch("/api/wallet/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        platform: newSession.platform,
+        productName: newSession.product_name,
+        productImage: newSession.product_image,
+        orderValue: newSession.order_value,
+        cashbackAmount: newSession.cashback_amount,
+        subId: session.sub_id,
+        note: newSession.note,
+      }),
+    }).catch((err) => {
+      console.warn("Could not persist shopping session to server:", err);
+    });
+  } catch {}
+
+  // 2. Tạm lưu một bản local chỉ để hiển thị phản hồi tức thì 0ms trước khi API hoàn tất
   try {
     const existing = getShoppingSessions(session.user_id);
-    // Tránh trùng lặp nếu vừa bấm cùng sản phẩm trong vòng 3 phút
     const deduped = existing.filter(
       (s) =>
         !(
@@ -77,7 +97,6 @@ export function saveShoppingSession(
           Math.abs(Date.now() - new Date(s.ordered_at).getTime()) < 3 * 60 * 1000
         )
     );
-
     const updated = [newSession, ...deduped].slice(0, MAX_SESSIONS);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch {}

@@ -123,13 +123,6 @@ export default function AccountModal({
             bank_account_name: parsed.bank_account_name || "",
           };
         }
-        const storedWallet = localStorage.getItem("dealhoan_wallet_cache_" + user.id);
-        if (storedWallet) {
-          const parsed = JSON.parse(storedWallet);
-          if (typeof parsed.balance === "number" && initialBalance === undefined) savedStats.balance = parsed.balance;
-          if (typeof parsed.pending_balance === "number") savedStats.pending_balance = parsed.pending_balance;
-          if (typeof parsed.total_withdrawn === "number") savedStats.total_withdrawn = parsed.total_withdrawn;
-        }
       } catch {}
     }
     return {
@@ -257,19 +250,14 @@ export default function AccountModal({
         } catch {}
         setWallet(serverW);
       }
-      try {
-        localStorage.setItem(
-          "dealhoan_wallet_cache_" + user.id,
-          JSON.stringify({
-            balance: serverW.balance,
-            pending_balance: serverW.pending_balance,
-            total_withdrawn: serverW.total_withdrawn,
-          })
-        );
-      } catch {}
     };
 
     const applyOrdersData = (serverOrders: CashbackOrderItem[]) => {
+      // Dữ liệu đơn hàng và các phiên mua sắm được quản lý tập trung từ CSDL máy chủ
+      if (Array.isArray(serverOrders) && serverOrders.length > 0) {
+        setOrders(serverOrders);
+        return;
+      }
       const sessions = getShoppingSessions(user.id);
       const merged = mergeOrdersWithSessions(serverOrders, sessions);
       setOrders(merged as CashbackOrderItem[]);

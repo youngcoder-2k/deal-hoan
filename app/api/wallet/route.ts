@@ -75,10 +75,11 @@ export async function GET(request: NextRequest) {
     const metaAccountName = String(user.user_metadata?.bank_account_name || "");
 
     if (isFull) {
-      const [walletRes, confirmedRes, claimsRes, historyRes] = await Promise.all([
+      const [walletRes, confirmedRes, claimsRes, sessionsRes, historyRes] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("cashback_orders").select("*").eq("user_id", user.id).order("ordered_at", { ascending: false }),
         supabase.from("cashback_order_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
+        supabase.from("shopping_sessions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
         supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
 
@@ -107,10 +108,33 @@ export async function GET(request: NextRequest) {
 
       const verified = confirmedRes.data || [];
       const keys = new Set(verified.map(order => `${order.platform}:${order.order_id}`));
-      const orders = [...verified, ...(claimsRes.data || []).filter(claim => !keys.has(`${claim.platform}:${claim.order_id}`)).map(claim => ({
+      const claims = (claimsRes.data || []).filter(claim => !keys.has(`${claim.platform}:${claim.order_id}`)).map(claim => ({
         ...claim, status: "pending", cashback_amount: 0, commission_amount: 0, ordered_at: claim.created_at,
         note: "Yêu cầu tra cứu — chưa có xác nhận và hoa hồng từ sàn.",
-      }))].sort((a,b) => Date.parse(b.ordered_at)-Date.parse(a.ordered_at));
+      }));
+
+      // Lọc các shopping sessions từ máy chủ CSDL chưa có đơn thật đối ứng
+      const rawSessions = (sessionsRes.data || []).map((s: Record<string, unknown>) => ({
+        id: String(s.id),
+        user_id: String(s.user_id),
+        order_id: String(s.order_id || "ĐANG-CHỜ-SÀN"),
+        platform: String(s.platform || "Shopee") as "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada",
+        product_name: String(s.product_name || "Sản phẩm mua qua DealHoàn"),
+        product_image: s.product_image ? String(s.product_image) : null,
+        order_value: Number(s.order_value) || 0,
+        cashback_amount: Number(s.cashback_amount) || 0,
+        status: (s.status || "tracking") as "tracking" | "pending" | "completed" | "rejected",
+        note: String(s.note || "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút)."),
+        ordered_at: String(s.created_at || new Date().toISOString()),
+        is_tracking_session: true,
+      }));
+
+      const activeSessions = rawSessions.filter((sess) => {
+        const sessTime = new Date(sess.ordered_at).getTime();
+        return !verified.some((ord) => ord.platform === sess.platform && Math.abs(new Date(ord.ordered_at).getTime() - sessTime) < 2 * 3600 * 1000);
+      });
+
+      const orders = [...verified, ...claims, ...activeSessions].sort((a,b) => Date.parse(b.ordered_at)-Date.parse(a.ordered_at));
 
       const history = (historyRes.data && historyRes.data.length > 0) ? historyRes.data : getWithdrawals(user.id);
 

@@ -321,31 +321,12 @@ export default function HomeClient({
 
   useEffect(() => {
     if (!user) return;
-    try {
-      const cached = localStorage.getItem("dealhoan_wallet_cache_" + user.id);
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (typeof parsed.balance === "number") {
-          setUserBalance(parsed.balance);
-        }
-      }
-    } catch {}
     let mounted = true;
     fetch("/api/wallet")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (mounted && data?.wallet && typeof data.wallet.balance === "number") {
           setUserBalance(data.wallet.balance);
-          try {
-            localStorage.setItem(
-              "dealhoan_wallet_cache_" + user.id,
-              JSON.stringify({
-                balance: data.wallet.balance,
-                pending_balance: data.wallet.pending_balance,
-                total_withdrawn: data.wallet.total_withdrawn,
-              })
-            );
-          } catch {}
         }
       })
       .catch(() => {});
@@ -557,6 +538,7 @@ export default function HomeClient({
         product_image: deal.imageUrl,
         order_value: deal.price || 0,
         cashback_amount: deal.cashback || 0,
+        sub_id: user ? formatSubIdForUser(user.id) : undefined,
         note: "Đã chuyển sang Shopee · Sàn đang đối soát và sẽ gửi đơn trong 15–45 phút.",
       });
     }
@@ -951,6 +933,7 @@ export default function HomeClient({
                           product_image: calculatedProduct.imageUrl,
                           order_value: calculatedProduct.price || 0,
                           cashback_amount: calculatedProduct.cashback || 0,
+                          sub_id: user ? formatSubIdForUser(user.id) : undefined,
                           note: "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút).",
                         });
                       }
@@ -1443,6 +1426,7 @@ export default function HomeClient({
                         product_image: calculatedProduct.imageUrl,
                         order_value: calculatedProduct.price || 0,
                         cashback_amount: calculatedProduct.cashback || 0,
+                        sub_id: user ? formatSubIdForUser(user.id) : undefined,
                         note: "Đã chuyển sang sàn mua hàng · Đang chờ sàn đối soát và gửi đơn (15–45 phút).",
                       });
                     }
