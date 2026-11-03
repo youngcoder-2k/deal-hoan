@@ -34,3 +34,36 @@ test('isAdminUser identifies trungquan2000bg@gmail.com as admin', () => {
   assert.equal(isAdminUser(null), false);
   assert.equal(isAdminUser({}), false);
 });
+
+test('isAuthorizedCron accepts Supabase pg_cron token and rejects unauthorized requests', () => {
+  const load = loadTs({});
+  const { isAuthorizedCron } = load('lib/cron/auth.ts');
+
+  // Supabase pg_cron request
+  assert.equal(
+    isAuthorizedCron(
+      new Request('https://deal-hoan.vercel.app/api/cron/sync-orders', {
+        headers: { authorization: 'Bearer dealhoan_cron_secret_auto_sync_32chars_key' },
+      })
+    ),
+    true
+  );
+
+  // Unauthorized request
+  assert.equal(
+    isAuthorizedCron(
+      new Request('https://deal-hoan.vercel.app/api/cron/sync-orders', {
+        headers: { authorization: 'Bearer wrong_token' },
+      })
+    ),
+    false
+  );
+
+  // Missing authorization
+  assert.equal(
+    isAuthorizedCron(
+      new Request('https://deal-hoan.vercel.app/api/cron/sync-orders')
+    ),
+    false
+  );
+});
