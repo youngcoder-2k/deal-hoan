@@ -6,7 +6,6 @@ import Image from "next/image";
 import { Wallet, Clock, Bank, ShoppingBag, Receipt, CreditCard, X, CaretDown, ArrowRight, Question, CheckCircle, Info, SignOut, Copy } from "@phosphor-icons/react";
 import s from "./account-wallet.module.css";
 import type { User } from "@supabase/supabase-js";
-import { getShoppingSessions, mergeOrdersWithSessions } from "@/lib/deals/shopping-sessions";
 
 export interface WalletData {
   balance: number;
@@ -139,16 +138,7 @@ export default function AccountModal({
     }
     return [];
   });
-  const [orders, setOrders] = useState<CashbackOrderItem[]>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        return getShoppingSessions(user.id) as CashbackOrderItem[];
-      } catch {}
-    }
-    return [];
-  });
-  const [claimOrderId, setClaimOrderId] = useState("");
-  const [claimingOrder, setClaimingOrder] = useState(false);
+  const [orders, setOrders] = useState<CashbackOrderItem[]>([]);
 
   // Form Ngân hàng
   const [bankName, setBankName] = useState(() => {
@@ -210,6 +200,11 @@ export default function AccountModal({
 
   // Tải dữ liệu ví và lịch sử từ server
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.removeItem("dealhoan_shopping_sessions");
+      } catch {}
+    }
     let cancelled = false;
     const controller = new AbortController();
     const deadline = setTimeout(() => controller.abort(), 12000);
@@ -260,14 +255,9 @@ export default function AccountModal({
     };
 
     const applyOrdersData = (serverOrders: CashbackOrderItem[]) => {
-      // Dữ liệu đơn hàng và các phiên mua sắm được quản lý tập trung từ CSDL máy chủ
-      if (Array.isArray(serverOrders) && serverOrders.length > 0) {
+      if (Array.isArray(serverOrders)) {
         setOrders(serverOrders);
-        return;
       }
-      const sessions = getShoppingSessions(user.id);
-      const merged = mergeOrdersWithSessions(serverOrders, sessions);
-      setOrders(merged as CashbackOrderItem[]);
     };
 
     const applyHistoryData = (serverHistory: WithdrawalItem[]) => {
@@ -585,33 +575,6 @@ export default function AccountModal({
     return name.slice(0, 2).toUpperCase();
   };
 
-  const handleClaimOrder = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const cleanId = claimOrderId.trim();
-    if (!cleanId) return onNotify("⚠️ Vui lòng nhập mã đơn hàng Shopee!");
-
-    try {
-      setClaimingOrder(true);
-      const res = await fetch("/api/wallet/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: cleanId, platform: "Shopee" }),
-      });
-      const data = await res.json();
-      if (res.ok && data.order) {
-        onNotify("🎉 Đã lưu mã đơn! Hệ thống đang đối soát cùng Shopee.");
-        setOrders((prev) => [data.order, ...prev.filter((o) => o.order_id !== cleanId)]);
-        setClaimOrderId("");
-      } else {
-        onNotify("⚠️ " + (data.error || "Không thể lưu mã đơn"));
-      }
-    } catch {
-      onNotify("⚠️ Lỗi kết nối khi gửi mã đơn");
-    } finally {
-      setClaimingOrder(false);
-    }
-  };
-
   const tabs = [
     { key: "orders", label: "Đơn hoàn tiền", Icon: ShoppingBag },
     { key: "withdraw", label: "Rút tiền", Icon: CreditCard },
@@ -697,37 +660,27 @@ export default function AccountModal({
               </div>
             ) : (
               <div className={s.list}>
-                {orders.map((order) => {
-                  const isTracking = order.status === "tracking" || order.order_id === "ĐANG-CHỜ-SÀN";
-                  return (
-                    <article className={`${s.record} ${isTracking ? s.trackingRecord : ""}`} key={order.id}>
-                      {!isTracking && (
-                        <div className={s.recordTop}>
-                          <span>
-                            {order.platform} · #{order.order_id}
-                          </span>
-                          <span className={s.status} data-status={order.status}>
-                            {statusLabel(order.status)}
-                          </span>
-                        </div>
-                      )}
-                      <div className={s.recordMain}>
-                        <strong>{order.product_name || "Sản phẩm mua qua DealHoàn"}</strong>
-                        <b>
-                          +{formatVnd(order.cashback_amount)}
-                          {isTracking && <small className={s.estimatePill}>Dự kiến</small>}
-                        </b>
-                      </div>
-                      <div className={s.recordMeta}>
-                        <span>Giá trị đơn: {formatVnd(order.order_value)}</span>
-                        <time>{formatDate(order.ordered_at)}</time>
-                      </div>
-                      {order.note && !isTracking && !order.note.includes("Đã chuyển sang sàn") && (
-                        <p>{order.note}</p>
-                      )}
-                    </article>
-                  );
-                })}
+                {orders.map((order) => (
+                  <article className={s.record} key={order.id}>
+                    <div className={s.recordTop}>
+                      <span>
+                        {order.platform} · #{order.order_id}
+                      </span>
+                      <span className={s.status} data-status={order.status}>
+                        {statusLabel(order.status)}
+                      </span>
+                    </div>
+                    <div className={s.recordMain}>
+                      <strong>{order.product_name || "Sản phẩm mua qua DealHoàn"}</strong>
+                      <b>+{formatVnd(order.cashback_amount)}</b>
+                    </div>
+                    <div className={s.recordMeta}>
+                      <span>Giá trị đơn: {formatVnd(order.order_value)}</span>
+                      <time>{formatDate(order.ordered_at)}</time>
+                    </div>
+                    {order.note && <p>{order.note}</p>}
+                  </article>
+                ))}
               </div>
             )}
           </>}

@@ -29,7 +29,6 @@ import {
   extractUrlFromText,
   formatSubIdForUser,
 } from "@/lib/deals/affiliate";
-import { saveShoppingSession } from "@/lib/deals/shopping-sessions";
 import { cashbackFor } from "@/lib/deals/score";
 import { type CalculatedProduct } from "@/lib/deals/resolve";
 
@@ -529,19 +528,8 @@ export default function HomeClient({
     return buildCustomShortUrl(url, { baseUrl, subId });
   };
 
-  const recordDealClick = (deal: Deal) => {
-    if (user) {
-      saveShoppingSession({
-        user_id: user.id,
-        platform: "Shopee",
-        product_name: deal.name,
-        product_image: deal.imageUrl,
-        order_value: deal.price || 0,
-        cashback_amount: deal.cashback || 0,
-        sub_id: user ? formatSubIdForUser(user.id) : undefined,
-        note: "Đã chuyển sang Shopee · Sàn đang đối soát và sẽ gửi đơn trong 15–45 phút.",
-      });
-    }
+  const recordDealClick = (_deal: Deal) => {
+    // Không ghi nhận đơn giả lập khi click; đơn chỉ hiển thị khi Shopee đồng bộ
   };
 
   const executeCalculation = async (targetUrl: string) => {
@@ -921,22 +909,6 @@ export default function HomeClient({
                         return false;
                       }
                       notify(`Đang chuyển tới ${result || "Shopee"} để nhận hoàn tiền!`);
-                      if (calculatedProduct) {
-                        saveShoppingSession({
-                          user_id: user.id,
-                          platform: (calculatedProduct.platform?.toLowerCase().includes("food")
-                            ? "ShopeeFood"
-                            : calculatedProduct.platform?.toLowerCase().includes("tiktok")
-                            ? "TikTok Shop"
-                            : "Shopee") as any,
-                          product_name: calculatedProduct.name,
-                          product_image: calculatedProduct.imageUrl,
-                          order_value: calculatedProduct.price || 0,
-                          cashback_amount: calculatedProduct.cashback || 0,
-                          sub_id: user ? formatSubIdForUser(user.id) : undefined,
-                          note: "",
-                        });
-                      }
                     }}
                     onClear={() => resetCalculation()}
                     isLoggedIn={Boolean(user)}
@@ -1414,22 +1386,6 @@ export default function HomeClient({
                   className="primary"
                   onClick={() => {
                     setBuyOpen(false);
-                    if (user && calculatedProduct) {
-                      saveShoppingSession({
-                        user_id: user.id,
-                        platform: (calculatedProduct.platform?.toLowerCase().includes("food")
-                          ? "ShopeeFood"
-                          : calculatedProduct.platform?.toLowerCase().includes("tiktok")
-                          ? "TikTok Shop"
-                          : "Shopee") as any,
-                        product_name: calculatedProduct.name,
-                        product_image: calculatedProduct.imageUrl,
-                        order_value: calculatedProduct.price || 0,
-                        cashback_amount: calculatedProduct.cashback || 0,
-                        sub_id: user ? formatSubIdForUser(user.id) : undefined,
-                        note: "",
-                      });
-                    }
                     window.open(
                       currentTrackedLink || (link ? getAffiliateUrl(link) : "https://shopee.vn"),
                       "_blank",

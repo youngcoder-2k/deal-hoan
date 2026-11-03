@@ -4,7 +4,7 @@ import {
   getSharedWallet,
   updateSharedWallet,
 } from "@/lib/deals/user-wallet-store";
-import { getWithdrawals } from "@/lib/deals/withdrawals-store";
+import { getSupabaseAdminClient } from "@/lib/auth/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           wallet: fallbackWallet,
           orders: [],
-          history: getWithdrawals("usr_dh_001"),
+          history: [],
         });
       }
       return NextResponse.json({
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({
           wallet: fallbackWallet,
           orders: [],
-          history: getWithdrawals("usr_dh_001"),
+          history: [],
         });
       }
       return NextResponse.json({
@@ -75,11 +75,10 @@ export async function GET(request: NextRequest) {
     const metaAccountName = String(user.user_metadata?.bank_account_name || "");
 
     if (isFull) {
-      const [walletRes, confirmedRes, claimsRes, sessionsRes, historyRes] = await Promise.all([
+      const [walletRes, confirmedRes, claimsRes, historyRes] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("cashback_orders").select("*").eq("user_id", user.id).order("ordered_at", { ascending: false }),
         supabase.from("cashback_order_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
-        supabase.from("shopping_sessions").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(20),
         supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
 
@@ -113,38 +112,38 @@ export async function GET(request: NextRequest) {
         note: "Yêu cầu tra cứu — chưa có xác nhận và hoa hồng từ sàn.",
       }));
 
-      // Lọc các shopping sessions từ máy chủ CSDL chưa có đơn thật đối ứng
-      const rawSessions = (sessionsRes.data || []).map((s: Record<string, unknown>) => ({
-        id: String(s.id),
-        user_id: String(s.user_id),
-        order_id: String(s.order_id || "ĐANG-CHỜ-SÀN"),
-        platform: String(s.platform || "Shopee") as "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada",
-        product_name: String(s.product_name || "Sản phẩm mua qua DealHoàn"),
-        product_image: s.product_image ? String(s.product_image) : null,
-        order_value: Number(s.order_value) || 0,
-        cashback_amount: Number(s.cashback_amount) || 0,
-        status: (s.status || "tracking") as "tracking" | "pending" | "completed" | "rejected",
-        note: s.note ? String(s.note) : undefined,
-        ordered_at: String(s.created_at || new Date().toISOString()),
-        is_tracking_session: true,
-      }));
-
-      const activeSessions = rawSessions.filter((sess) => {
-        const sessTime = new Date(sess.ordered_at).getTime();
-        return !verified.some((ord) => ord.platform === sess.platform && Math.abs(new Date(ord.ordered_at).getTime() - sessTime) < 2 * 3600 * 1000);
-      });
-
-      const orders = [...verified, ...claims, ...activeSessions].sort((a,b) => Date.parse(b.ordered_at)-Date.parse(a.ordered_at));
+      const orders = [...verified, ...claims].sort((a,b) => Date.parse(b.ordered_at)-Date.parse(a.ordered_at));
 
       const dbHistory = Array.isArray(historyRes.data) ? [...historyRes.data] : [];
-      const memHistory = getWithdrawals(user.id);
-      const existingHistoryIds = new Set(dbHistory.map((h) => String(h.id)));
-      for (const mh of memHistory) {
-        if (!existingHistoryIds.has(String(mh.id))) {
-          dbHistory.push(mh);
-          existingHistoryIds.add(String(mh.id));
-        }
+
+      // Tự động kiểm tra đối soát nếu ví đã trừ tiền nhưng chưa có bản ghi lệnh rút tương ứng
+      const totalWithdrawn = Number(mergedWallet.total_withdrawn || 0);
+      const recordedSum = dbHistory.reduce(
+        (sum, item) => sum + Number(item.amount || 0),
+        0
+      );
+      const missingDiff = totalWithdrawn - recordedSum;
+      if (missingDiff >= 10000) {
+        const autoPending = {
+          id: crypto.randomUUID(),
+          user_id: user.id,
+          amount: missingDiff,
+          bank_name: mergedWallet.bank_name || "MB Bank (MBB)",
+          bank_account_no: mergedWallet.bank_account_no || "",
+          bank_account_name: (mergedWallet.bank_account_name || "").toUpperCase(),
+          status: "pending",
+          note: "Đang chờ đối soát & chuyển khoản qua Napas247",
+          created_at: new Date().toISOString(),
+        };
+        const adminClient = getSupabaseAdminClient();
+        const clientToUse = adminClient || supabase;
+        void clientToUse
+          .from("withdrawal_requests")
+          .insert(autoPending)
+          .then(null, () => {});
+        dbHistory.unshift(autoPending);
       }
+
       dbHistory.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

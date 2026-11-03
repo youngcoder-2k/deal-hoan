@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { checkAdminApiAuth } from "@/lib/auth/admin-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  getWithdrawals,
-  updateWithdrawalStatus,
-} from "@/lib/deals/withdrawals-store";
 
 export const dynamic = "force-dynamic";
 
@@ -39,18 +35,8 @@ export async function GET(
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
 
-      if (!error && Array.isArray(data) && data.length > 0) {
+      if (!error && Array.isArray(data)) {
         dbData = data;
-      }
-    }
-
-    // Merge in-memory records
-    const memData = getWithdrawals(userId);
-    const existingIds = new Set(dbData.map((w) => String(w.id)));
-    for (const mw of memData) {
-      if (!existingIds.has(String(mw.id))) {
-        dbData.push(mw);
-        existingIds.add(String(mw.id));
       }
     }
 
@@ -92,42 +78,40 @@ export async function PATCH(
     } catch {}
     const clientToUse = supabaseAdmin || supabaseServer;
 
+    if (!clientToUse) {
+      return NextResponse.json(
+        { error: "Không thể kết nối CSDL Supabase để cập nhật." },
+        { status: 500 }
+      );
+    }
+
     let targetAmount = 0;
 
-    if (clientToUse) {
-      try {
-        const { data: wRow } = await clientToUse
-          .from("withdrawal_requests")
-          .select("amount")
-          .eq("id", withdrawalId)
-          .maybeSingle();
+    const { data: wRow } = await clientToUse
+      .from("withdrawal_requests")
+      .select("amount")
+      .eq("id", withdrawalId)
+      .maybeSingle();
 
-        if (wRow) {
-          targetAmount = Number(wRow.amount || 0);
-        }
-
-        await clientToUse
-          .from("withdrawal_requests")
-          .update({
-            status,
-            note: note || (status === "completed" ? "Đã chuyển khoản Napas247" : "Từ chối yêu cầu rút"),
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", withdrawalId);
-      } catch (err) {
-        console.warn("DB update withdrawal error:", err);
-      }
+    if (wRow) {
+      targetAmount = Number(wRow.amount || 0);
     }
 
-    if (!targetAmount) {
-      const mem = getWithdrawals().find((w) => w.id === withdrawalId);
-      if (mem) targetAmount = mem.amount;
-    }
+    const { error: updateErr } = await clientToUse
+      .from("withdrawal_requests")
+      .update({
+        status,
+        note: note || (status === "completed" ? "Đã chuyển khoản Napas247" : "Từ chối yêu cầu rút"),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", withdrawalId);
 
-    updateWithdrawalStatus(withdrawalId, status, note);
+    if (updateErr) {
+      console.warn("DB update withdrawal error:", updateErr);
+    }
 
     // Hoàn trả số dư ví nếu từ chối
-    if (status === "rejected" && targetAmount > 0 && clientToUse && userId) {
+    if (status === "rejected" && targetAmount > 0 && userId) {
       try {
         const { data: wallet } = await clientToUse
           .from("user_wallets")

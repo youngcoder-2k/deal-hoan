@@ -8,7 +8,6 @@ import {
   getSupabaseAdminClient,
   isAdminUser,
 } from "./admin";
-import { getWithdrawals } from "@/lib/deals/withdrawals-store";
 
 /**
  * Kiểm tra quyền Quản trị viên cho các Admin API Route (/api/admin/*)
@@ -171,16 +170,6 @@ export async function fetchRealAdminUsers(): Promise<{
           withdrawalsData = ovWrData;
         }
       } catch {}
-    }
-
-    // Kết hợp thêm các yêu cầu rút tiền từ in-memory store (đảm bảo hiển thị đầy đủ ngay cả khi vừa tạo lệnh rút)
-    const memWithdrawals = getWithdrawals();
-    const existingWrIds = new Set(withdrawalsData.map((w) => String(w.id)));
-    for (const mw of memWithdrawals) {
-      if (!existingWrIds.has(String(mw.id))) {
-        withdrawalsData.push(mw);
-        existingWrIds.add(String(mw.id));
-      }
     }
 
     // Map wallets và withdrawals theo user_id
