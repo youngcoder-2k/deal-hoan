@@ -141,7 +141,6 @@ export default function AccountModal({
   });
   const [claimOrderId, setClaimOrderId] = useState("");
   const [claimingOrder, setClaimingOrder] = useState(false);
-  const [showClaimForm, setShowClaimForm] = useState(false);
 
   // Form Ngân hàng
   const [bankName, setBankName] = useState(() => {
@@ -562,7 +561,6 @@ export default function AccountModal({
         onNotify("🎉 Đã lưu mã đơn! Hệ thống đang đối soát cùng Shopee.");
         setOrders((prev) => [data.order, ...prev.filter((o) => o.order_id !== cleanId)]);
         setClaimOrderId("");
-        setShowClaimForm(false);
       } else {
         onNotify("⚠️ " + (data.error || "Không thể lưu mã đơn"));
       }
@@ -583,7 +581,7 @@ export default function AccountModal({
       : status === "pending"
       ? "Chờ duyệt"
       : status === "tracking"
-      ? "Chờ sàn gửi đơn"
+      ? "Chờ duyệt"
       : "Bị từ chối";
   const busyWallet = loading.wallet || Boolean(loadErrors.wallet);
   const switchTab = (key: typeof activeTab) => { setActiveTab(key); document.getElementById(`${tabId}-${key}`)?.focus(); };
@@ -649,28 +647,6 @@ export default function AccountModal({
         <div className={s.content} role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${activeTab}`} tabIndex={0}>
           {(loadErrors.wallet || loadErrors[activeTab]) && <div className={s.error} role="alert"><Info size={18} /><span>Tải dữ liệu chưa thành công. Vui lòng thử lại.</span><button type="button" onClick={() => { setLoading({ wallet: true, orders: true, history: true }); setLoadErrors({}); setRefreshKey(key => key + 1); }}>Thử lại</button></div>}
           {activeTab === "orders" && <>
-            {orders.length > 0 && (
-              <div className={s.orderNotice}>
-                <span>💡 Sàn thường xuất đơn sau 15–45 phút kể từ khi bạn chốt đơn.</span>
-                <button type="button" onClick={() => setShowClaimForm((v) => !v)}>
-                  {showClaimForm ? "✕ Đóng" : "🔍 Nhập mã đơn Shopee"}
-                </button>
-              </div>
-            )}
-            {showClaimForm && (
-              <form onSubmit={handleClaimOrder} className={s.claimBar}>
-                <input
-                  placeholder="Dán mã đơn Shopee (Ví dụ: 241030ABC123)..."
-                  value={claimOrderId}
-                  onChange={(e) => setClaimOrderId(e.target.value.trim())}
-                  disabled={claimingOrder}
-                  autoFocus
-                />
-                <button type="submit" disabled={claimingOrder || !claimOrderId}>
-                  {claimingOrder ? "Đang gửi..." : "Ghi nhận"}
-                </button>
-              </form>
-            )}
             {loading.orders && orders.length === 0 ? (
               <p className={s.loading} role="status">Đang tải đơn hoàn tiền…</p>
             ) : loadErrors.orders && orders.length === 0 ? null : orders.length === 0 ? (
@@ -684,14 +660,16 @@ export default function AccountModal({
                   const isTracking = order.status === "tracking" || order.order_id === "ĐANG-CHỜ-SÀN";
                   return (
                     <article className={`${s.record} ${isTracking ? s.trackingRecord : ""}`} key={order.id}>
-                      <div className={s.recordTop}>
-                        <span>
-                          {order.platform} · {isTracking ? "Phiên mua vừa bấm" : `#${order.order_id}`}
-                        </span>
-                        <span className={s.status} data-status={order.status}>
-                          {isTracking ? "⏳ Chờ sàn gửi đơn (15-45p)" : statusLabel(order.status)}
-                        </span>
-                      </div>
+                      {!isTracking && (
+                        <div className={s.recordTop}>
+                          <span>
+                            {order.platform} · #{order.order_id}
+                          </span>
+                          <span className={s.status} data-status={order.status}>
+                            {statusLabel(order.status)}
+                          </span>
+                        </div>
+                      )}
                       <div className={s.recordMain}>
                         <strong>{order.product_name || "Sản phẩm mua qua DealHoàn"}</strong>
                         <b>
@@ -703,7 +681,9 @@ export default function AccountModal({
                         <span>Giá trị đơn: {formatVnd(order.order_value)}</span>
                         <time>{formatDate(order.ordered_at)}</time>
                       </div>
-                      {order.note && <p className={isTracking ? s.trackingNote : ""}>{order.note}</p>}
+                      {order.note && !isTracking && !order.note.includes("Đã chuyển sang sàn") && (
+                        <p>{order.note}</p>
+                      )}
                     </article>
                   );
                 })}
@@ -714,10 +694,79 @@ export default function AccountModal({
             <h3 className={s.sectionTitle}>Rút tiền về ngân hàng</h3>
             {loading.wallet ? <p className={s.loading} role="status">Đang tải thông tin ví…</p> : <>
               {isBankReady && !editingBank ? <div className={s.bankSummary}><span className={s.bankIcon}><Bank size={24} /></span><strong>{wallet.bank_name}</strong><span className={s.masked}>•••• {wallet.bank_account_no.slice(-4)}</span><span className={s.saved}><CheckCircle size={18} />{bankSavedSuccess ? "Đã cập nhật" : "Đã lưu"}</span><button type="button" onClick={() => setEditingBank(true)} aria-expanded={false}>Chỉnh sửa</button></div> : <form onSubmit={async event => { await handleSaveBank(event); }} className={s.bankForm}>
-                <h4>{isBankReady ? "Chỉnh sửa tài khoản nhận" : "Thêm tài khoản nhận tiền"}</h4>
-                <label>Ngân hàng<select value={bankName} onChange={event => setBankName(event.target.value)} disabled={savingBank}>{VN_BANKS.map(bank => <option key={bank}>{bank}</option>)}</select></label>
-                <div className={s.formRow}><label>Số tài khoản<input required inputMode="numeric" autoComplete="off" value={accountNo} onChange={event => setAccountNo(event.target.value.replace(/\D/g, ""))} disabled={savingBank} /></label><label>Tên chủ tài khoản<input required autoComplete="name" value={accountName} onChange={event => setAccountName(event.target.value)} disabled={savingBank} /></label></div>
-                <div className={s.actions}>{isBankReady && <button type="button" className={s.secondary} disabled={savingBank} onClick={() => { setBankName(wallet.bank_name); setAccountNo(wallet.bank_account_no); setAccountName(wallet.bank_account_name); setEditingBank(false); }}>Hủy</button>}<button type="submit" className={s.primary} disabled={savingBank || Boolean(loadErrors.wallet)}>{savingBank ? "Đang lưu…" : "Lưu tài khoản"}</button></div>
+                <div className={s.bankFormHeader}>
+                  <h4>{isBankReady ? "Chỉnh sửa tài khoản nhận" : "Thêm tài khoản nhận tiền"}</h4>
+                  {isBankReady && (
+                    <button
+                      type="button"
+                      className={s.bankCancelBtn}
+                      disabled={savingBank}
+                      onClick={() => {
+                        setBankName(wallet.bank_name);
+                        setAccountNo(wallet.bank_account_no);
+                        setAccountName(wallet.bank_account_name);
+                        setEditingBank(false);
+                      }}
+                    >
+                      ✕ Đóng
+                    </button>
+                  )}
+                </div>
+                <div className={s.bankGrid}>
+                  <label className={s.bankField}>
+                    Ngân hàng
+                    <select value={bankName} onChange={event => setBankName(event.target.value)} disabled={savingBank}>
+                      {VN_BANKS.map(bank => <option key={bank}>{bank}</option>)}
+                    </select>
+                  </label>
+                  <label className={s.bankField}>
+                    Số tài khoản
+                    <input
+                      required
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="Nhập số tài khoản"
+                      value={accountNo}
+                      onChange={event => setAccountNo(event.target.value.replace(/\D/g, ""))}
+                      disabled={savingBank}
+                    />
+                  </label>
+                  <label className={s.bankField}>
+                    Tên chủ tài khoản
+                    <input
+                      required
+                      autoComplete="name"
+                      placeholder="Tên in hoa không dấu"
+                      value={accountName}
+                      onChange={event => setAccountName(event.target.value)}
+                      disabled={savingBank}
+                    />
+                  </label>
+                  <div className={s.bankActions}>
+                    {isBankReady && (
+                      <button
+                        type="button"
+                        className={s.bankSecondaryBtn}
+                        disabled={savingBank}
+                        onClick={() => {
+                          setBankName(wallet.bank_name);
+                          setAccountNo(wallet.bank_account_no);
+                          setAccountName(wallet.bank_account_name);
+                          setEditingBank(false);
+                        }}
+                      >
+                        Hủy
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      className={s.bankPrimaryBtn}
+                      disabled={savingBank || Boolean(loadErrors.wallet)}
+                    >
+                      {savingBank ? "Đang lưu…" : "Lưu tài khoản"}
+                    </button>
+                  </div>
+                </div>
               </form>}
               <form className={s.withdrawForm} onSubmit={handleWithdraw}>
                 <div className={s.amountLabel}><label htmlFor={`${tabId}-amount`}>Số tiền muốn rút</label><span>Tối thiểu 10.000đ</span></div>
