@@ -1,4 +1,4 @@
-const CACHE_NAME = 'deal-hoan-v1';
+const CACHE_NAME = 'deal-hoan-v3';
 const PRECACHE_ASSETS = [
   '/',
   '/manifest.webmanifest',
@@ -9,24 +9,33 @@ const PRECACHE_ASSETS = [
   '/favicon.ico',
 ];
 
+// Lắng nghe lệnh skipWaiting từ client
+self.addEventListener('message', (event) => {
+  if (event.data && (event.data.type === 'SKIP_WAITING' || event.data.action === 'skipWaiting')) {
+    self.skipWaiting();
+  }
+});
+
 // 1. Cài đặt Service Worker và lưu cache các tài nguyên tĩnh ban đầu
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(PRECACHE_ASSETS).catch((err) => {
         console.warn('[SW] Precache asset error (non-fatal):', err);
       });
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
-// 2. Kích hoạt và dọn dẹp cache cũ
+// 2. Kích hoạt và dọn dẹp TOÀN BỘ cache cũ của các phiên bản trước
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cache) => {
           if (cache !== CACHE_NAME) {
+            console.log('[SW] Purging outdated cache:', cache);
             return caches.delete(cache);
           }
         })
@@ -72,7 +81,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Với hình ảnh, css, js tĩnh: Stale-While-Revalidate
+  // Với hình ảnh, css, js tĩnh: Ưu tiên tải từ mạng, nếu offline mới dùng cache
   if (
     url.pathname.startsWith('/_next/static/') ||
     url.pathname.startsWith('/icons/') ||
@@ -82,17 +91,15 @@ self.addEventListener('fetch', (event) => {
     url.pathname.endsWith('.ico')
   ) {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        const fetchPromise = fetch(request).then((networkResponse) => {
+      fetch(request)
+        .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const copy = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }
           return networkResponse;
-        }).catch(() => cachedResponse);
-
-        return cachedResponse || fetchPromise;
-      })
+        })
+        .catch(() => caches.match(request))
     );
   }
 });
