@@ -680,9 +680,6 @@ export default function AccountModal({
               <div className={s.empty}>
                 <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span>
                 <h3>Chưa có đơn hoàn tiền</h3>
-                <p className={s.emptyHint}>
-                  Khi bạn bấm <strong>Mua ngay</strong> qua DealHoàn và đặt đơn trên sàn, đơn hàng sẽ tự động xuất hiện tại đây sau <strong>15 – 45 phút</strong>.
-                </p>
                 <form onSubmit={handleClaimOrder} className={s.claimBox}>
                   <p>Bạn vừa chốt đơn trên Shopee và đã có mã đơn hàng?</p>
                   <div className={s.claimRow}>
