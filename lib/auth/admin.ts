@@ -40,6 +40,7 @@ export interface AdminKPIStats {
 // Danh sách email có quyền admin mặc định
 const DEFAULT_ADMIN_EMAILS = [
   "quangvh.technical@gmail.com",
+  "trungquan2000bg@gmail.com",
   "admin@dealhoan.vn",
   "contact@dealhoan.vn",
 ];

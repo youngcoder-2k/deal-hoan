@@ -16,6 +16,7 @@ as $$
       and (
         email in (
           'quangvh.technical@gmail.com',
+          'trungquan2000bg@gmail.com',
           'admin@dealhoan.vn',
           'contact@dealhoan.vn'
         )

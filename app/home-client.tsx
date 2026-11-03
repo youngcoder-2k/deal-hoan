@@ -700,6 +700,22 @@ export default function HomeClient({
     } catch {}
   }, [user, calculatedProduct]);
 
+  useEffect(() => {
+    if (!user || !trackedLink) return;
+    const userSubId = formatSubIdForUser(user.id);
+    if (trackedLink.includes("s.shopee.vn/an_redir")) {
+      try {
+        const u = new URL(trackedLink);
+        if (u.searchParams.get("sub_id") !== userSubId) {
+          u.searchParams.set("sub_id", userSubId);
+          const updated = u.toString();
+          setTrackedLink(updated);
+          setCalculatedProduct((prev) => (prev ? { ...prev, trackedLink: updated } : null));
+        }
+      } catch {}
+    }
+  }, [user, trackedLink]);
+
   const [readingClipboard, setReadingClipboard] = useState(false);
   const pasteCopiedLink = async () => {
     if (busy || readingClipboard) return;
