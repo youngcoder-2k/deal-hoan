@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "tests/**",
+    "scripts/**",
+    "design-evidence/**",
     // Reference export; it is third-party/generated prototype code, not app code.
     "Deal Hoan Homepage v3/**",
   ]),

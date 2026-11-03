@@ -70,7 +70,7 @@ async function fetchBundle(): Promise<DealBundle> {
   }
 
   if (allDeals.length > 0) {
-    let flash = pickFlash(allDeals);
+    const flash = pickFlash(allDeals);
 
     // Đảm bảo Deal chớp nhoáng LUÔN ĐẦY ĐỦ: nếu ít hơn FLASH_COUNT, tự động đệm thêm để hiển thị liên tục
     if (flash.length < FLASH_COUNT) {
