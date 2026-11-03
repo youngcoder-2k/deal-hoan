@@ -104,7 +104,7 @@ export default function AccountModal({
   onSignOut: () => void;
   onNotify: (msg: string) => void;
 }) {
-  const [activeTab, setActiveTab] = useState<"orders" | "withdraw" | "history">("orders");
+  const [activeTab, setActiveTab] = useState<"orders" | "withdraw">("orders");
   const [wallet, setWallet] = useState<WalletData>(() => {
     let savedBank = { bank_name: "", bank_account_no: "", bank_account_name: "" };
     let savedStats = {
@@ -511,8 +511,7 @@ export default function AccountModal({
         if (data.request) {
           setHistory((prev) => [data.request, ...prev]);
         }
-        setActiveTab("history");
-        document.getElementById(`${tabId}-history`)?.focus();
+        onNotify(`✓ Đã gửi yêu cầu rút ${formatVnd(parsedAmount)}. Tiền sẽ được chuyển trong 24–48h.`);
       } else {
         setWithdrawError(data.error || "Không thể tạo yêu cầu rút tiền.");
       }
@@ -577,7 +576,6 @@ export default function AccountModal({
   const tabs = [
     { key: "orders", label: "Đơn hoàn tiền", Icon: ShoppingBag },
     { key: "withdraw", label: "Rút tiền", Icon: CreditCard },
-    { key: "history", label: "Lịch sử rút", Icon: Receipt },
   ] as const;
   const statusLabel = (status: string) =>
     status === "completed"
@@ -629,7 +627,6 @@ export default function AccountModal({
           {[
             { label: "Chờ nền tảng duyệt", value: wallet.pending_balance, Icon: Clock },
             { label: "Có thể rút", value: wallet.balance, Icon: Wallet, isAvailable: true },
-            { label: "Đã nhận", value: wallet.total_withdrawn, Icon: Bank },
           ].map(({ label, value, Icon, isAvailable }) => (
             <div className={`${s.stat} ${isAvailable ? s.available : ""}`} key={label}>
               <Icon size={27} />
@@ -644,13 +641,13 @@ export default function AccountModal({
         </div>
         <div className={s.tabs} role="tablist" aria-label="Ví hoàn tiền" onKeyDown={event => {
           const index = tabs.findIndex(tab => tab.key === activeTab);
-          const next = event.key === "ArrowRight" ? (index + 1) % 3 : event.key === "ArrowLeft" ? (index + 2) % 3 : event.key === "Home" ? 0 : event.key === "End" ? 2 : -1;
+          const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
           if (next >= 0) { event.preventDefault(); switchTab(tabs[next].key); document.getElementById(`${tabId}-${tabs[next].key}`)?.focus(); }
         }}>
           {tabs.map(({key, label, Icon}) => <button key={key} type="button" role="tab" id={`${tabId}-${key}`} aria-controls={`${tabId}-panel`} aria-selected={activeTab === key} tabIndex={activeTab === key ? 0 : -1} className={activeTab === key ? s.active : ""} onClick={() => switchTab(key)}><Icon size={20} /><span>{label}</span></button>)}
         </div>
         <div className={s.content} role="tabpanel" id={`${tabId}-panel`} aria-labelledby={`${tabId}-${activeTab}`} tabIndex={0}>
-          {(loadErrors.wallet || loadErrors[activeTab === "withdraw" ? "history" : activeTab]) && <div className={s.error} role="alert"><Info size={18} /><span>Tải dữ liệu chưa thành công. Vui lòng thử lại.</span><button type="button" onClick={() => { setLoading({ wallet: true, orders: true, history: true }); setLoadErrors({}); setRefreshKey(key => key + 1); }}>Thử lại</button></div>}
+          {(loadErrors.wallet || loadErrors[activeTab]) && <div className={s.error} role="alert"><Info size={18} /><span>Tải dữ liệu chưa thành công. Vui lòng thử lại.</span><button type="button" onClick={() => { setLoading({ wallet: true, orders: true, history: true }); setLoadErrors({}); setRefreshKey(key => key + 1); }}>Thử lại</button></div>}
           {activeTab === "orders" && <>
             {orders.length > 0 && (
               <div className={s.orderNotice}>
@@ -680,21 +677,6 @@ export default function AccountModal({
               <div className={s.empty}>
                 <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span>
                 <h3>Chưa có đơn hoàn tiền</h3>
-                <form onSubmit={handleClaimOrder} className={s.claimBox}>
-                  <p>Bạn vừa chốt đơn trên Shopee và đã có mã đơn hàng?</p>
-                  <div className={s.claimRow}>
-                    <input
-                      placeholder="Dán mã đơn Shopee (VD: 241030XYZ...)"
-                      value={claimOrderId}
-                      onChange={(e) => setClaimOrderId(e.target.value.trim())}
-                      disabled={claimingOrder}
-                    />
-                    <button type="submit" disabled={claimingOrder || !claimOrderId}>
-                      {claimingOrder ? "Đang gửi..." : "Ghi nhận ngay"}
-                    </button>
-                  </div>
-                </form>
-                <Link href="/#deals" onClick={onClose} className={s.primary}>Tìm sản phẩm nhận hoàn <ArrowRight size={19} /></Link>
               </div>
             ) : (
               <div className={s.list}>
@@ -764,14 +746,33 @@ export default function AccountModal({
                     <Info size={17} /><span>{withdrawError || amountValidation.error}</span>
                   </p>
                 )}
-                <button type="submit" className={s.primary} disabled={busyWallet || loading.history || Boolean(loadErrors.history) || withdrawing || !amountValidation.isValid}>{withdrawing ? "Đang gửi yêu cầu…" : "Rút tiền"}</button>
+                <button type="submit" className={s.primary} disabled={busyWallet || withdrawing || !amountValidation.isValid}>{withdrawing ? "Đang gửi yêu cầu…" : "Rút tiền"}</button>
 
+                {history.length > 0 && (
+                  <div style={{ marginTop: 22 }}>
+                    <h4 style={{ margin: "0 0 10px", fontSize: 13, color: "var(--muted)", fontWeight: 600 }}>Lệnh rút gần đây</h4>
+                    <div className={s.list}>
+                      {history.slice(0, 3).map((item) => (
+                        <article className={s.record} key={item.id}>
+                          <div className={s.recordTop}>
+                            <strong>{formatVnd(item.amount)}</strong>
+                            <span className={s.status} data-status={item.status}>
+                              {item.status === "completed" ? "Đã chuyển" : item.status === "pending" ? "Chờ xử lý" : "Bị từ chối"}
+                            </span>
+                          </div>
+                          <div className={s.recordMeta}>
+                            <span>{item.bank_name} · •••• {item.bank_account_no.slice(-4)}</span>
+                            <time>{formatDate(item.created_at)}</time>
+                          </div>
+                          {item.note && <p>{item.note}</p>}
+                        </article>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </form>
             </>}
           </>}
-          {activeTab === "history" && (loading.history ? <p className={s.loading} role="status">Đang tải lịch sử rút tiền…</p> : loadErrors.history ? null : history.length === 0 ? <div className={s.empty}>
-            <span className={s.emptyIcon}><Receipt size={36} weight="light" /></span><h3>Chưa có giao dịch rút tiền</h3><button type="button" className={s.secondary} onClick={() => switchTab("orders")}>Xem đơn hoàn tiền <ArrowRight size={18} /></button>
-          </div> : <div className={s.list}>{history.map(item => <article className={s.record} key={item.id}><div className={s.recordTop}><strong>{formatVnd(item.amount)}</strong><span className={s.status} data-status={item.status}>{item.status === "completed" ? "Đã chuyển" : item.status === "pending" ? "Chờ xử lý" : "Bị từ chối"}</span></div><div className={s.recordMeta}><span>{item.bank_name} · •••• {item.bank_account_no.slice(-4)}</span><time>{formatDate(item.created_at)}</time></div>{item.note && <p>{item.note}</p>}</article>)}</div>)}
         </div>
         <footer className={s.footer}><Link href="/#contact" onClick={onClose}><Question size={19} /> Cần hỗ trợ?</Link></footer>
       </div>
