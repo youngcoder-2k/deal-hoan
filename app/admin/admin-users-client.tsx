@@ -2153,7 +2153,10 @@ export default function AdminUsersClient({
             <div className="admin-settings-card">
               <div className="admin-settings-header mb-6">
                 <div>
-                  <h3>⚙️ Cấu Hình % Hoàn Tiền</h3>
+                  <h3 className="flex items-center gap-2.5 text-lg font-bold text-stone-900 m-0">
+                    <GearSix size={22} weight="bold" className="text-orange-600" />
+                    <span>Cấu Hình % Hoàn Tiền</span>
+                  </h3>
                 </div>
               </div>
 
@@ -2234,9 +2237,19 @@ export default function AdminUsersClient({
                   type="button"
                   onClick={handleSaveSettings}
                   disabled={savingSettings}
-                  className="admin-save-settings-btn"
+                  className="admin-save-settings-btn flex items-center gap-2"
                 >
-                  {savingSettings ? "Đang lưu cấu hình…" : "💾 Lưu Cấu Hình Ngay"}
+                  {savingSettings ? (
+                    <>
+                      <ArrowClockwise size={18} weight="bold" className="animate-spin" />
+                      <span>Đang lưu cấu hình…</span>
+                    </>
+                  ) : (
+                    <>
+                      <FloppyDisk size={18} weight="bold" />
+                      <span>Lưu Cấu Hình Ngay</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -2247,9 +2260,12 @@ export default function AdminUsersClient({
           <section className="admin-import-container flex flex-col gap-5">
             {/* 1. THẺ NẠP ĐƠN HÀNG SHOPEE QUA CSV */}
             <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex items-center justify-between flex-wrap gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2 m-0">
-                  <span className="text-2xl">📥</span> Nạp Đơn Hàng Shopee (File CSV)
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-orange-600 flex items-center justify-center shrink-0 shadow-xs">
+                  <CloudArrowUp size={22} weight="bold" />
+                </div>
+                <h3 className="text-lg font-bold text-stone-900 m-0">
+                  Nạp Đơn Hàng Shopee (File CSV)
                 </h3>
               </div>
 
@@ -2270,12 +2286,12 @@ export default function AdminUsersClient({
                 >
                   {isUploadingCsv ? (
                     <>
-                      <span className="animate-spin inline-block">⏳</span>
+                      <ArrowClockwise size={16} weight="bold" className="animate-spin" />
                       <span>Đang nạp file CSV...</span>
                     </>
                   ) : (
                     <>
-                      <span>📁</span>
+                      <FileCsv size={18} weight="bold" />
                       <span>Chọn File CSV Báo Cáo Shopee Để Nạp</span>
                     </>
                   )}
@@ -2284,13 +2300,17 @@ export default function AdminUsersClient({
 
               {csvUploadResult && (
                 <div
-                  className={`w-full p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
+                  className={`w-full p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
                     csvUploadResult.success
                       ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
                       : "bg-red-50 text-red-900 border border-red-300"
                   }`}
                 >
-                  <span>{csvUploadResult.success ? "✅" : "⚠️"}</span>
+                  {csvUploadResult.success ? (
+                    <CheckCircle size={18} weight="fill" className="text-emerald-600 shrink-0" />
+                  ) : (
+                    <WarningCircle size={18} weight="fill" className="text-red-600 shrink-0" />
+                  )}
                   <span>{csvUploadResult.message}</span>
                 </div>
               )}
@@ -2300,20 +2320,22 @@ export default function AdminUsersClient({
             <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
-                  <span>📋</span> Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({filteredRecentSyncedOrders.length})
+                  <Receipt size={20} weight="bold" className="text-orange-600" />
+                  <span>Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({filteredRecentSyncedOrders.length})</span>
                 </h4>
                 <button
                   type="button"
                   onClick={() => loadShopeeSyncConfig()}
                   className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5"
                 >
-                  <span>🔄</span> Làm mới danh sách
+                  <ArrowClockwise size={14} weight="bold" />
+                  <span>Làm mới danh sách</span>
                 </button>
               </div>
 
               {filteredRecentSyncedOrders.length === 0 ? (
                 <div className="p-8 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-500 text-sm">
-                  <p className="text-3xl mb-2">🛒</p>
+                  <ShoppingCart size={40} weight="duotone" className="mx-auto mb-2 text-stone-400" />
                   <p className="font-bold text-stone-800">Chưa có đơn hàng nào được ghi nhận</p>
                 </div>
               ) : (
@@ -2388,15 +2410,17 @@ export default function AdminUsersClient({
                 onClick={() => setShowAdvanced(!showAdvanced)}
                 className="w-full p-4 flex items-center justify-between text-left hover:bg-stone-50 transition-colors"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">⚙️</span>
+                <div className="flex items-center gap-2.5">
+                  <GearSix size={18} weight="bold" className="text-stone-700" />
                   <h5 className="font-bold text-stone-800 m-0 text-sm">
                     Cài đặt nâng cao (Shopee Open API, Ghim Deal, TikTok Shop)
                   </h5>
                 </div>
-                <span className={`text-stone-400 font-bold transition-transform duration-200 ${showAdvanced ? "rotate-90" : ""}`}>
-                  ▶
-                </span>
+                <CaretRight
+                  size={16}
+                  weight="bold"
+                  className={`text-stone-400 transition-transform duration-200 ${showAdvanced ? "rotate-90" : ""}`}
+                />
               </button>
 
               {showAdvanced && (
@@ -2404,11 +2428,13 @@ export default function AdminUsersClient({
                   {/* Shopee Open API */}
                   <div className="bg-white p-4 rounded-xl border border-orange-200 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <div className="font-bold text-sm text-stone-900 flex items-center gap-1.5">
-                        <span>🎁</span> Shopee Open API (Tự động kéo Xtra)
+                      <div className="font-bold text-sm text-stone-900 flex items-center gap-2">
+                        <Key size={16} weight="bold" className="text-orange-600" />
+                        <span>Shopee Open API (Tự động kéo Xtra)</span>
                       </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${hasShopeeOpenApi ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-stone-100 text-stone-600 border-stone-300"}`}>
-                        {hasShopeeOpenApi ? "🟢 Đã kết nối" : "⚪ Chưa kết nối"}
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${hasShopeeOpenApi ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-stone-100 text-stone-600 border-stone-300"}`}>
+                        <span className={`w-2 h-2 rounded-full ${hasShopeeOpenApi ? "bg-emerald-500" : "bg-stone-400"}`} />
+                        <span>{hasShopeeOpenApi ? "Đã kết nối" : "Chưa kết nối"}</span>
                       </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -2438,14 +2464,25 @@ export default function AdminUsersClient({
                         type="button"
                         onClick={handleSaveShopeeOpenApi}
                         disabled={isSavingOpenApi || !shopeeAppId.trim()}
-                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-2 px-4 rounded-xl transition-colors"
+                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-2 px-4 rounded-xl transition-colors flex items-center gap-1.5"
                       >
-                        {isSavingOpenApi ? "Đang lưu..." : "Lưu Open API"}
+                        {isSavingOpenApi ? (
+                          <>
+                            <ArrowClockwise size={14} weight="bold" className="animate-spin" />
+                            <span>Đang lưu...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FloppyDisk size={14} weight="bold" />
+                            <span>Lưu Open API</span>
+                          </>
+                        )}
                       </button>
                     </div>
                     {openApiResult && (
-                      <div className={`p-2.5 rounded-lg text-xs ${openApiResult.success ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}>
-                        {openApiResult.message}
+                      <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${openApiResult.success ? "bg-emerald-50 text-emerald-900 border border-emerald-300" : "bg-red-50 text-red-900 border border-red-300"}`}>
+                        {openApiResult.success ? <CheckCircle size={16} weight="fill" className="text-emerald-600 shrink-0" /> : <WarningCircle size={16} weight="fill" className="text-red-600 shrink-0" />}
+                        <span>{openApiResult.message}</span>
                       </div>
                     )}
                   </div>
@@ -2453,8 +2490,9 @@ export default function AdminUsersClient({
                   {/* Ghim Deal Xtra lên trang chủ */}
                   <div className="bg-white p-4 rounded-xl border border-rose-200 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <div className="font-bold text-sm text-stone-900 flex items-center gap-1.5">
-                        <span>⚡</span> Ghim hàng loạt Deal Xtra lên Deal Chớp Nhoáng
+                      <div className="font-bold text-sm text-stone-900 flex items-center gap-2">
+                        <Lightning size={16} weight="bold" className="text-rose-600" />
+                        <span>Ghim hàng loạt Deal Xtra lên Deal Chớp Nhoáng</span>
                       </div>
                       <span className="text-xs bg-rose-50 text-rose-700 font-bold px-2.5 py-1 rounded-full border border-rose-200">
                         Đang ghim: {curatedXtraList.length} deal
@@ -2485,24 +2523,36 @@ export default function AdminUsersClient({
                           <button
                             type="button"
                             onClick={() => handleDeleteXtraDeal("all")}
-                            className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                            className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100 flex items-center gap-1"
                           >
-                            Xóa hết ({curatedXtraList.length})
+                            <X size={14} weight="bold" />
+                            <span>Xóa hết ({curatedXtraList.length})</span>
                           </button>
                         )}
                         <button
                           type="button"
                           onClick={handleImportXtraDeals}
                           disabled={isImportingXtra || !xtraUrls.trim()}
-                          className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-1.5 px-3.5 rounded-xl transition-colors"
+                          className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-1.5 px-3.5 rounded-xl transition-colors flex items-center gap-1.5"
                         >
-                          {isImportingXtra ? "Đang nạp..." : "Nạp lên trang chủ"}
+                          {isImportingXtra ? (
+                            <>
+                              <ArrowClockwise size={14} weight="bold" className="animate-spin" />
+                              <span>Đang nạp...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Lightning size={14} weight="bold" />
+                              <span>Nạp lên trang chủ</span>
+                            </>
+                          )}
                         </button>
                       </div>
                     </div>
                     {xtraImportResult && (
-                      <div className={`p-2.5 rounded-lg text-xs ${xtraImportResult.success ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}>
-                        {xtraImportResult.message}
+                      <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${xtraImportResult.success ? "bg-emerald-50 text-emerald-900 border border-emerald-300" : "bg-red-50 text-red-900 border border-red-300"}`}>
+                        {xtraImportResult.success ? <CheckCircle size={16} weight="fill" className="text-emerald-600 shrink-0" /> : <WarningCircle size={16} weight="fill" className="text-red-600 shrink-0" />}
+                        <span>{xtraImportResult.message}</span>
                       </div>
                     )}
                   </div>
@@ -2510,11 +2560,13 @@ export default function AdminUsersClient({
                   {/* AccessTrade & TikTok Shop */}
                   <div className="bg-white p-4 rounded-xl border border-stone-200 flex flex-col gap-3">
                     <div className="flex items-center justify-between">
-                      <div className="font-bold text-sm text-stone-900 flex items-center gap-1.5">
-                        <span>🎵</span> TikTok Shop / AccessTrade Token
+                      <div className="font-bold text-sm text-stone-900 flex items-center gap-2">
+                        <Globe size={16} weight="bold" className="text-stone-700" />
+                        <span>TikTok Shop / AccessTrade Token</span>
                       </div>
-                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${accesstradeToken.trim() ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-stone-100 text-stone-600 border-stone-300"}`}>
-                        {accesstradeToken.trim() ? "🟢 Đã có Token" : "⚪ Chưa cắm"}
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${accesstradeToken.trim() ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-stone-100 text-stone-600 border-stone-300"}`}>
+                        <span className={`w-2 h-2 rounded-full ${accesstradeToken.trim() ? "bg-emerald-500" : "bg-stone-400"}`} />
+                        <span>{accesstradeToken.trim() ? "Đã có Token" : "Chưa cắm"}</span>
                       </span>
                     </div>
                     <div className="flex gap-2">
@@ -2529,14 +2581,25 @@ export default function AdminUsersClient({
                         type="button"
                         onClick={handleSaveAccesstradeToken}
                         disabled={isSavingAtToken || !accesstradeToken.trim()}
-                        className="bg-stone-900 hover:bg-black text-white text-xs font-bold py-2 px-4 rounded-xl transition-colors"
+                        className="bg-stone-900 hover:bg-black text-white text-xs font-bold py-2 px-4 rounded-xl transition-colors flex items-center gap-1.5"
                       >
-                        {isSavingAtToken ? "Đang lưu..." : "Lưu Token"}
+                        {isSavingAtToken ? (
+                          <>
+                            <ArrowClockwise size={14} weight="bold" className="animate-spin" />
+                            <span>Đang lưu...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FloppyDisk size={14} weight="bold" />
+                            <span>Lưu Token</span>
+                          </>
+                        )}
                       </button>
                     </div>
                     {atTokenResult && (
-                      <div className={`p-2.5 rounded-lg text-xs ${atTokenResult.success ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}>
-                        {atTokenResult.message}
+                      <div className={`p-2.5 rounded-lg text-xs flex items-center gap-2 ${atTokenResult.success ? "bg-emerald-50 text-emerald-900 border border-emerald-300" : "bg-red-50 text-red-900 border border-red-300"}`}>
+                        {atTokenResult.success ? <CheckCircle size={16} weight="fill" className="text-emerald-600 shrink-0" /> : <WarningCircle size={16} weight="fill" className="text-red-600 shrink-0" />}
+                        <span>{atTokenResult.message}</span>
                       </div>
                     )}
                   </div>
