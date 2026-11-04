@@ -476,25 +476,24 @@ export async function lookupHoanNgayProduct(
 
   let result: HoanNgayProduct | null = null;
   if (isShopee) {
-    // Run both providers concurrently for Shopee: resolve immediately with whichever responds first
-    result = await new Promise<HoanNgayProduct | null>((resolve) => {
-      let resolved = false;
-      let finished = 0;
-      const tasks = [runLonghouse(), runHoanNgay()];
-      tasks.forEach((p) => {
-        p.then((res) => {
-          if (!resolved && res && res.price > 0 && res.name) {
-            resolved = true;
-            resolve(res);
-          }
-        }).catch(() => {}).finally(() => {
-          finished++;
-          if (finished === tasks.length && !resolved) {
-            resolve(null);
-          }
-        });
-      });
-    });
+    // Chạy song song cả Longhouse và HoanNgay:
+    // Longhouse kết nối trực tiếp Shopee Open API cho ra số tiền hoa hồng thực tế kèm trần (Cap).
+    // HoanNgay bổ sung thông tin seller, rating và hình ảnh.
+    const [lhRes, hnRes] = await Promise.all([
+      runLonghouse().catch(() => null),
+      runHoanNgay().catch(() => null),
+    ]);
+
+    if (lhRes && lhRes.price > 0 && lhRes.name) {
+      result = {
+        ...lhRes,
+        imageUrl: lhRes.imageUrl || hnRes?.imageUrl || null,
+        seller: lhRes.seller || hnRes?.seller,
+        rating: hnRes?.rating || lhRes.rating,
+      };
+    } else if (hnRes && hnRes.price > 0 && hnRes.name) {
+      result = hnRes;
+    }
   } else {
     result = await runHoanNgay();
   }

@@ -139,8 +139,12 @@ export function calculateParabolaBonus(
 }
 
 /**
- * Tính toán tỷ lệ hoàn tiền tối ưu cho DealHoàn dựa trên tỷ lệ thị trường (Hoàn Ngay)
- * và cấu hình quản trị hiện tại
+ * Tính toán tỷ lệ hoàn tiền thực tế cho người dùng:
+ * 1. ĐÃ TRỪ PHẦN CHIẾT KHẤU NỀN TẢNG (safetyMarginPercent, mặc định 12%):
+ *    Số tiền hiển thị là số tiền thực nhận sau khi nền tảng giữ lại phí vận hành (88% hoa hồng).
+ * 2. Ưu tiên số tiền hoa hồng thực tế từ sàn (rawCashbackAmount/commission) kèm mức trần (cap).
+ * 3. Nếu tính theo % danh mục, tự động bóc tách thuế VAT 8% (tính trên giá trước thuế)
+ *    để số tiền hiển thị sát nhất với thực tế đơn hàng Shopee ghi nhận.
  */
 export function boostCashbackRate(
   rawHoanNgayRate: number,
@@ -152,72 +156,77 @@ export function boostCashbackRate(
   const settings = customSettings || getBoosterSettingsSync();
   const baseRate = Number(rawHoanNgayRate.toFixed(2));
   
+  // Tỷ lệ nền tảng trích giữ lại (mặc định 12%), người dùng nhận 88%
+  const safetyMargin = Math.max(0, Math.min(50, settings.safetyMarginPercent ?? 12));
+  const baseUserShare = (100 - safetyMargin) / 100;
+
+  // Nếu có hệ số thưởng kích cầu, tăng nhẹ tỷ lệ người dùng nhận (giảm phần nền tảng giữ)
+  const bonusShare = settings.boostFactor > 0
+    ? Math.min(settings.maxBonusRate, calculateParabolaBonus(
+        baseRate,
+        settings.maxBonusRate * settings.boostFactor,
+        settings.minBonusRate * settings.boostFactor
+      ))
+    : 0;
+  const effectiveUserShare = Math.min(0.95, baseUserShare + (bonusShare / 100));
+
   if (!Number.isFinite(baseRate) || baseRate <= 0) {
-    const defaultRate = 5.0;
-    const amount = productPrice > 0 ? Math.round(productPrice * (defaultRate / 100)) : 0;
+    const defaultGrossRate = 5.0;
+    const defaultUserRate = Number((defaultGrossRate * effectiveUserShare).toFixed(1));
+    const amount = productPrice > 0 ? Math.round(productPrice * (defaultUserRate / 100)) : 0;
     return {
-      baseRate: defaultRate,
+      baseRate: defaultGrossRate,
       bonusRate: 0,
-      finalRate: defaultRate,
+      finalRate: defaultUserRate,
       cashbackAmount: amount,
       isBoosted: false,
     };
   }
 
-  // Nếu Admin tắt hệ số kích cầu (boostFactor === 0), hoàn theo mức gốc thị trường
-  if (settings.boostFactor <= 0) {
-    let amount = productPrice > 0 
-      ? Math.round(productPrice * (baseRate / 100))
-      : (rawCashbackAmount || 0);
-    if (typeof cap === "number" && cap > 0 && amount > cap) {
-      amount = cap;
+  // 1. Nếu có số tiền hoa hồng thực tế từ sàn (rawCashbackAmount)
+  if (typeof rawCashbackAmount === "number" && rawCashbackAmount > 0) {
+    let netCashback = Math.round(rawCashbackAmount * effectiveUserShare);
+    if (typeof cap === "number" && cap > 0) {
+      const netCap = Math.round(cap * effectiveUserShare);
+      if (netCashback > netCap) {
+        netCashback = netCap;
+      }
     }
+    const finalRate = productPrice > 0
+      ? Number(((netCashback / productPrice) * 100).toFixed(1))
+      : Number((baseRate * effectiveUserShare).toFixed(1));
+
     return {
       baseRate,
-      bonusRate: 0,
-      finalRate: baseRate,
-      cashbackAmount: amount,
-      isBoosted: false,
+      bonusRate: bonusShare > 0 ? Number(bonusShare.toFixed(1)) : 0,
+      finalRate: Math.max(0.1, finalRate),
+      cashbackAmount: netCashback,
+      isBoosted: bonusShare > 0,
     };
   }
 
-  // 1. Tính mức thưởng theo đường cong Parabol kết hợp với hệ số boostFactor
-  const targetBonus = calculateParabolaBonus(
-    baseRate,
-    settings.maxBonusRate * settings.boostFactor,
-    settings.minBonusRate * settings.boostFactor
-  );
+  // 2. Nếu tính theo tỷ lệ % danh mục (chưa có hoa hồng tuyệt đối):
+  // Shopee/Lazada bóc tách thuế VAT (8%) trước khi nhân tỷ lệ:
+  const preTaxPrice = productPrice > 0 ? productPrice / 1.08 : 0;
+  const grossCommission = preTaxPrice > 0 ? preTaxPrice * (baseRate / 100) : 0;
+  let netCashback = Math.round(grossCommission * effectiveUserShare);
 
-  // 2. Chốt chặn an toàn: mức cộng tối đa không vượt quá 20% tỷ lệ gốc của Hoàn Ngay
-  const maxSafeBonus = Number((baseRate * 0.20 * Math.min(1.0, settings.boostFactor)).toFixed(2));
-  const floorBonus = Math.min(targetBonus, settings.minBonusRate * settings.boostFactor);
-  const effectiveBonus = Math.min(targetBonus, Math.max(floorBonus, maxSafeBonus));
-
-  // Tỷ lệ hoàn cuối cùng của DealHoàn
-  const finalRate = Number((baseRate + effectiveBonus).toFixed(1));
-  const actualBonus = Number((finalRate - baseRate).toFixed(1));
-
-  // 3. Tính số tiền hoàn thực tế
-  let cashbackAmount = 0;
-  if (productPrice > 0) {
-    cashbackAmount = Math.round(productPrice * (finalRate / 100));
-  } else if (typeof rawCashbackAmount === "number" && rawCashbackAmount > 0) {
-    cashbackAmount = Math.round(rawCashbackAmount * (finalRate / baseRate));
-  }
-
-  // 4. Nếu Shopee có mức trần (cap), áp dụng trần hoa hồng có cộng thưởng
   if (typeof cap === "number" && cap > 0) {
-    const boostedCap = Math.round(cap * (finalRate / baseRate));
-    if (cashbackAmount > boostedCap) {
-      cashbackAmount = boostedCap;
+    const netCap = Math.round(cap * effectiveUserShare);
+    if (netCashback > netCap) {
+      netCashback = netCap;
     }
   }
+
+  const finalRate = productPrice > 0
+    ? Number(((netCashback / productPrice) * 100).toFixed(1))
+    : Number((baseRate * effectiveUserShare).toFixed(1));
 
   return {
     baseRate,
-    bonusRate: actualBonus > 0 ? actualBonus : effectiveBonus,
-    finalRate,
-    cashbackAmount,
-    isBoosted: actualBonus > 0,
+    bonusRate: bonusShare > 0 ? Number(bonusShare.toFixed(1)) : 0,
+    finalRate: Math.max(0.1, finalRate),
+    cashbackAmount: netCashback,
+    isBoosted: bonusShare > 0,
   };
 }

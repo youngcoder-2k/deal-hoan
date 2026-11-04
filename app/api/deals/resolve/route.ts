@@ -301,9 +301,10 @@ export async function POST(request: NextRequest) {
     } else if (hasRealCommission && (hoanNgayProduct?.cashbackRate ?? 0) === 0 && (hoanNgayProduct?.commission ?? 0) === 0) {
       finalCashback = 0;
       cashbackRate = 0;
-    } else if (hoanNgayProduct?.cashbackRate && hoanNgayProduct.cashbackRate > 0) {
+    } else if (hoanNgayProduct?.commission && hoanNgayProduct.commission > 0 && finalPrice > 0) {
+      const rawRate = Number(((hoanNgayProduct.commission / finalPrice) * 100).toFixed(2));
       const boosted = boostCashbackRate(
-        hoanNgayProduct.cashbackRate,
+        rawRate,
         finalPrice,
         hoanNgayProduct.commission,
         undefined,
@@ -311,10 +312,9 @@ export async function POST(request: NextRequest) {
       );
       finalCashback = boosted.cashbackAmount;
       cashbackRate = boosted.finalRate;
-    } else if (hoanNgayProduct?.commission && hoanNgayProduct.commission > 0 && finalPrice > 0) {
-      const rawRate = Number(((hoanNgayProduct.commission / finalPrice) * 100).toFixed(2));
+    } else if (hoanNgayProduct?.cashbackRate && hoanNgayProduct.cashbackRate > 0) {
       const boosted = boostCashbackRate(
-        rawRate,
+        hoanNgayProduct.cashbackRate,
         finalPrice,
         hoanNgayProduct.commission,
         undefined,
