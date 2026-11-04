@@ -1942,50 +1942,46 @@ export default function AdminUsersClient({
               {/* 2 Card so sánh trực quan */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 {/* Cột 1: % Hoàn tiền cho khách */}
-                <div className="p-5 rounded-2xl border-2 border-orange-500 bg-orange-50/40 relative shadow-sm flex flex-col justify-between">
-                  <div>
-                    <label className="block text-base font-extrabold text-stone-900 mb-2">
-                      % Hoàn tiền cho khách:
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="50.0"
-                        max="98.0"
-                        value={boosterSettings.userCashbackPercent ?? 88.0}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          const safeVal = isNaN(val) ? 88.0 : Math.max(50.0, Math.min(98.0, Number(val.toFixed(1))));
-                          setBoosterSettings((prev) => ({
-                            ...prev,
-                            userCashbackPercent: safeVal,
-                            safetyMarginPercent: Number((100 - safeVal).toFixed(1)),
-                          }));
-                        }}
-                        className="w-full text-3xl font-black text-orange-600 bg-white border-2 border-orange-300 rounded-xl px-4 py-2.5 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-100 transition-all text-left"
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl font-black text-orange-500 pointer-events-none">
-                        %
-                      </span>
-                    </div>
+                <div className="p-5 rounded-2xl border-2 border-orange-500 bg-orange-50/40 shadow-sm flex flex-col justify-center">
+                  <label className="block text-base font-extrabold text-stone-900 mb-2">
+                    % Hoàn tiền cho khách:
+                  </label>
+                  <div className="relative flex items-center h-[58px]">
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="50.0"
+                      max="98.0"
+                      value={boosterSettings.userCashbackPercent ?? 88.0}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        const safeVal = isNaN(val) ? 88.0 : Math.max(50.0, Math.min(98.0, Number(val.toFixed(1))));
+                        setBoosterSettings((prev) => ({
+                          ...prev,
+                          userCashbackPercent: safeVal,
+                          safetyMarginPercent: Number((100 - safeVal).toFixed(1)),
+                        }));
+                      }}
+                      className="w-full h-full text-3xl font-black text-orange-600 bg-white border-2 border-orange-300 rounded-xl px-4 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-100 transition-all text-left"
+                    />
+                    <span className="absolute right-4 text-xl font-black text-orange-500 pointer-events-none">
+                      %
+                    </span>
                   </div>
                 </div>
 
                 {/* Cột 2: % Lợi nhuận DealHoàn giữ lại */}
-                <div className="p-5 rounded-2xl border-2 border-emerald-400 bg-emerald-50/40 relative shadow-sm flex flex-col justify-between">
-                  <div>
-                    <div className="text-base font-extrabold text-stone-900 mb-2">
-                      % Lợi nhuận DealHoàn giữ lại:
-                    </div>
-                    <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 py-2.5 mb-3 flex items-center justify-between">
-                      <span className="text-3xl font-black text-emerald-700">
-                        {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
-                      </span>
-                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">
-                        Tự động tính
-                      </span>
-                    </div>
+                <div className="p-5 rounded-2xl border-2 border-emerald-400 bg-emerald-50/40 shadow-sm flex flex-col justify-center">
+                  <div className="text-base font-extrabold text-stone-900 mb-2">
+                    % Lợi nhuận DealHoàn giữ lại:
+                  </div>
+                  <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 h-[58px] flex items-center justify-between">
+                    <span className="text-3xl font-black text-emerald-700">
+                      {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
+                    </span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">
+                      Tự động tính
+                    </span>
                   </div>
                 </div>
               </div>
@@ -2109,7 +2105,6 @@ export default function AdminUsersClient({
                       <tr>
                         <th>Mã đơn Shopee</th>
                         <th>Thành viên</th>
-                        <th>Sản phẩm</th>
                         <th className="text-right">Giá trị đơn</th>
                         <th className="text-right">Hoa hồng Shopee</th>
                         <th className="text-right">Tiền hoàn ({boosterSettings.userCashbackPercent ?? 88}%)</th>
@@ -2125,21 +2120,12 @@ export default function AdminUsersClient({
                             <td className="font-mono text-xs font-bold text-stone-900">{ord.orderId}</td>
                             <td>
                               {matchedUser ? (
-                                <div>
-                                  <div className="font-bold text-emerald-800 text-xs">
-                                    {matchedUser.fullName || matchedUser.email}
-                                  </div>
-                                  <div className="text-[11px] text-stone-400 font-mono">{ord.subId}</div>
+                                <div className="font-bold text-emerald-800 text-xs">
+                                  {matchedUser.fullName || matchedUser.email}
                                 </div>
                               ) : (
-                                <div>
-                                  <span className="text-xs font-mono font-bold text-orange-700">{ord.subId}</span>
-                                  {ord.userId && <span className="block text-[10px] text-stone-400">ID: {ord.userId}</span>}
-                                </div>
+                                <span className="text-xs font-mono font-bold text-orange-700">{ord.subId}</span>
                               )}
-                            </td>
-                            <td className="max-w-[220px] truncate text-xs text-stone-700" title={ord.productName}>
-                              {ord.productName}
                             </td>
                             <td className="text-right text-xs font-medium">{formatVnd(ord.orderValue)}</td>
                             <td className="text-right text-xs font-semibold text-stone-800">
