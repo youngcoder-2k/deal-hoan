@@ -355,9 +355,9 @@ export default function AdminUsersClient({
       } else {
         setShopeeSyncResult({
           success: false,
-          message: data.error || "Không thể đồng bộ tự động từ Shopee.",
+          message: data.message || data.error || "Không thể đồng bộ tự động từ Shopee. Vui lòng thử nạp bằng File CSV (Cách 2).",
         });
-        setLastSyncResult("Lỗi: " + (data.error || "Không thể đồng bộ"));
+        setLastSyncResult("Lỗi: " + (data.message || data.error || "Không thể đồng bộ"));
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Lỗi kết nối";

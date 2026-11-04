@@ -39,10 +39,10 @@ export async function syncShopeeOrders(options: {
     try {
       response = await fetcher(url, { headers: { Cookie: cookie, Accept: "application/json", Referer: "https://affiliate.shopee.vn/report/conversion" },
         redirect: "error", cache: "no-store", signal: AbortSignal.timeout(9000) });
-    } catch { return { code: 502, body: { success: false, status: "shopee_source_unavailable", ...counts() } }; }
+    } catch { return { code: 502, body: { success: false, status: "shopee_source_unavailable", message: "Không thể kết nối đến máy chủ Shopee (bị chặn IP/mạng). Vui lòng dùng Cách 2 (Nạp File CSV).", ...counts() } }; }
     const report = await response.json().catch(() => null);
     if (!response.ok || !report || (report.code !== undefined && report.code !== 0) || !Array.isArray(report.data?.list)) {
-      return { code: 502, body: { success: false, status: "shopee_report_unavailable", upstreamStatus: response.status, ...counts() } };
+      return { code: 502, body: { success: false, status: "shopee_report_unavailable", upstreamStatus: response.status, message: `Shopee phản hồi lỗi (HTTP ${response.status || "chặn"}). Vui lòng nạp qua File CSV (Cách 2).`, ...counts() } };
     }
     const list = report.data.list as Record<string, unknown>[];
     for (const item of list) {
