@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowClockwise, DownloadSimple, CaretRight, Bank } from "@phosphor-icons/react";
 import design from "./admin-users.module.css";
@@ -211,6 +211,15 @@ export default function AdminUsersClient({
     status: "pending" | "completed" | "rejected";
     orderedAt?: string;
   }>>([]);
+
+  // Lọc sạch các đơn test / fake (SP_..., TT_..., đơn test)
+  const filteredRecentSyncedOrders = useMemo(() => {
+    return recentSyncedOrders.filter((ord) => {
+      const id = String(ord.orderId || "");
+      const name = String(ord.productName || "").toLowerCase();
+      return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test");
+    });
+  }, [recentSyncedOrders]);
 
   const [showCookieGuide, setShowCookieGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -835,7 +844,16 @@ export default function AdminUsersClient({
     ordered_at?: string;
   }>>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
-  const [isSimulatingOrder, setIsSimulatingOrder] = useState(false);
+
+  // Lọc sạch các đơn test / fake trong modal chi tiết thành viên
+  const filteredUserOrders = useMemo(() => {
+    return userOrders.filter((ord) => {
+      const id = String(ord.order_id || "");
+      const name = String(ord.product_name || "").toLowerCase();
+      const note = String(ord.note || "").toLowerCase();
+      return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test") && !note.includes("test");
+    });
+  }, [userOrders]);
 
   // Modal điều chỉnh số dư
   const [adjustBalanceMode, setAdjustBalanceMode] = useState(false);
@@ -1033,74 +1051,6 @@ export default function AdminUsersClient({
       }
     } catch {
       showToast("⚠️ Lỗi cập nhật lệnh rút");
-    }
-  };
-
-  // Giả lập đơn hàng hoàn tiền thử nghiệm cho user (Admin test)
-  const handleSimulateOrder = async (platformName: "TikTok Shop" | "Shopee", orderStatus: "pending" | "completed") => {
-    if (!selectedUser) return;
-    setIsSimulatingOrder(true);
-    try {
-      const testOrderId = `${platformName === "TikTok Shop" ? "TT" : "SP"}_${Date.now().toString().slice(-6)}`;
-      const orderVal = 350000;
-      const cbVal = 35000;
-      const res = await fetch("/api/admin/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: selectedUser.id,
-          orderId: testOrderId,
-          platform: platformName,
-          productName: `Đơn test ${platformName} (${new Date().toLocaleTimeString("vi-VN")})`,
-          orderValue: orderVal,
-          commissionAmount: 45000,
-          cashbackAmount: cbVal,
-          status: orderStatus,
-          note: `Đơn thử nghiệm bởi Admin (${orderStatus === "completed" ? "Cộng ví ngay" : "Chờ duyệt"})`,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.order) {
-        showToast(`🎉 Đã tạo đơn test ${platformName} (+${formatVnd(cbVal)})`);
-        setUserOrders((prev) => [data.order, ...prev]);
-
-        // Cập nhật ngay số dư trong giao diện
-        if (orderStatus === "completed") {
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === selectedUser.id
-                ? { ...u, balance: u.balance + cbVal, totalEarned: u.totalEarned + cbVal }
-                : u
-            )
-          );
-          setSelectedUser((prev) =>
-            prev
-              ? { ...prev, balance: prev.balance + cbVal, totalEarned: prev.totalEarned + cbVal }
-              : null
-          );
-          setNewBalance((b) => b + cbVal);
-        } else {
-          setUsers((prev) =>
-            prev.map((u) =>
-              u.id === selectedUser.id
-                ? { ...u, pendingBalance: u.pendingBalance + cbVal }
-                : u
-            )
-          );
-          setSelectedUser((prev) =>
-            prev
-              ? { ...prev, pendingBalance: prev.pendingBalance + cbVal }
-              : null
-          );
-          setNewPending((p) => p + cbVal);
-        }
-      } else {
-        showToast("⚠️ " + (data.error || "Không thể tạo đơn test"));
-      }
-    } catch {
-      showToast("⚠️ Lỗi kết nối khi tạo đơn test");
-    } finally {
-      setIsSimulatingOrder(false);
     }
   };
 
@@ -2136,7 +2086,7 @@ export default function AdminUsersClient({
             <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
-                  <span>📋</span> Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({recentSyncedOrders.length})
+                  <span>📋</span> Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({filteredRecentSyncedOrders.length})
                 </h4>
                 <button
                   type="button"
@@ -2147,7 +2097,7 @@ export default function AdminUsersClient({
                 </button>
               </div>
 
-              {recentSyncedOrders.length === 0 ? (
+              {filteredRecentSyncedOrders.length === 0 ? (
                 <div className="p-8 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-500 text-sm">
                   <p className="text-3xl mb-2">🛒</p>
                   <p className="font-bold text-stone-800">Chưa có đơn hàng nào được ghi nhận</p>
@@ -2168,7 +2118,7 @@ export default function AdminUsersClient({
                       </tr>
                     </thead>
                     <tbody>
-                      {recentSyncedOrders.map((ord, idx) => {
+                      {filteredRecentSyncedOrders.map((ord, idx) => {
                         const matchedUser = users.find((u) => ord.userId && u.id.startsWith(ord.userId));
                         return (
                           <tr key={idx} className="admin-table-row">
@@ -2619,40 +2569,20 @@ export default function AdminUsersClient({
                   <div className="flex items-center gap-2">
                     <span className="block-icon">🛍️</span>
                     <h4 className="block-title">
-                      Đơn Hàng Hoàn Tiền ({userOrders.length})
+                      Đơn Hàng Hoàn Tiền ({filteredUserOrders.length})
                     </h4>
-                  </div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <button
-                      type="button"
-                      disabled={isSimulatingOrder}
-                      onClick={() => handleSimulateOrder("TikTok Shop", "completed")}
-                      className="px-2.5 py-1 text-xs font-semibold rounded-md bg-stone-900 hover:bg-stone-800 text-white transition-all shadow-sm disabled:opacity-50"
-                      title="Mô phỏng 1 đơn TikTok Shop đã mua thành công, cộng ngay 35.000đ vào số dư khả dụng"
-                    >
-                      {isSimulatingOrder ? "..." : "+ Test TikTok (+35k)"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isSimulatingOrder}
-                      onClick={() => handleSimulateOrder("Shopee", "pending")}
-                      className="px-2.5 py-1 text-xs font-semibold rounded-md bg-orange-600 hover:bg-orange-700 text-white transition-all shadow-sm disabled:opacity-50"
-                      title="Mô phỏng 1 đơn Shopee đang chờ duyệt, cộng 35.000đ vào tiền chờ duyệt"
-                    >
-                      {isSimulatingOrder ? "..." : "+ Test Shopee (Chờ)"}
-                    </button>
                   </div>
                 </div>
 
                 {loadingOrders ? (
                   <div className="p-4 text-center text-stone-500 text-sm">Đang tải danh sách đơn hàng...</div>
-                ) : userOrders.length === 0 ? (
+                ) : filteredUserOrders.length === 0 ? (
                   <div className="p-4 text-center text-stone-500 text-sm">
                     Không có thông tin
                   </div>
                 ) : (
                   <div className="modal-withdrawals-list">
-                    {userOrders.map((ord) => (
+                    {filteredUserOrders.map((ord) => (
                       <div key={ord.id || ord.order_id} className="modal-w-item">
                         <div className="w-item-left">
                           <div className="flex items-center gap-2">
