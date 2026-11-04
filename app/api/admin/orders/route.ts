@@ -35,7 +35,10 @@ export async function GET(request: NextRequest) {
 
     if (platform) query = query.eq("platform", platform);
     if (status) query = query.eq("status", status);
-    if (userId) query = query.eq("user_id", userId);
+    if (userId) {
+      const cleanHex = userId.replace(/-/g, "").toLowerCase();
+      query = query.or(`user_id.eq.${userId},sub_id.ilike.%${cleanHex}%`);
+    }
 
     const { data: orders, error } = await query;
 
