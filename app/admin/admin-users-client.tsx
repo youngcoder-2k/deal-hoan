@@ -1386,8 +1386,6 @@ export default function AdminUsersClient({
             { label: "Người dùng", value: stats.totalUsers, available: false },
             { label: "Số dư khả dụng", value: formatVnd(stats.totalBalance), available: true },
             { label: "Chờ hoàn", value: formatVnd(stats.totalPendingBalance), available: false },
-            { label: "Đã chi trả", value: formatVnd(stats.totalWithdrawn), available: false },
-            { label: "Đã liên kết ngân hàng", value: `${stats.bankLinkedUsers}/${stats.totalUsers}`, available: false },
           ].map(stat => <div className="admin-kpi-card" key={stat.label}><span className="kpi-label">{stat.label}</span><strong className={`kpi-value ${stat.available ? "text-green" : ""}`}>{stat.value}</strong></div>)}
         </section>
 
