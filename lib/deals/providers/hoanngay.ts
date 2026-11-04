@@ -8,6 +8,7 @@ export type HoanNgayProduct = {
   seller?: string;
   isVerifiedPrice: boolean;
   commission?: number;
+  sellerCommission?: number;
   cashbackRate?: number;
   cap?: number;
   productLink?: string;
@@ -248,11 +249,169 @@ type LonghouseRawProduct = {
   imageUrl?: string;
   productLink?: string;
   commission?: number;
+  sellerComFinal?: number;
   shopeeComFinal?: number;
   cap?: number;
+  capRaw?: number;
+  isCapped?: boolean;
+  isLimitCap?: boolean;
   shopeeRatePercent?: number;
   totalRatePercent?: number;
 };
+
+/**
+ * Tỷ lệ hoa hồng cơ bản Shopee (Shopee Base Commission Rate) theo ngành hàng chính thức.
+ * Tổng hoa hồng Shopee chi trả = Hoa hồng người bán (Xtra) + Hoa hồng cơ bản sàn Shopee (Uncapped).
+ */
+export function getShopeeCategoryRate(text: string): number {
+  if (!text) return 0.0368;
+  const s = text.toLowerCase();
+
+  // 1. Phụ kiện thời trang, Trang sức, Vàng bạc, Đồng hồ, Thời trang & Sắc đẹp: ~6.09%
+  if (
+    s.includes("trang sức") ||
+    s.includes("vàng") ||
+    s.includes("bạc") ||
+    s.includes("nhẫn") ||
+    s.includes("dây chuyền") ||
+    s.includes("bông tai") ||
+    s.includes("khuyên tai") ||
+    s.includes("lắc tay") ||
+    s.includes("hoa tai") ||
+    s.includes("kim hoàn") ||
+    s.includes("phụ kiện & trang sức") ||
+    s.includes("phụ kiện thời trang") ||
+    s.includes("thời trang nữ") ||
+    s.includes("thời trang nam") ||
+    s.includes("sắc đẹp") ||
+    s.includes("mỹ phẩm") ||
+    s.includes("son ") ||
+    s.includes("son môi") ||
+    s.includes("đồng hồ") ||
+    s.includes("giày dép") ||
+    s.includes("túi ví") ||
+    s.includes("quần áo") ||
+    s.includes("váy") ||
+    s.includes("đầm")
+  ) {
+    return 0.0609075;
+  }
+
+  // 2. Nhà cửa & Đời sống, Nội thất, Trang trí nhà cửa, Đồ gia dụng: ~3.565%
+  if (
+    s.includes("nhà cửa") ||
+    s.includes("đời sống") ||
+    s.includes("nội thất") ||
+    s.includes("trang trí") ||
+    s.includes("gương") ||
+    s.includes("bàn") ||
+    s.includes("ghế") ||
+    s.includes("tủ") ||
+    s.includes("kệ") ||
+    s.includes("giường") ||
+    s.includes("pegboard") ||
+    s.includes("đèn") ||
+    s.includes("rèm") ||
+    s.includes("gối") ||
+    s.includes("nệm") ||
+    s.includes("chăn") ||
+    s.includes("decor") ||
+    s.includes("wood decor")
+  ) {
+    return 0.0356538;
+  }
+
+  // 3. Điện thoại & Phụ kiện công nghệ
+  if (
+    s.includes("ốp lưng") ||
+    s.includes("cường lực") ||
+    s.includes("cáp sạc") ||
+    s.includes("củ sạc") ||
+    s.includes("phụ kiện điện thoại")
+  ) {
+    return 0.0350;
+  }
+  if (
+    s.includes("điện thoại") ||
+    s.includes("smartphone") ||
+    s.includes("iphone") ||
+    s.includes("samsung")
+  ) {
+    return 0.0158;
+  }
+
+  // 4. Máy tính, Laptop, Thiết bị điện tử
+  if (
+    s.includes("máy tính") ||
+    s.includes("laptop") ||
+    s.includes("linh kiện") ||
+    s.includes("thiết bị điện tử") ||
+    s.includes("máy quay") ||
+    s.includes("máy ảnh")
+  ) {
+    return 0.0158;
+  }
+
+  // 5. Điện gia dụng
+  if (
+    s.includes("thiết bị điện gia dụng") ||
+    s.includes("nồi cơm") ||
+    s.includes("máy hút bụi") ||
+    s.includes("quạt") ||
+    s.includes("máy sấy")
+  ) {
+    return 0.0250;
+  }
+
+  // 6. Sức khỏe
+  if (
+    s.includes("sức khỏe") ||
+    s.includes("thực phẩm chức năng") ||
+    s.includes("y tế")
+  ) {
+    return 0.0500;
+  }
+
+  // 7. Thể thao & Dã ngoại
+  if (
+    s.includes("thể thao") ||
+    s.includes("dã ngoại") ||
+    s.includes("du lịch")
+  ) {
+    return 0.0450;
+  }
+
+  // 8. Nhà sách & Văn phòng phẩm
+  if (
+    s.includes("nhà sách") ||
+    s.includes("sách") ||
+    s.includes("văn phòng phẩm")
+  ) {
+    return 0.0400;
+  }
+
+  // 9. Thú cưng
+  if (
+    s.includes("thú cưng") ||
+    s.includes("mèo") ||
+    s.includes("chó")
+  ) {
+    return 0.0400;
+  }
+
+  // 10. Mẹ & Bé, Bách hóa
+  if (
+    s.includes("mẹ & bé") ||
+    s.includes("bách hóa") ||
+    s.includes("thực phẩm") ||
+    s.includes("đồ ăn")
+  ) {
+    return 0.0220;
+  }
+
+  // Mặc định đơn hàng trực tiếp Shopee
+  return 0.0368;
+}
 
 /**
  * Primary HoanNgay API request
@@ -426,10 +585,22 @@ export async function lookupHoanNgayProduct(
       const price = Number(lhInfo.price);
       if (!Number.isFinite(price) || price <= 0) return null;
 
-      const rawCommission = Number(lhInfo.commission ?? lhInfo.shopeeComFinal);
-      const rawCap = Number(lhInfo.cap);
-      const commission = Number.isFinite(rawCommission) && rawCommission > 0 ? rawCommission : undefined;
-      const cap = Number.isFinite(rawCap) && rawCap > 0 ? rawCap : undefined;
+      const sellerCommission = Number(lhInfo.sellerComFinal);
+      const validSellerCom = Number.isFinite(sellerCommission) && sellerCommission >= 0 ? sellerCommission : 0;
+      let commission: number | undefined;
+
+      if (lhInfo.isCapped) {
+        // Shopee áp trần 20k cho khách cũ, nhưng hoa hồng tổng Shopee chi trả (hiển thị trên trang tiếp thị liên kết)
+        // là mức toàn phần không bị ép trần 20k.
+        const catRate = getShopeeCategoryRate(String(lhInfo.productName || ""));
+        const uncappedShopeeCom = Math.round(price * catRate);
+        const finalShopeeCom = Math.max(Number(lhInfo.shopeeComFinal) || 0, uncappedShopeeCom);
+        commission = validSellerCom + finalShopeeCom;
+      } else {
+        const rawCommission = Number(lhInfo.commission ?? lhInfo.shopeeComFinal);
+        commission = Number.isFinite(rawCommission) && rawCommission > 0 ? rawCommission : undefined;
+      }
+
       const ratePercent = Number(lhInfo.shopeeRatePercent ?? lhInfo.totalRatePercent);
 
       let originalPrice = price;
@@ -462,8 +633,9 @@ export async function lookupHoanNgayProduct(
         seller: lhInfo.shopName ? String(lhInfo.shopName).trim() : undefined,
         isVerifiedPrice: true,
         commission,
+        sellerCommission: validSellerCom,
         cashbackRate: Number.isFinite(ratePercent) && ratePercent > 0 ? ratePercent : undefined,
-        cap,
+        cap: undefined,
         productLink,
         shopId,
         itemId,

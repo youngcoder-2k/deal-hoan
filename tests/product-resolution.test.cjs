@@ -4,7 +4,7 @@ const loadTs=require('./helpers/load-ts.cjs');
 const fs=require('node:fs');
 function route(file, product=null){return loadTs({
  '@/lib/supabase/server':{createSupabaseServerClient:async()=>null},
- '@/lib/deals/providers/hoanngay':{lookupHoanNgayProduct:async()=>product},
+ '@/lib/deals/providers/hoanngay':{lookupHoanNgayProduct:async()=>product,getShopeeCategoryRate:()=>0.0368},
  '@/lib/deals/providers/accesstrade':{lookupAccessTradeProduct:async()=>null},
  '@/lib/deals/shopee-sync-config':{getAccessTradeToken:()=>''},
  })(file).POST;}

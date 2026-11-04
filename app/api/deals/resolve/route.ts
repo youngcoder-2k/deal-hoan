@@ -17,7 +17,7 @@ import { cashbackFor } from "@/lib/deals/score";
 import type { Platform } from "@/lib/deals/types";
 import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resolve";
 import { lookupAccessTradeProduct } from "@/lib/deals/providers/accesstrade";
-import { lookupHoanNgayProduct } from "@/lib/deals/providers/hoanngay";
+import { lookupHoanNgayProduct, getShopeeCategoryRate } from "@/lib/deals/providers/hoanngay";
 import { boostCashbackRate } from "@/lib/deals/cashback-booster";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 import { getVouchers } from "@/lib/deals/vouchers";
@@ -38,6 +38,23 @@ function extractMeta(html: string, propertyOrName: string): string | null {
 
   const m = html.match(r1) || html.match(r2) || html.match(r3) || html.match(r4);
   return m ? m[1].trim() : null;
+}
+
+function extractShopeeBreadcrumbCategory(html: string): string | null {
+  try {
+    const allLd = [...html.matchAll(/<script data-rh="true" type="application\/ld\+json">([\s\S]*?)<\/script>/g)];
+    for (const match of allLd) {
+      if (match[1].includes("BreadcrumbList")) {
+        const parsed = JSON.parse(match[1]);
+        const items = parsed?.itemListElement;
+        if (Array.isArray(items) && items.length >= 2) {
+          const topCat = items[1]?.item?.name;
+          if (topCat) return String(topCat).trim();
+        }
+      }
+    }
+  } catch {}
+  return null;
 }
 
 export async function POST(request: NextRequest) {
@@ -280,6 +297,22 @@ export async function POST(request: NextRequest) {
          (baseProduct.originalPrice > finalPrice
            ? baseProduct.originalPrice
            : Math.round((finalPrice * 1.28) / 1000) * 1000));
+
+     // Tính toán hoa hồng Shopee toàn phần sát thực tế theo ngành hàng & người bán:
+    // Shopee Affiliate trả = Hoa hồng người bán (sellerCommission) + Hoa hồng cơ bản ngành hàng (uncapped).
+    if (isCurrentShopee && hoanNgayProduct && finalPrice > 0) {
+      const breadcrumbCat = metaResult?.html ? extractShopeeBreadcrumbCategory(metaResult.html) : null;
+      const categoryText = [breadcrumbCat, finalName].filter(Boolean).join(" ");
+      const catRate = typeof getShopeeCategoryRate === "function" ? getShopeeCategoryRate(categoryText) : 0.0368;
+      const uncappedShopeeCom = Math.round(finalPrice * catRate);
+      const sellerCom = hoanNgayProduct.sellerCommission || 0;
+      const preciseGross = sellerCom + uncappedShopeeCom;
+
+      if (preciseGross > 0) {
+        hoanNgayProduct.commission = preciseGross;
+        hoanNgayProduct.cashbackRate = Number(((preciseGross / finalPrice) * 100).toFixed(2));
+      }
+    }
 
     const hasRealCommission = isCurrentShopeeFood
       ? true

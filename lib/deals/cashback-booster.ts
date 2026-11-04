@@ -184,19 +184,20 @@ export function boostCashbackRate(
   }
 
   // 1. Nếu có số tiền hoa hồng thực tế từ sàn (rawCashbackAmount):
-  // rawCashbackAmount (từ Longhouse / Shopee API) đã là tổng hoa hồng thực tế (Seller + Shopee đã tính cap sàn).
+  // rawCashbackAmount (từ Shopee/Longhouse) là tổng hoa hồng Shopee trả về cho DealHoàn.
+  // Người dùng nhận chính xác tỷ lệ % DealHoàn chia (mặc định 88% khi giữ 12% phí vận hành/an toàn).
   if (typeof rawCashbackAmount === "number" && rawCashbackAmount > 0) {
-    let netCashback = Math.round(rawCashbackAmount * effectiveUserShare);
+    const netCashback = Math.round(rawCashbackAmount * baseUserShare);
     const finalRate = productPrice > 0
       ? Number(((netCashback / productPrice) * 100).toFixed(1))
-      : Number((baseRate * effectiveUserShare).toFixed(1));
+      : Number((baseRate * baseUserShare).toFixed(1));
 
     return {
       baseRate,
-      bonusRate: bonusShare > 0 ? Number(bonusShare.toFixed(1)) : 0,
+      bonusRate: 0,
       finalRate: Math.max(0.1, finalRate),
       cashbackAmount: netCashback,
-      isBoosted: bonusShare > 0,
+      isBoosted: false,
     };
   }
 
@@ -204,10 +205,10 @@ export function boostCashbackRate(
   // Shopee/Lazada bóc tách thuế VAT (8%) trước khi nhân tỷ lệ:
   const preTaxPrice = productPrice > 0 ? productPrice / 1.08 : 0;
   const grossCommission = preTaxPrice > 0 ? preTaxPrice * (baseRate / 100) : 0;
-  let netCashback = Math.round(grossCommission * effectiveUserShare);
+  let netCashback = Math.round(grossCommission * baseUserShare);
 
   if (typeof cap === "number" && cap > 0) {
-    const netCap = Math.round(cap * effectiveUserShare);
+    const netCap = Math.round(cap * baseUserShare);
     if (netCashback > netCap) {
       netCashback = netCap;
     }
@@ -215,13 +216,13 @@ export function boostCashbackRate(
 
   const finalRate = productPrice > 0
     ? Number(((netCashback / productPrice) * 100).toFixed(1))
-    : Number((baseRate * effectiveUserShare).toFixed(1));
+    : Number((baseRate * baseUserShare).toFixed(1));
 
   return {
     baseRate,
-    bonusRate: bonusShare > 0 ? Number(bonusShare.toFixed(1)) : 0,
+    bonusRate: 0,
     finalRate: Math.max(0.1, finalRate),
     cashbackAmount: netCashback,
-    isBoosted: bonusShare > 0,
+    isBoosted: false,
   };
 }
