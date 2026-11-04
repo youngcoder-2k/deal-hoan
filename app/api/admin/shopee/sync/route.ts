@@ -88,6 +88,64 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Nạp đơn hàng trực tiếp từ file CSV Shopee Affiliate
+    if (typeof body.csvContent === "string" && body.csvContent.trim()) {
+      const { parseShopeeConversionReport } = await import("@/lib/deals/shopee-import");
+      const { recordCashbackOrder } = await import("@/lib/deals/cashback");
+      const { getBoosterSettingsSync } = await import("@/lib/deals/cashback-booster");
+      const boosterSettings = getBoosterSettingsSync();
+      const report = parseShopeeConversionReport(body.csvContent, {
+        userCashbackPercent: boosterSettings.userCashbackPercent,
+      });
+
+      let importedCount = 0;
+      const syncedOrders: Array<Record<string, unknown>> = [];
+
+      for (const ord of report.validOrders) {
+        if (ord.orderId && ord.subId) {
+          const rec = await recordCashbackOrder({
+            orderId: ord.orderId,
+            subId: ord.subId,
+            platform: "Shopee",
+            productName: ord.productName,
+            orderValue: ord.orderValue,
+            commissionAmount: ord.commissionAmount,
+            cashbackAmount: ord.cashbackAmount,
+            status: ord.status,
+            orderedAt: ord.orderedAt,
+          });
+          if (rec.success) {
+            importedCount++;
+            syncedOrders.push({
+              orderId: ord.orderId,
+              subId: ord.subId,
+              userId: ord.userId || "",
+              productName: ord.productName,
+              orderValue: ord.orderValue,
+              commissionAmount: ord.commissionAmount,
+              cashbackAmount: ord.cashbackAmount,
+              status: ord.status,
+              orderedAt: ord.orderedAt,
+            });
+          }
+        }
+      }
+
+      await saveOrderSyncConfig({
+        lastSyncAt: new Date().toISOString(),
+        lastSyncResult: `Nạp CSV: ${importedCount}/${report.validOrders.length} đơn`,
+        lastOrdersCount: importedCount,
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: `Đã nạp thành công ${importedCount}/${report.validOrders.length} đơn hàng từ file CSV Shopee!`,
+        importedCount,
+        syncedOrders,
+        warnings: report.warnings,
+      });
+    }
+
     const cookie = typeof body.cookie === "string" ? body.cookie.trim() : undefined;
     if (cookie) await saveOrderSyncConfig({ shopeeCookie:cookie });
     const result = await syncShopeeOrders({ cookie });

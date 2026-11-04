@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowClockwise, DownloadSimple, CaretRight, Bank } from "@phosphor-icons/react";
 import design from "./admin-users.module.css";
@@ -211,6 +211,46 @@ export default function AdminUsersClient({
     status: "pending" | "completed" | "rejected";
     orderedAt?: string;
   }>>([]);
+
+  const [showCookieGuide, setShowCookieGuide] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isUploadingCsv, setIsUploadingCsv] = useState(false);
+  const [csvUploadResult, setCsvUploadResult] = useState<{ success: boolean; message: string } | null>(null);
+  const csvFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingCsv(true);
+      setCsvUploadResult(null);
+      const text = await file.text();
+      const res = await fetch("/api/admin/shopee/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+        body: JSON.stringify({ csvContent: text }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setCsvUploadResult({ success: true, message: data.message });
+        setToastMsg("🎉 " + data.message);
+        setTimeout(() => setToastMsg(null), 4000);
+        if (Array.isArray(data.syncedOrders) && data.syncedOrders.length > 0) {
+          setRecentSyncedOrders((prev) => [...data.syncedOrders, ...prev]);
+        }
+        await reloadUsers();
+      } else {
+        setCsvUploadResult({ success: false, message: data.error || "Không thể nạp file CSV." });
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Lỗi đọc file CSV";
+      setCsvUploadResult({ success: false, message: msg });
+    } finally {
+      setIsUploadingCsv(false);
+      if (csvFileInputRef.current) csvFileInputRef.current.value = "";
+    }
+  };
 
   const getAdminFetchHeaders = (): Record<string, string> => {
     if (typeof window === "undefined") return { "x-admin-key": "dealhoan2026" };
@@ -2058,406 +2098,201 @@ export default function AdminUsersClient({
         )}
 
         {(activeTab === "sync" || activeTab === "import") && (
-          <section className="admin-import-container">
-            {/* Header Hero Card */}
-            <div className="admin-settings-card border-orange-200 bg-orange-50/20">
-              <div className="admin-settings-header mb-4">
+          <section className="admin-import-container flex flex-col gap-5">
+            {/* 1. THẺ ĐIỀU KHIỂN CHÍNH: ĐỒNG BỘ ĐƠN HÀNG SHOPEE */}
+            <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-5">
+              {/* Top Row: Tiêu đề + Trạng thái chạy tự động */}
+              <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-stone-100">
                 <div>
-                  <h3 className="text-orange-950 flex items-center gap-2">
-                    <span>⚡</span> Tự Động Đồng Bộ Shopee 24/7 (Hoàn Toàn Không Cần Nạp CSV)
+                  <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2 m-0">
+                    <span className="text-2xl">🛒</span> Đồng Bộ Đơn Hàng Shopee
                   </h3>
-                  <p>
-                    Hệ thống vận hành <b>100% tự động qua Background Cron</b>: Cứ mỗi 15 phút, máy chủ tự kết nối Shopee Affiliate API, kéo toàn bộ đơn hàng mới phát sinh, đối chiếu mã <code>Sub_ID</code> của khách hàng, tính toán tiền hoàn và tự động cộng thẳng vào ví thành viên.
+                  <p className="text-xs text-stone-500 mt-1 m-0">
+                    Hệ thống tự động quét đơn mỗi 15 phút, đối chiếu Sub_ID khách hàng và cộng {boosterSettings.userCashbackPercent ?? 88}% tiền hoàn vào ví.
                   </p>
                 </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
-                      autoSyncEnabled
-                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                        : "bg-stone-100 text-stone-600 border-stone-300"
-                    }`}
-                  >
-                    <span className={`w-2 h-2 rounded-full ${autoSyncEnabled ? "bg-emerald-500 animate-pulse" : "bg-stone-400"}`} />
-                    <span>{autoSyncEnabled ? "🟢 Auto-Pilot: ĐANG BẬT" : "⚪ Auto-Pilot: TẮT"}</span>
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleAutoSync(!autoSyncEnabled)}
-                    className="text-xs bg-white hover:bg-stone-50 border border-stone-300 font-bold px-3 py-1.5 rounded-lg text-stone-700 transition-colors"
-                  >
-                    {autoSyncEnabled ? "Tạm dừng" : "Bật lại"}
-                  </button>
+
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 bg-stone-50 px-3 py-1.5 rounded-xl border border-stone-200 text-xs">
+                    <span className="text-stone-500">Lần quét gần nhất:</span>
+                    <strong className="text-stone-800">
+                      {lastSyncAt ? formatDate(lastSyncAt) : "Chưa có"}
+                    </strong>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
+                        autoSyncEnabled
+                          ? "bg-emerald-50 text-emerald-800 border-emerald-300"
+                          : "bg-stone-100 text-stone-600 border-stone-300"
+                      }`}
+                    >
+                      <span className={`w-2 h-2 rounded-full ${autoSyncEnabled ? "bg-emerald-500 animate-pulse" : "bg-stone-400"}`} />
+                      <span>{autoSyncEnabled ? "🟢 Tự động quét: BẬT" : "⚪ ĐANG TẮT"}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAutoSync(!autoSyncEnabled)}
+                      className="text-xs bg-white hover:bg-stone-50 border border-stone-300 font-bold px-3 py-1.5 rounded-xl text-stone-700 transition-colors"
+                    >
+                      {autoSyncEnabled ? "Tạm dừng" : "Bật lại"}
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Cookie Input and Manual Trigger */}
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
-                  <input
-                    type="password"
-                    placeholder="Dán Shopee Cookie (SPC_EC=... hoặc SPC_AFF_SESSION=...)"
-                    value={shopeeCookie}
-                    onChange={(e) => setShopeeCookie(e.target.value)}
-                    className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
-                  />
+              {/* 2 LỰA CHỌN ĐỒNG BỘ: 2 CARD ĐẸP, TRỰC QUAN */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Cách 1: Quét đơn bằng Cookie */}
+                <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/20 flex flex-col justify-between gap-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-orange-950 uppercase tracking-wide flex items-center gap-1.5">
+                        <span>⚡</span> Cách 1: Quét Đơn Bằng Cookie
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setShowCookieGuide(!showCookieGuide)}
+                        className="text-[11px] text-orange-700 hover:text-orange-900 font-semibold underline"
+                      >
+                        {showCookieGuide ? "Ẩn hướng dẫn" : "❓ Hướng dẫn lấy Cookie"}
+                      </button>
+                    </div>
+                    <p className="text-xs text-stone-600 mb-2">
+                      Dán chuỗi Cookie Shopee Affiliate để máy chủ kết nối và kéo đơn tự động:
+                    </p>
+                    <input
+                      type="password"
+                      placeholder="Dán Shopee Cookie (SPC_EC=...)..."
+                      value={shopeeCookie}
+                      onChange={(e) => setShopeeCookie(e.target.value)}
+                      className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
+                    />
+                  </div>
+
+                  {showCookieGuide && (
+                    <div className="p-3 bg-white rounded-lg border border-orange-200 text-[11px] text-stone-600 space-y-1">
+                      <div className="font-bold text-orange-900">Cách lấy nhanh trong 30 giây:</div>
+                      <div>1. Đăng nhập <b>affiliate.shopee.vn</b> trên máy tính.</div>
+                      <div>2. Nhấn phím <b>F12</b> &rarr; Chọn tab <b>Application</b> (hoặc Bộ nhớ) &rarr; <b>Cookies</b>.</div>
+                      <div>3. Tìm dòng <b>SPC_EC</b>, copy giá trị và dán vào ô trên.</div>
+                    </div>
+                  )}
+
                   <button
                     type="button"
                     onClick={() => handleSyncShopee(false)}
                     disabled={isSyncingShopee || !shopeeCookie.trim()}
-                    className="admin-btn-primary bg-orange-600 hover:bg-orange-700 whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
+                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
                   >
                     {isSyncingShopee ? (
                       <>
                         <span className="animate-spin inline-block">🔄</span>
-                        <span>Đang đồng bộ...</span>
+                        <span>Đang quét đơn Shopee...</span>
                       </>
                     ) : (
                       <>
                         <span>🔄</span>
-                        <span>Kích Hoạt Quét Ngay</span>
+                        <span>Kích Hoạt Quét Đơn Ngay</span>
                       </>
                     )}
                   </button>
                 </div>
 
-                {shopeeSyncResult && (
-                  <div
-                    className={`p-3 rounded-lg text-xs font-medium ${
-                      shopeeSyncResult.success
-                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                        : "bg-red-100 text-red-900 border border-red-300"
-                    }`}
-                  >
-                    {shopeeSyncResult.message}
-                  </div>
-                )}
-
-                <div className="text-[11.5px] text-stone-500 flex items-center gap-1.5">
-                  <span>💡</span>
-                  <span>
-                    <b>Cách lấy Cookie (1 lần duy nhất):</b> Đăng nhập <b>affiliate.shopee.vn</b> &rarr; nhấn <code>F12</code> &rarr; tab <code>Application</code> (hoặc <code>Storage</code>) &rarr; <code>Cookies</code> &rarr; copy giá trị <code>SPC_EC</code> hoặc toàn bộ chuỗi cookie dán vào đây.
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Shopee Open API & Hoa hồng Xtra Card */}
-            <div className="admin-settings-card border-orange-200 bg-orange-50/30">
-              <div className="admin-settings-header mb-3">
-                <div>
-                  <h3 className="text-stone-900 flex items-center gap-2">
-                    <span className="text-xl">🎁</span> Shopee Open API & Hoa hồng Xtra (Hoàn tới 87%)
-                  </h3>
-                  <p>
-                    Tự động kéo hàng loạt sản phẩm <b>Hoa hồng Xtra</b> (mức hoàn tiền khủng từ 30% đến 87%) trực tiếp từ sàn Shopee về hiển thị ưu tiên tại mục <b>Deal chớp nhoáng</b> trên trang chủ.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
-                      hasShopeeOpenApi
-                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                        : "bg-amber-100 text-amber-800 border-amber-300"
-                    }`}
-                  >
-                    <span>{hasShopeeOpenApi ? "🟢 Open API: ĐÃ KẾT NỐI (Tự động kéo Xtra)" : "⚪ Chưa cắm Shopee Open API"}</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="p-3 bg-white rounded-xl border border-orange-200 text-xs text-stone-700 flex flex-col gap-1.5">
-                  <span className="font-semibold text-orange-950 flex items-center gap-1.5">
-                    <span>💡</span> <b>Cách lấy App ID và Secret Key (1 phút):</b>
-                  </span>
-                  <ol className="list-decimal pl-4 space-y-1 text-stone-600">
-                    <li>Đăng nhập <b>affiliate.shopee.vn</b> (trang Tiếp thị liên kết Shopee).</li>
-                    <li>Ở thanh menu bên trái, cuộn xuống dưới cùng và click vào mục <b>Open API</b>.</li>
-                    <li>Copy mã <b>App ID</b> và <b>Secret</b> dán vào 2 ô bên dưới rồi nhấn <b>Lưu & Kích hoạt</b>.</li>
-                  </ol>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Cách 2: Nạp nhanh File Báo Cáo CSV */}
+                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 flex flex-col justify-between gap-3">
                   <div>
-                    <label className="block text-[11px] font-bold text-stone-700 mb-1">Shopee App ID:</label>
-                    <input
-                      type="text"
-                      placeholder="Dán App ID (ví dụ: 17333200656)..."
-                      value={shopeeAppId}
-                      onChange={(e) => setShopeeAppId(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-stone-700 mb-1">Shopee Secret Key:</label>
-                    <input
-                      type="password"
-                      placeholder="Dán Secret Key..."
-                      value={shopeeSecret}
-                      onChange={(e) => setShopeeSecret(e.target.value)}
-                      className="w-full px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={handleSaveShopeeOpenApi}
-                    disabled={isSavingOpenApi || !shopeeAppId.trim()}
-                    className="admin-btn-primary bg-orange-600 hover:bg-orange-700 text-white whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
-                  >
-                    {isSavingOpenApi ? "Đang lưu..." : "💾 Lưu & Kích hoạt Hoa hồng Xtra"}
-                  </button>
-                </div>
-
-                {openApiResult && (
-                  <div
-                    className={`p-3 rounded-lg text-xs font-medium ${
-                      openApiResult.success
-                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                        : "bg-red-100 text-red-900 border border-red-300"
-                    }`}
-                  >
-                    {openApiResult.message}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Nhập hàng loạt sản phẩm Hoa hồng Xtra (1-Click) */}
-            <div className="admin-settings-card border-rose-200 bg-rose-50/30">
-              <div className="admin-settings-header mb-3">
-                <div>
-                  <h3 className="text-stone-900 flex items-center gap-2">
-                    <span className="text-xl">⚡</span> Nhập hàng loạt sản phẩm Hoa hồng Xtra lên Deal chớp nhoáng
-                  </h3>
-                  <p>
-                    Giải pháp bán tự động nhanh nhất khi chưa có Open API: Tích chọn các shop hoa hồng 70% - 87% &rarr; bấm nút <b>&quot;Lấy link hàng loạt&quot;</b> trên Shopee Affiliate &rarr; Dán vào đây để đưa thẳng lên trang chủ.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold px-3 py-1.5 rounded-full border bg-rose-100 text-rose-800 border-rose-300">
-                    Đang ghim: {curatedXtraList.length} deal Xtra
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-stone-700 mb-1">
-                    Danh sách link Shopee (Mỗi dòng 1 link - Copy từ nút &quot;Lấy link hàng loạt&quot; hoặc link sản phẩm):
-                  </label>
-                  <textarea
-                    rows={4}
-                    placeholder={`https://shopee.vn/product/1547687617/43120673024\nhttps://shopee.vn/product/1660251166/43975778650\nhttps://s.shopee.vn/xyz...`}
-                    value={xtraUrls}
-                    onChange={(e) => setXtraUrls(e.target.value)}
-                    className="w-full p-3 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-rose-500 bg-white"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="flex items-center gap-2">
-                    <label className="text-[11px] font-bold text-stone-700 whitespace-nowrap">% Hoa hồng Xtra:</label>
-                    <input
-                      type="number"
-                      min={10}
-                      max={95}
-                      value={xtraCommission}
-                      onChange={(e) => setXtraCommission(e.target.value)}
-                      className="w-20 px-2.5 py-1.5 text-xs font-bold text-center rounded-lg border border-stone-300 bg-white focus:outline-none focus:border-rose-500"
-                    />
-                    <span className="text-xs text-stone-500">% (Mặc định 70% từ các Shop Xtra)</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {curatedXtraList.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteXtraDeal("all")}
-                        className="px-3 py-2 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                      >
-                        🗑️ Xóa tất cả ({curatedXtraList.length})
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleImportXtraDeals}
-                      disabled={isImportingXtra || !xtraUrls.trim()}
-                      className="admin-btn-primary bg-rose-600 hover:bg-rose-700 text-white whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
-                    >
-                      {isImportingXtra ? "Đang xử lý nạp..." : "🚀 Nạp ngay lên Deal chớp nhoáng"}
-                    </button>
-                  </div>
-                </div>
-
-                {xtraImportResult && (
-                  <div
-                    className={`p-3 rounded-lg text-xs font-medium ${
-                      xtraImportResult.success
-                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                        : "bg-red-100 text-red-900 border border-red-300"
-                    }`}
-                  >
-                    {xtraImportResult.message}
-                  </div>
-                )}
-
-                {curatedXtraList.length > 0 && (
-                  <div className="mt-2 bg-white rounded-xl border border-stone-200 p-3 max-h-56 overflow-y-auto">
-                    <div className="text-[11px] font-bold text-stone-600 uppercase mb-2">Các sản phẩm Hoa hồng Xtra đang hiển thị ({curatedXtraList.length}):</div>
-                    <div className="space-y-1.5">
-                      {curatedXtraList.slice(0, 10).map((deal: any) => (
-                        <div key={deal.id} className="flex items-center justify-between text-xs py-1 border-b border-stone-100 last:border-none">
-                          <div className="truncate flex-1 pr-2">
-                            <span className="font-semibold text-stone-800">{deal.name}</span>
-                            <span className="text-stone-500 ml-2">({Number(deal.price).toLocaleString("vi-VN")}đ · Hoàn {Number(deal.cashback).toLocaleString("vi-VN")}đ)</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteXtraDeal(deal.id)}
-                            className="text-stone-400 hover:text-red-500 text-xs px-1"
-                            title="Xóa deal này"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide flex items-center gap-1.5">
+                        <span>📁</span> Cách 2: Nạp File Báo Cáo CSV (Shopee)
+                      </span>
+                      <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
+                        Không cần Cookie
+                      </span>
                     </div>
+                    <p className="text-xs text-stone-600 mb-2">
+                      Vào <b>affiliate.shopee.vn</b> &rarr; <b>Báo cáo chuyển đổi</b> &rarr; Xuất file CSV rồi chọn tải lên tại đây:
+                    </p>
+                    <input
+                      ref={csvFileInputRef}
+                      type="file"
+                      accept=".csv,.txt"
+                      onChange={handleCsvUpload}
+                      className="hidden"
+                    />
                   </div>
-                )}
-              </div>
-            </div>
 
-            {/* AccessTrade & TikTok Shop Config Card */}
-            <div className="admin-settings-card border-stone-200 bg-stone-50/40">
-              <div className="admin-settings-header mb-3">
-                <div>
-                  <h3 className="text-stone-900 flex items-center gap-2">
-                    <span className="text-xl">🎵</span> TikTok Shop & AccessTrade Integration (Real-time Webhook)
-                  </h3>
-                  <p>
-                    Kết nối AccessTrade API để tự động bọc link TikTok Shop gắn mã thành viên (<code>Sub_ID</code>) và nhận webhook nạp tiền hoàn thời gian thực khi khách mua hàng.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
-                      accesstradeToken.trim()
-                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                        : "bg-amber-100 text-amber-800 border-amber-300"
-                    }`}
-                  >
-                    <span>{accesstradeToken.trim() ? "🟢 TikTok Shop: ĐÃ CẮM TOKEN" : "⚪ Chưa có AccessTrade Token"}</span>
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex gap-2 items-center flex-wrap sm:flex-nowrap">
-                  <input
-                    type="password"
-                    placeholder="Dán mã AccessTrade API Token (Lấy tại: Công cụ -> AccessTrade API)..."
-                    value={accesstradeToken}
-                    onChange={(e) => setAccesstradeToken(e.target.value)}
-                    className="flex-1 px-3.5 py-2.5 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-stone-800 bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSaveAccesstradeToken}
-                    disabled={isSavingAtToken || !accesstradeToken.trim()}
-                    className="admin-btn-primary bg-stone-900 hover:bg-black text-white whitespace-nowrap text-xs py-2.5 px-4 font-bold flex items-center gap-1.5"
-                  >
-                    {isSavingAtToken ? "Đang lưu..." : "💾 Lưu AccessTrade Token"}
-                  </button>
-                </div>
-
-                {atTokenResult && (
-                  <div
-                    className={`p-3 rounded-lg text-xs font-medium ${
-                      atTokenResult.success
-                        ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                        : "bg-red-100 text-red-900 border border-red-300"
-                    }`}
-                  >
-                    {atTokenResult.message}
-                  </div>
-                )}
-
-                <div className="bg-white p-3 rounded-xl border border-stone-200 text-xs flex flex-col gap-1.5">
-                  <div className="font-semibold text-stone-800 flex items-center gap-1.5">
-                    <span>🔗</span> URL Postback / Webhook nhận đơn TikTok tự động:
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 p-2 bg-stone-100 rounded text-[11.5px] font-mono text-stone-700 select-all overflow-x-auto">
-                      {typeof window !== "undefined" ? `${window.location.origin}/api/affiliate/webhook` : "https://deal-hoan.vercel.app/api/affiliate/webhook"}
-                    </code>
+                  <div className="flex flex-col gap-2">
                     <button
                       type="button"
-                      onClick={() => {
-                        const url = typeof window !== "undefined" ? `${window.location.origin}/api/affiliate/webhook` : "https://deal-hoan.vercel.app/api/affiliate/webhook";
-                        navigator.clipboard.writeText(url);
-                        setToastMsg("📋 Đã copy link Postback Webhook!");
-                        setTimeout(() => setToastMsg(null), 3000);
-                      }}
-                      className="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 font-bold rounded text-xs transition-colors"
+                      onClick={() => csvFileInputRef.current?.click()}
+                      disabled={isUploadingCsv}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
                     >
-                      Copy URL
+                      {isUploadingCsv ? (
+                        <>
+                          <span className="animate-spin inline-block">⏳</span>
+                          <span>Đang đọc và nạp đơn hàng...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>📥</span>
+                          <span>Chọn File CSV Báo Cáo Shopee Để Nạp</span>
+                        </>
+                      )}
                     </button>
+                    <span className="text-[11px] text-center text-stone-500">
+                      Tự động tính tiền hoàn {boosterSettings.userCashbackPercent ?? 88}% và cộng thẳng vào ví thành viên.
+                    </span>
                   </div>
-                  <span className="text-[11px] text-stone-500">
-                    Dán URL này vào mục <b>Công cụ &rarr; Postback</b> trên trang <b>pub.accesstrade.vn</b> để nhận thông báo đơn hàng theo thời gian thực (Real-time).
-                  </span>
                 </div>
               </div>
+
+              {/* Thông báo kết quả quét cookie hoặc nạp CSV */}
+              {shopeeSyncResult && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
+                    shopeeSyncResult.success
+                      ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
+                      : "bg-red-50 text-red-900 border border-red-300"
+                  }`}
+                >
+                  <span>{shopeeSyncResult.success ? "✅" : "⚠️"}</span>
+                  <span>{shopeeSyncResult.message}</span>
+                </div>
+              )}
+
+              {csvUploadResult && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
+                    csvUploadResult.success
+                      ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
+                      : "bg-red-50 text-red-900 border border-red-300"
+                  }`}
+                >
+                  <span>{csvUploadResult.success ? "✅" : "⚠️"}</span>
+                  <span>{csvUploadResult.message}</span>
+                </div>
+              )}
             </div>
 
-            {/* KPI Status Grid */}
-            <div className="admin-import-stats-grid">
-              <div className="admin-import-stat-card">
-                <span className="admin-import-stat-title">Chu kỳ quét tự động</span>
-                <span className="admin-import-stat-value text-orange-600">Mỗi 15 phút</span>
-                <span className="admin-import-stat-note">Chạy ngầm 24/7 không cần mở web</span>
-              </div>
-
-              <div className="admin-import-stat-card highlight">
-                <span className="admin-import-stat-title">Lần quét gần nhất</span>
-                <span className="admin-import-stat-value text-stone-900">
-                  {lastSyncAt ? formatDate(lastSyncAt) : "Chưa có"}
-                </span>
-                <span className="admin-import-stat-note">
-                  {lastSyncResult || "Sẵn sàng hoạt động"}
-                </span>
-              </div>
-
-              <div className="admin-import-stat-card">
-                <span className="admin-import-stat-title">Đơn hàng Shopee đã kéo</span>
-                <span className="admin-import-stat-value text-emerald-700">
-                  {recentSyncedOrders.length} đơn
-                </span>
-                <span className="admin-import-stat-note">Trong 30 ngày gần nhất</span>
-              </div>
-
-              <div className="admin-import-stat-card highlight">
-                <span className="admin-import-stat-title">Cơ chế bảo vệ</span>
-                <span className="admin-import-stat-value text-emerald-700">Zero Loss Guard</span>
-                <span className="admin-import-stat-note">Giữ lại {boosterSettings.safetyMarginPercent}% biên an toàn</span>
-              </div>
-            </div>
-
-            {/* Synced Orders Table */}
-            <div className="admin-settings-card">
-              <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-                <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
-                  <span>📋</span> Đơn Hàng Shopee Đồng Bộ Tự Động Gần Nhất ({recentSyncedOrders.length})
-                </h4>
+            {/* 2. BẢNG ĐƠN HÀNG SHOPEE ĐÃ GHI NHẬN (TRUNG TÂM) */}
+            <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div>
+                  <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
+                    <span>📋</span> Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({recentSyncedOrders.length})
+                  </h4>
+                  <p className="text-xs text-stone-500 m-0 mt-0.5">
+                    Toàn bộ đơn hàng được đối chiếu Sub_ID và chia {boosterSettings.userCashbackPercent ?? 88}% tiền hoàn:
+                  </p>
+                </div>
                 <button
                   type="button"
                   onClick={() => handleSyncShopee(false)}
                   disabled={isSyncingShopee || !shopeeCookie.trim()}
-                  className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                  className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5"
                 >
                   <span>🔄</span> Làm mới danh sách
                 </button>
@@ -2465,23 +2300,23 @@ export default function AdminUsersClient({
 
               {recentSyncedOrders.length === 0 ? (
                 <div className="p-8 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-500 text-sm">
-                  <p className="text-2xl mb-2">🤖</p>
-                  <p className="font-semibold text-stone-700">Chưa có đơn hàng nào được ghi nhận</p>
-                  <p className="text-xs text-stone-500 mt-1">
-                    Khi khách hàng mua qua liên kết DealHoàn và Cron Job 15 phút quét xong, toàn bộ đơn hàng sẽ tự động hiển thị tại đây.
+                  <p className="text-3xl mb-2">🛒</p>
+                  <p className="font-bold text-stone-800">Chưa có đơn hàng nào được ghi nhận</p>
+                  <p className="text-xs text-stone-500 mt-1 max-w-md mx-auto">
+                    Dán Cookie Shopee rồi bấm <b>&quot;Kích Hoạt Quét Ngay&quot;</b> hoặc tải file <b>CSV Báo Cáo Chuyển Đổi</b> lên để hệ thống nhận diện đơn của 2 khách hàng ngay.
                   </p>
                 </div>
               ) : (
                 <div className="table-responsive">
-                  <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
+                  <table className="admin-data-table" aria-label="Danh sách đơn hàng Shopee">
                     <thead>
                       <tr>
                         <th>Mã đơn Shopee</th>
-                        <th>Thành viên DealHoàn (SubID)</th>
+                        <th>Thành viên (Khách nhận)</th>
                         <th>Sản phẩm</th>
                         <th className="text-right">Giá trị đơn</th>
-                        <th className="text-right">Hoa hồng sàn</th>
-                        <th className="text-right">Tiền hoàn về ví</th>
+                        <th className="text-right">Hoa hồng Shopee</th>
+                        <th className="text-right">Tiền hoàn khách nhận ({boosterSettings.userCashbackPercent ?? 88}%)</th>
                         <th className="text-center">Trạng thái</th>
                         <th className="text-right">Thời gian</th>
                       </tr>
@@ -2503,7 +2338,7 @@ export default function AdminUsersClient({
                               ) : (
                                 <div>
                                   <span className="text-xs font-mono font-bold text-orange-700">{ord.subId}</span>
-                                  <span className="block text-[10px] text-stone-400">ID: {ord.userId}</span>
+                                  {ord.userId && <span className="block text-[10px] text-stone-400">ID: {ord.userId}</span>}
                                 </div>
                               )}
                             </td>
@@ -2542,6 +2377,174 @@ export default function AdminUsersClient({
                       })}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+
+            {/* 3. CÀI ĐẶT NÂNG CAO & TÍCH HỢP KHÁC (ACCORDION THU GỌN) */}
+            <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="w-full p-4 flex items-center justify-between text-left hover:bg-stone-50 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">⚙️</span>
+                  <div>
+                    <h5 className="font-bold text-stone-800 m-0 text-sm">
+                      Cài đặt nâng cao & Tích hợp khác (Shopee Open API, Ghim Deal Xtra, TikTok Shop)
+                    </h5>
+                    <p className="text-xs text-stone-500 m-0 mt-0.5">
+                      Dành cho cấu hình kỹ thuật, kết nối API hoặc ghim sản phẩm hoa hồng cao lên trang chủ.
+                    </p>
+                  </div>
+                </div>
+                <span className={`text-stone-400 font-bold transition-transform duration-200 ${showAdvanced ? "rotate-90" : ""}`}>
+                  ▶
+                </span>
+              </button>
+
+              {showAdvanced && (
+                <div className="p-6 border-t border-stone-100 flex flex-col gap-6 bg-stone-50/30">
+                  {/* Shopee Open API */}
+                  <div className="bg-white p-4 rounded-xl border border-orange-200 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-sm text-stone-900 flex items-center gap-1.5">
+                        <span>🎁</span> Shopee Open API (Tự động kéo Xtra)
+                      </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${hasShopeeOpenApi ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-stone-100 text-stone-600 border-stone-300"}`}>
+                        {hasShopeeOpenApi ? "🟢 Đã kết nối" : "⚪ Chưa kết nối"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-stone-700 mb-1">Shopee App ID:</label>
+                        <input
+                          type="text"
+                          placeholder="Dán App ID..."
+                          value={shopeeAppId}
+                          onChange={(e) => setShopeeAppId(e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-stone-700 mb-1">Shopee Secret Key:</label>
+                        <input
+                          type="password"
+                          placeholder="Dán Secret Key..."
+                          value={shopeeSecret}
+                          onChange={(e) => setShopeeSecret(e.target.value)}
+                          className="w-full px-3 py-2 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={handleSaveShopeeOpenApi}
+                        disabled={isSavingOpenApi || !shopeeAppId.trim()}
+                        className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold py-2 px-4 rounded-xl transition-colors"
+                      >
+                        {isSavingOpenApi ? "Đang lưu..." : "Lưu Open API"}
+                      </button>
+                    </div>
+                    {openApiResult && (
+                      <div className={`p-2.5 rounded-lg text-xs ${openApiResult.success ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}>
+                        {openApiResult.message}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ghim Deal Xtra lên trang chủ */}
+                  <div className="bg-white p-4 rounded-xl border border-rose-200 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-sm text-stone-900 flex items-center gap-1.5">
+                        <span>⚡</span> Ghim hàng loạt Deal Xtra lên Deal Chớp Nhoáng
+                      </div>
+                      <span className="text-xs bg-rose-50 text-rose-700 font-bold px-2.5 py-1 rounded-full border border-rose-200">
+                        Đang ghim: {curatedXtraList.length} deal
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      placeholder={`Dán các link Shopee (mỗi dòng 1 link):\nhttps://shopee.vn/product/123/456`}
+                      value={xtraUrls}
+                      onChange={(e) => setXtraUrls(e.target.value)}
+                      className="w-full p-2.5 text-xs font-mono rounded-xl border border-stone-300 bg-white"
+                    />
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-stone-600 font-bold">% Hoa hồng:</span>
+                        <input
+                          type="number"
+                          min={10}
+                          max={95}
+                          value={xtraCommission}
+                          onChange={(e) => setXtraCommission(e.target.value)}
+                          className="w-16 px-2 py-1 text-xs font-bold text-center rounded border border-stone-300"
+                        />
+                        <span className="text-xs text-stone-500">%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {curatedXtraList.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteXtraDeal("all")}
+                            className="px-3 py-1.5 text-xs font-bold text-red-600 bg-red-50 rounded-lg hover:bg-red-100"
+                          >
+                            Xóa hết ({curatedXtraList.length})
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleImportXtraDeals}
+                          disabled={isImportingXtra || !xtraUrls.trim()}
+                          className="bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold py-1.5 px-3.5 rounded-xl transition-colors"
+                        >
+                          {isImportingXtra ? "Đang nạp..." : "Nạp lên trang chủ"}
+                        </button>
+                      </div>
+                    </div>
+                    {xtraImportResult && (
+                      <div className={`p-2.5 rounded-lg text-xs ${xtraImportResult.success ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}>
+                        {xtraImportResult.message}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* AccessTrade & TikTok Shop */}
+                  <div className="bg-white p-4 rounded-xl border border-stone-200 flex flex-col gap-3">
+                    <div className="flex items-center justify-between">
+                      <div className="font-bold text-sm text-stone-900 flex items-center gap-1.5">
+                        <span>🎵</span> TikTok Shop / AccessTrade Token
+                      </div>
+                      <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${accesstradeToken.trim() ? "bg-emerald-50 text-emerald-800 border-emerald-300" : "bg-stone-100 text-stone-600 border-stone-300"}`}>
+                        {accesstradeToken.trim() ? "🟢 Đã có Token" : "⚪ Chưa cắm"}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="password"
+                        placeholder="Dán mã AccessTrade Token..."
+                        value={accesstradeToken}
+                        onChange={(e) => setAccesstradeToken(e.target.value)}
+                        className="flex-1 px-3 py-2 text-xs font-mono rounded-xl border border-stone-300 bg-white"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleSaveAccesstradeToken}
+                        disabled={isSavingAtToken || !accesstradeToken.trim()}
+                        className="bg-stone-900 hover:bg-black text-white text-xs font-bold py-2 px-4 rounded-xl transition-colors"
+                      >
+                        {isSavingAtToken ? "Đang lưu..." : "Lưu Token"}
+                      </button>
+                    </div>
+                    {atTokenResult && (
+                      <div className={`p-2.5 rounded-lg text-xs ${atTokenResult.success ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-900"}`}>
+                        {atTokenResult.message}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
