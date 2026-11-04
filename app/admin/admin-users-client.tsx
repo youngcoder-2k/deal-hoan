@@ -109,35 +109,6 @@ function applyLocalBalanceOverrides(usersList: AdminUserItem[]): AdminUserItem[]
   }
 }
 
-const SIMULATION_ITEMS = [
-  { name: "✨ Quà Tặng Bính Ngọ Vàng 24k Huy Thanh", category: "Trang sức / Phụ kiện", price: 989040, shopeeCommission: 80021 },
-  { name: "🪞 Gương Cánh Trượt Pegboard Wood Decor", category: "Nhà cửa & Đời sống", price: 699000, shopeeCommission: 41698 },
-  { name: "🎧 Tai nghe chống ồn Sony WF-C710N", category: "Thiết bị điện tử Mall", price: 1540000, shopeeCommission: 77000 },
-  { name: "🫖 Nồi chiên không dầu điện tử Lock&Lock", category: "Gia dụng đời sống", price: 1890000, shopeeCommission: 66150 },
-  { name: "💄 Son môi lì Black Rouge Air Fit", category: "Mỹ phẩm làm đẹp", price: 180000, shopeeCommission: 16200 },
-  { name: "📱 iPhone 16 Pro Max 256GB Titan Sa Mạc", category: "Điện thoại Flagship", price: 34990000, shopeeCommission: 552842 },
-];
-
-function calcSimResult(shopeeCommission: number, price: number, settings: CashbackBoosterSettings) {
-  const userPercent = typeof settings.userCashbackPercent === "number" && !isNaN(settings.userCashbackPercent)
-    ? settings.userCashbackPercent
-    : (100 - (settings.safetyMarginPercent ?? 12.0));
-  const userShare = Math.max(0.5, Math.min(0.98, userPercent / 100));
-  const userCashback = Math.round(shopeeCommission * userShare);
-  const dealHoanProfit = shopeeCommission - userCashback;
-  const userRateOnPrice = price > 0 ? Number(((userCashback / price) * 100).toFixed(1)) : 0;
-  const profitPercent = Number((100 - userPercent).toFixed(1));
-
-  return {
-    shopeeCommission,
-    userCashback,
-    dealHoanProfit,
-    userRateOnPrice,
-    userPercent,
-    profitPercent,
-  };
-}
-
 export interface AdminWithdrawalRecord {
   id: string;
   userId: string;
@@ -1989,39 +1960,25 @@ export default function AdminUsersClient({
 
         {activeTab === "settings" && (
           <section className="admin-settings-container">
-            {/* Card 1: Cấu hình tỷ lệ hoàn tiền duy nhất */}
             <div className="admin-settings-card">
-              <div className="admin-settings-header">
+              <div className="admin-settings-header mb-6">
                 <div>
-                  <h3>⚙️ Cấu Hình % Hoàn Tiền Cho Khách</h3>
+                  <h3>⚙️ Cấu Hình % Hoàn Tiền</h3>
                   <p>
-                    Chỉ cần 1 thông số duy nhất: tỷ lệ % tổng hoa hồng Shopee hoàn lại cho khách hàng. Phần còn lại hệ thống tự động tính làm lợi nhuận của DealHoàn.
+                    Điều chỉnh tỷ lệ % hoa hồng Shopee hoàn lại cho khách hàng và phần giữ lại của DealHoàn.
                   </p>
-                </div>
-                <div className="admin-security-badge">
-                  🔒 Quyền Quản trị viên
                 </div>
               </div>
 
-              {/* 2 Card so sánh song song: % Hoàn khách & % Lợi nhuận DealHoàn */}
+              {/* 2 Card so sánh trực quan */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Cột 1: % Hoàn tiền cho khách (Có ô nhập duy nhất) */}
-                <div className="p-5 rounded-2xl border-2 border-orange-500 bg-orange-50/40 relative shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold uppercase tracking-wider text-orange-700 bg-orange-100/80 px-2.5 py-1 rounded-full">
-                      🎁 Thông số cấu hình chính
-                    </span>
-                    <span className="text-xs text-stone-500 font-medium">Mặc định: 88.0%</span>
-                  </div>
-                  <label className="block text-base font-extrabold text-stone-900 mb-1">
-                    % Hoàn tiền cho khách:
-                  </label>
-                  <p className="text-xs text-stone-500 mb-4 leading-relaxed">
-                    Tỷ lệ tổng hoa hồng Shopee trả về mà khách hàng nhận được khi mua đơn thành công. Hỗ trợ 1 số thập phân (ví dụ: 86.8%).
-                  </p>
-
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="relative flex-1">
+                {/* Cột 1: % Hoàn tiền cho khách */}
+                <div className="p-5 rounded-2xl border-2 border-orange-500 bg-orange-50/40 relative shadow-sm flex flex-col justify-between">
+                  <div>
+                    <label className="block text-base font-extrabold text-stone-900 mb-2">
+                      % Hoàn tiền cho khách:
+                    </label>
+                    <div className="relative mb-3">
                       <input
                         type="number"
                         step="0.1"
@@ -2075,39 +2032,28 @@ export default function AdminUsersClient({
                   </div>
                 </div>
 
-                {/* Cột 2: % Lợi nhuận DealHoàn giữ lại (Tự động tính) */}
-                <div className="p-5 rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 relative shadow-sm flex flex-col justify-between">
+                {/* Cột 2: % Lợi nhuận DealHoàn giữ lại */}
+                <div className="p-5 rounded-2xl border-2 border-emerald-400 bg-emerald-50/40 relative shadow-sm flex flex-col justify-between">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-2.5 py-1 rounded-full">
-                        ✨ Tự động tính toán
+                    <div className="text-base font-extrabold text-stone-900 mb-2">
+                      % Lợi nhuận DealHoàn giữ lại:
+                    </div>
+                    <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 py-2.5 mb-3 flex items-center justify-between">
+                      <span className="text-3xl font-black text-emerald-700">
+                        {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
                       </span>
-                      <span className="text-xs text-stone-500 font-medium">= 100% - % hoàn khách</span>
+                      <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">
+                        Tự động tính
+                      </span>
                     </div>
-                    <div className="text-base font-extrabold text-stone-900 mb-1">
-                      Lợi nhuận DealHoàn giữ lại:
-                    </div>
-                    <p className="text-xs text-stone-500 mb-4 leading-relaxed">
-                      Phần hoa hồng hệ thống tự động giữ lại để vận hành nền tảng và tạo biên lợi nhuận ròng.
-                    </p>
                   </div>
-
-                  <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 py-2.5 mb-4 flex items-center justify-between">
-                    <span className="text-3xl font-black text-emerald-700">
-                      {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
-                    </span>
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">
-                      Lợi nhuận ròng
-                    </span>
-                  </div>
-
-                  <p className="text-xs text-emerald-800/80 m-0 leading-relaxed font-medium">
-                    💡 Khách nhận <b>{(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%</b> thì DealHoàn sẽ giữ lại đúng <b>{(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%</b> tổng hoa hồng Shopee chi trả.
+                  <p className="text-xs text-stone-500 m-0">
+                    Phần hoa hồng nền tảng tự động giữ lại để vận hành và tạo biên lợi nhuận ròng.
                   </p>
                 </div>
               </div>
 
-              {/* Thanh hiển thị phân bổ tổng thể (Visual Split Bar) */}
+              {/* Thanh hiển thị phân bổ tổng thể */}
               <div className="mb-6 p-4 bg-stone-50 border border-stone-200 rounded-xl">
                 <div className="flex justify-between items-center text-xs font-bold mb-2">
                   <span className="text-orange-700 flex items-center gap-1.5">
@@ -2132,15 +2078,7 @@ export default function AdminUsersClient({
               </div>
 
               {/* Nút Lưu Cấu Hình */}
-              <div className="settings-action-bar">
-                <div className="text-xs text-stone-500">
-                  {boosterSettings.updatedAt && (
-                    <span>
-                      🕒 Cập nhật lần cuối: <b>{formatDate(boosterSettings.updatedAt)}</b>
-                      {boosterSettings.updatedBy && ` bởi ${boosterSettings.updatedBy}`}
-                    </span>
-                  )}
-                </div>
+              <div className="flex justify-end pt-4 border-t border-stone-200">
                 <button
                   type="button"
                   onClick={handleSaveSettings}
@@ -2149,63 +2087,6 @@ export default function AdminUsersClient({
                 >
                   {savingSettings ? "Đang lưu cấu hình…" : "💾 Lưu Cấu Hình Ngay"}
                 </button>
-              </div>
-            </div>
-
-            {/* Card 2: Live Simulator - Bảng Mô Phỏng Trực Tiếp */}
-            <div className="admin-settings-card">
-              <div className="admin-settings-header mb-4">
-                <div>
-                  <h3>📊 Mô Phỏng Kết Quả Thực Tế (Live Simulator)</h3>
-                  <p>
-                    Bảng tính tự động áp dụng tỷ lệ <b>{(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%</b> trên để bạn nhìn thấy ngay số tiền khách nhận được và tiền lời DealHoàn giữ lại cho các đơn mẫu:
-                  </p>
-                </div>
-                <span className="text-xs bg-orange-100 text-orange-800 font-bold px-3 py-1.5 rounded-full border border-orange-200">
-                  Tỷ lệ chia: {(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}% / {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
-                </span>
-              </div>
-
-              <div className="table-responsive">
-                <table className="admin-data-table" aria-label="Bảng mô phỏng kết quả">
-                  <thead>
-                    <tr>
-                      <th>Sản phẩm mẫu</th>
-                      <th>Ngành hàng</th>
-                      <th className="text-right">Giá niêm yết</th>
-                      <th className="text-right">Hoa hồng Shopee trả</th>
-                      <th className="text-right">Tiền hoàn khách nhận</th>
-                      <th className="text-right">Lợi nhuận DealHoàn</th>
-                      <th className="text-center">Tỷ lệ hoàn trên đơn</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {SIMULATION_ITEMS.map((item, idx) => {
-                      const res = calcSimResult(item.shopeeCommission, item.price, boosterSettings);
-                      return (
-                        <tr key={idx} className="admin-table-row">
-                          <td className="font-bold text-stone-900">{item.name}</td>
-                          <td className="text-stone-500 text-xs">{item.category}</td>
-                          <td className="text-right font-medium text-stone-700">{formatVnd(item.price)}</td>
-                          <td className="text-right font-bold text-stone-900 bg-stone-50">
-                            {formatVnd(item.shopeeCommission)}
-                          </td>
-                          <td className="text-right font-black text-orange-600 bg-orange-50/50">
-                            {formatVnd(res.userCashback)}
-                          </td>
-                          <td className="text-right font-bold text-emerald-700 bg-emerald-50/40">
-                            {formatVnd(res.dealHoanProfit)}
-                          </td>
-                          <td className="text-center font-bold text-stone-800">
-                            <span className="inline-block bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs">
-                              {res.userRateOnPrice}%
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
               </div>
             </div>
           </section>
