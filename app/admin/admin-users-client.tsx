@@ -2638,7 +2638,7 @@ export default function AdminUsersClient({
                 className="admin-modal-close"
                 onClick={() => setSelectedUser(null)}
               >
-                ✕
+                <X size={18} weight="bold" />
               </button>
             </div>
 
@@ -2667,7 +2667,7 @@ export default function AdminUsersClient({
               <div className="modal-card-block">
                 <div className="block-title-row">
                   <div className="flex items-center gap-2">
-                    <span className="block-icon">🏦</span>
+                    <Bank size={20} weight="bold" className="text-orange-600" />
                     <h4 className="block-title">Tài Khoản Ngân Hàng Nhận Tiền</h4>
                   </div>
                   {selectedUser.isBankConfigured && (
@@ -2679,9 +2679,10 @@ export default function AdminUsersClient({
                           "Toàn bộ thông tin ngân hàng"
                         )
                       }
-                      className="btn-copy-all"
+                      className="btn-copy-all flex items-center gap-1"
                     >
-                      📋 Copy đầy đủ
+                      <Copy size={13} weight="bold" />
+                      <span>Copy đầy đủ</span>
                     </button>
                   )}
                 </div>
@@ -2703,9 +2704,16 @@ export default function AdminUsersClient({
                             onClick={() =>
                               copyToClipboard(selectedUser.bankAccountNo, "Số tài khoản", "modal-stk")
                             }
-                            className="btn-copy-mini"
+                            className="btn-copy-mini flex items-center gap-1"
                           >
-                            {copiedId === "modal-stk" ? "✓ Đã chép" : "Sao chép"}
+                            {copiedId === "modal-stk" ? (
+                              <>
+                                <Check size={12} weight="bold" />
+                                <span>Đã chép</span>
+                              </>
+                            ) : (
+                              <span>Sao chép</span>
+                            )}
                           </button>
                         </div>
                       </div>
@@ -2763,7 +2771,7 @@ export default function AdminUsersClient({
               <div className="modal-card-block">
                 <div className="block-title-row">
                   <div className="flex items-center gap-2">
-                    <span className="block-icon">⚙️</span>
+                    <GearSix size={20} weight="bold" className="text-orange-600" />
                     <h4 className="block-title">Điều Chỉnh Số Dư</h4>
                   </div>
                   <button
@@ -2834,7 +2842,7 @@ export default function AdminUsersClient({
               <div className="modal-card-block">
                 <div className="block-title-row">
                   <div className="flex items-center gap-2">
-                    <span className="block-icon">🛍️</span>
+                    <ShoppingBag size={20} weight="bold" className="text-orange-600" />
                     <h4 className="block-title">
                       Đơn Hàng Hoàn Tiền ({filteredUserOrders.length})
                     </h4>
@@ -2876,30 +2884,41 @@ export default function AdminUsersClient({
                         </div>
                         <div className="w-item-right">
                           {ord.status === "completed" && (
-                            <span className="w-badge w-completed">✅ Đã hoàn ví</span>
+                            <span className="w-badge w-completed inline-flex items-center gap-1">
+                              <CheckCircle size={11} weight="fill" />
+                              <span>Đã hoàn ví</span>
+                            </span>
                           )}
                           {ord.status === "rejected" && (
-                            <span className="w-badge w-rejected">❌ Bị hủy</span>
+                            <span className="w-badge w-rejected inline-flex items-center gap-1">
+                              <XCircle size={11} weight="fill" />
+                              <span>Bị hủy</span>
+                            </span>
                           )}
                           {ord.status === "pending" && (
                             <div className="pending-actions-wrap">
-                              <span className="w-badge w-pending">⏳ Chờ duyệt</span>
+                              <span className="w-badge w-pending inline-flex items-center gap-1">
+                                <Clock size={11} weight="bold" />
+                                <span>Chờ duyệt</span>
+                              </span>
                               <div className="flex gap-1 mt-2">
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "completed")}
-                                  className="btn-approve-mini"
+                                  className="btn-approve-mini flex items-center gap-1"
                                   title="Duyệt đơn và cộng tiền vào ví khả dụng của user"
                                 >
-                                  ✓ Duyệt
+                                  <Check size={12} weight="bold" />
+                                  <span>Duyệt</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "rejected")}
-                                  className="btn-reject-mini"
+                                  className="btn-reject-mini flex items-center gap-1"
                                   title="Từ chối đơn hoàn tiền này"
                                 >
-                                  ✕ Hủy
+                                  <X size={12} weight="bold" />
+                                  <span>Hủy</span>
                                 </button>
                               </div>
                             </div>
@@ -2915,7 +2934,7 @@ export default function AdminUsersClient({
               <div className="modal-card-block">
                 <div className="block-title-row">
                   <div className="flex items-center gap-2">
-                    <span className="block-icon">📋</span>
+                    <Receipt size={20} weight="bold" className="text-orange-600" />
                     <h4 className="block-title">
                       Lịch Sử Yêu Cầu Rút Tiền ({userWithdrawals.length})
                     </h4>
@@ -2942,30 +2961,41 @@ export default function AdminUsersClient({
                         </div>
                         <div className="w-item-right">
                           {w.status === "completed" && (
-                            <span className="w-badge w-completed">✅ Đã chuyển</span>
+                            <span className="w-badge w-completed inline-flex items-center gap-1">
+                              <CheckCircle size={11} weight="fill" />
+                              <span>Đã chuyển</span>
+                            </span>
                           )}
                           {w.status === "rejected" && (
-                            <span className="w-badge w-rejected">❌ Bị từ chối</span>
+                            <span className="w-badge w-rejected inline-flex items-center gap-1">
+                              <XCircle size={11} weight="fill" />
+                              <span>Bị từ chối</span>
+                            </span>
                           )}
                           {w.status === "pending" && (
                             <div className="pending-actions-wrap">
-                              <span className="w-badge w-pending">⏳ Chờ xử lý</span>
+                              <span className="w-badge w-pending inline-flex items-center gap-1">
+                                <Clock size={11} weight="bold" />
+                                <span>Chờ xử lý</span>
+                              </span>
                               <div className="flex gap-1 mt-2">
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateWithdrawalStatus(w.id, "completed")}
-                                  className="btn-approve-mini"
+                                  className="btn-approve-mini flex items-center gap-1"
                                   title="Xác nhận đã chuyển tiền thành công"
                                 >
-                                  ✓ Duyệt
+                                  <Check size={12} weight="bold" />
+                                  <span>Duyệt</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleUpdateWithdrawalStatus(w.id, "rejected")}
-                                  className="btn-reject-mini"
+                                  className="btn-reject-mini flex items-center gap-1"
                                   title="Từ chối lệnh rút tiền này"
                                 >
-                                  ✕ Từ chối
+                                  <X size={12} weight="bold" />
+                                  <span>Từ chối</span>
                                 </button>
                               </div>
                             </div>
