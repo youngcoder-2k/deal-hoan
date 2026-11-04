@@ -1975,7 +1975,7 @@ export default function AdminUsersClient({
                     <label className="block text-base font-extrabold text-stone-900 mb-2">
                       % Hoàn tiền cho khách:
                     </label>
-                    <div className="relative mb-3">
+                    <div className="relative">
                       <input
                         type="number"
                         step="0.1"
@@ -1997,35 +1997,6 @@ export default function AdminUsersClient({
                         %
                       </span>
                     </div>
-                  </div>
-
-                  {/* Nút bấm nhanh Presets */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-xs text-stone-500 font-medium mr-1">Chọn nhanh:</span>
-                    {[85.0, 86.8, 88.0, 90.0, 92.0].map((preset) => {
-                      const current = boosterSettings.userCashbackPercent ?? 88.0;
-                      const isActive = Math.abs(current - preset) < 0.05;
-                      return (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() =>
-                            setBoosterSettings((prev) => ({
-                              ...prev,
-                              userCashbackPercent: preset,
-                              safetyMarginPercent: Number((100 - preset).toFixed(1)),
-                            }))
-                          }
-                          className={`text-xs px-2.5 py-1 rounded-lg font-bold transition-all border ${
-                            isActive
-                              ? "bg-orange-600 text-white border-orange-600 shadow-sm"
-                              : "bg-white text-stone-700 border-stone-200 hover:border-orange-300 hover:bg-orange-50/50"
-                          }`}
-                        >
-                          {preset.toFixed(1)}%{preset === 88.0 ? " (Chuẩn)" : ""}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
 
