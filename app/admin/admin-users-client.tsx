@@ -1964,9 +1964,6 @@ export default function AdminUsersClient({
               <div className="admin-settings-header mb-6">
                 <div>
                   <h3>⚙️ Cấu Hình % Hoàn Tiền</h3>
-                  <p>
-                    Điều chỉnh tỷ lệ % hoa hồng Shopee hoàn lại cho khách hàng và phần giữ lại của DealHoàn.
-                  </p>
                 </div>
               </div>
 
@@ -2047,9 +2044,6 @@ export default function AdminUsersClient({
                       </span>
                     </div>
                   </div>
-                  <p className="text-xs text-stone-500 m-0">
-                    Phần hoa hồng nền tảng tự động giữ lại để vận hành và tạo biên lợi nhuận ròng.
-                  </p>
                 </div>
               </div>
 
