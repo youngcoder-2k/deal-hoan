@@ -75,14 +75,24 @@ export async function GET(request: NextRequest) {
     const metaAccountName = String(user.user_metadata?.bank_account_name || "");
 
     if (isFull) {
+      const cleanHex = user.id.replace(/-/g, "").toLowerCase();
+      const adminClient = getSupabaseAdminClient();
+
       const [walletRes, confirmedRes, claimsRes, historyRes] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id).maybeSingle(),
-        supabase.from("cashback_orders").select("*").eq("user_id", user.id).order("ordered_at", { ascending: false }),
+        supabase.from("cashback_orders").select("*").or(`user_id.eq.${user.id},sub_id.ilike.%${cleanHex}%`).order("ordered_at", { ascending: false }),
         supabase.from("cashback_order_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
         supabase.from("withdrawal_requests").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
       ]);
 
-      const wallet = walletRes.data;
+      let wallet = walletRes.data;
+      if (!wallet && adminClient) {
+        try {
+          const { data: aWallet } = await adminClient.from("user_wallets").select("*").eq("user_id", user.id).maybeSingle();
+          if (aWallet) wallet = aWallet;
+        } catch {}
+      }
+
       let mergedWallet: WalletData;
       if (!wallet) {
         mergedWallet = {
@@ -93,7 +103,8 @@ export async function GET(request: NextRequest) {
           bank_account_no: metaAccountNo,
           bank_account_name: metaAccountName,
         };
-        void supabase.from("user_wallets").insert({ user_id: user.id, ...mergedWallet }).then(null, () => {});
+        const clientForInsert = adminClient || supabase;
+        void clientForInsert.from("user_wallets").insert({ user_id: user.id, ...mergedWallet }).then(null, () => {});
       } else {
         mergedWallet = {
           balance: Number(wallet.balance ?? 0),
@@ -105,7 +116,32 @@ export async function GET(request: NextRequest) {
         };
       }
 
-      const verified = confirmedRes.data || [];
+      let verified = confirmedRes.data || [];
+      if (verified.length === 0 && adminClient) {
+        try {
+          const { data: aOrders } = await adminClient
+            .from("cashback_orders")
+            .select("*")
+            .or(`user_id.eq.${user.id},sub_id.ilike.%${cleanHex}%`)
+            .order("ordered_at", { ascending: false });
+          if (aOrders && aOrders.length > 0) verified = aOrders;
+        } catch {}
+      }
+
+      // Tự động tính toán số dư chờ duyệt từ các đơn pending và đồng bộ vào ví nếu thiếu
+      const computedPending = verified
+        .filter((o) => o.status === "pending")
+        .reduce((sum, o) => sum + Number(o.cashback_amount || 0), 0);
+
+      if (computedPending > mergedWallet.pending_balance) {
+        mergedWallet.pending_balance = computedPending;
+        const clientForUpdate = adminClient || supabase;
+        void clientForUpdate
+          .from("user_wallets")
+          .update({ pending_balance: computedPending, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id);
+      }
+
       const keys = new Set(verified.map(order => `${order.platform}:${order.order_id}`));
       const claims = (claimsRes.data || []).filter(claim => !keys.has(`${claim.platform}:${claim.order_id}`)).map(claim => ({
         ...claim, status: "pending", cashback_amount: 0, commission_amount: 0, ordered_at: claim.created_at,

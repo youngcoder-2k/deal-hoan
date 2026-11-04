@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseAdminClient } from "@/lib/auth/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -20,18 +21,31 @@ export async function GET() {
       stats: { totalOrders: 0, totalCashback: 0, pendingCashback: 0 },
     });
   }
+  const cleanHex = user.id.replace(/-/g, "").toLowerCase();
+  const adminClient = getSupabaseAdminClient();
+
   const [confirmed, claims] = await Promise.all([
-    db.from("cashback_orders").select("*").eq("user_id", user.id).order("ordered_at", { ascending: false }),
+    db.from("cashback_orders").select("*").or(`user_id.eq.${user.id},sub_id.ilike.%${cleanHex}%`).order("ordered_at", { ascending: false }),
     db.from("cashback_order_claims").select("*").eq("user_id", user.id).order("created_at", { ascending: false }),
   ]);
-  if (confirmed.error && claims.error) {
+  if (confirmed.error && claims.error && !adminClient) {
     return NextResponse.json({
       success: true,
       orders: [],
       stats: { totalOrders: 0, totalCashback: 0, pendingCashback: 0 },
     });
   }
-  const verified = confirmed.data || [];
+  let verified = confirmed.data || [];
+  if (verified.length === 0 && adminClient) {
+    try {
+      const { data: aOrders } = await adminClient
+        .from("cashback_orders")
+        .select("*")
+        .or(`user_id.eq.${user.id},sub_id.ilike.%${cleanHex}%`)
+        .order("ordered_at", { ascending: false });
+      if (aOrders && aOrders.length > 0) verified = aOrders;
+    } catch {}
+  }
   const keys = new Set(verified.map(order => `${order.platform}:${order.order_id}`));
   const claimOrders = (claims.data || []).filter(claim => !keys.has(`${claim.platform}:${claim.order_id}`)).map(claim => ({
     ...claim, status: "pending", cashback_amount: 0, commission_amount: 0, ordered_at: claim.created_at,
