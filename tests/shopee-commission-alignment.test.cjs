@@ -114,3 +114,14 @@ test('Shopee real CSV export format: distinguishes Trạng thái hoa hồng from
   assert.equal(res.validOrders[0].commissionAmount, 41698, 'Must correctly capture 41.698đ commission instead of 0đ from Trạng thái hoa hồng');
   assert.equal(res.validOrders[0].cashbackAmount, 36694, '88% of 41.698đ must be 36.694đ');
 });
+
+test('Shopee CSV money parser: handles 4-decimal-places and comma decimal representations', () => {
+  const { parseShopeeMoney } = loadTs({})('lib/deals/shopee-import.ts');
+  assert.equal(parseShopeeMoney('41698,0000'), 41698);
+  assert.equal(parseShopeeMoney('41698,00'), 41698);
+  assert.equal(parseShopeeMoney('41.698,00'), 41698);
+  assert.equal(parseShopeeMoney('250.000'), 250000);
+  assert.equal(parseShopeeMoney('250,000'), 250000);
+  assert.equal(parseShopeeMoney('0,00'), 0);
+  assert.equal(parseShopeeMoney('0,0000'), 0);
+});

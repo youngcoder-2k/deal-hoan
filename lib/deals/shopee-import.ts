@@ -35,21 +35,21 @@ export function parseShopeeMoney(raw: unknown): number {
   str = str.replace(/[₫đVNDvndUSD$]/g, "").trim();
   if (!str) return 0;
 
-  // If format is plain integer with comma decimal (e.g. "41698,00" or "41698,5" or "0,00")
-  if (/^\d+,\d{1,2}$/.test(str)) {
-    str = str.replace(",", ".");
-    return Math.max(0, Math.round(parseFloat(str) || 0));
-  }
-
-  // If format is Vietnamese dot separator: 250.000 or 1.250.000
+  // If format is Vietnamese dot separator: 250.000 or 1.250.000 or 41.698,00
   if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(str)) {
     str = str.replace(/\./g, "").replace(",", ".");
     return Math.max(0, Math.round(parseFloat(str) || 0));
   }
 
-  // If format is comma separator: 250,000 or 1,250,000
+  // If format is comma separator: 250,000 or 1,250,000 or 41,698.00
   if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(str)) {
     str = str.replace(/,/g, "");
+    return Math.max(0, Math.round(parseFloat(str) || 0));
+  }
+
+  // If format is plain integer with comma decimal (e.g. "41698,00" or "41698,0000" or "0,00")
+  if (/^\d+,\d+$/.test(str)) {
+    str = str.replace(",", ".");
     return Math.max(0, Math.round(parseFloat(str) || 0));
   }
 
@@ -302,14 +302,8 @@ export function parseShopeeConversionReport(
     const orderComm = headerMap.orderCommission !== undefined ? parseShopeeMoney(row[headerMap.orderCommission]) : 0;
     const anyComm = headerMap.commission !== undefined ? parseShopeeMoney(row[headerMap.commission]) : 0;
 
-    let commissionAmount = 0;
-    if (totalComm > 0) {
-      commissionAmount = totalComm;
-    } else if (prodComm > 0 || orderComm > 0) {
-      commissionAmount = prodComm + orderComm;
-    } else {
-      commissionAmount = anyComm;
-    }
+    // Ưu tiên lấy hoa hồng lớn nhất từ các cột hợp lệ (tránh 0đ từ cột trạng thái hoặc thiếu cột)
+    const commissionAmount = Math.max(totalComm, prodComm + orderComm, anyComm);
 
     // Calculate safe cashback amount with margin guardrail
     const cashbackAmount = Math.round(commissionAmount * safeMultiplier);
