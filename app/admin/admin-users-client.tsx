@@ -1868,7 +1868,7 @@ export default function AdminUsersClient({
                 </div>
               ) : filteredWithdrawals.length === 0 ? (
                 <div className="admin-empty-state">
-                  <div className="empty-icon">🔍</div>
+                  <div className="empty-icon"><MagnifyingGlass size={36} weight="duotone" className="text-stone-400 mx-auto" /></div>
                   <h3>Không tìm thấy yêu cầu rút tiền nào</h3>
                   <p>
                     {withdrawalFilter !== "all" || withdrawalSearch
@@ -1917,8 +1917,9 @@ export default function AdminUsersClient({
                                   #{w.id.slice(0, 8)}
                                 </div>
                                 {w.note && (
-                                  <div className="text-[11px] text-stone-500 mt-1 italic max-w-xs truncate" title={w.note}>
-                                    💬 {w.note}
+                                  <div className="text-[11px] text-stone-500 mt-1 italic max-w-xs truncate flex items-center gap-1" title={w.note}>
+                                    <ChatDots size={12} weight="bold" className="shrink-0 text-stone-400" />
+                                    <span>{w.note}</span>
                                   </div>
                                 )}
                               </td>
@@ -1971,10 +1972,20 @@ export default function AdminUsersClient({
                                     <button
                                       type="button"
                                       onClick={() => handleCopySTK(w.bankAccountNo, w.bankName)}
-                                      className="btn-copy-stk"
+                                      className="btn-copy-stk flex items-center gap-1"
                                       title="Sao chép số tài khoản để dán vào App ngân hàng"
                                     >
-                                      {copiedSTK === w.bankAccountNo ? "✓ Đã copy" : "📋 Copy"}
+                                      {copiedSTK === w.bankAccountNo ? (
+                                        <>
+                                          <Check size={12} weight="bold" />
+                                          <span>Đã copy</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy size={12} weight="bold" />
+                                          <span>Copy</span>
+                                        </>
+                                      )}
                                     </button>
                                   </div>
                                   <div className="bank-holder-name">
@@ -1986,18 +1997,21 @@ export default function AdminUsersClient({
                               {/* Cột 5: Trạng thái */}
                               <td className="text-center">
                                 {w.status === "pending" && (
-                                  <span className="w-badge w-pending">
-                                    ⏳ Chờ duyệt
+                                  <span className="w-badge w-pending inline-flex items-center gap-1">
+                                    <Clock size={11} weight="bold" />
+                                    <span>Chờ duyệt</span>
                                   </span>
                                 )}
                                 {w.status === "completed" && (
-                                  <span className="w-badge w-completed">
-                                    ✅ Đã chi trả
+                                  <span className="w-badge w-completed inline-flex items-center gap-1">
+                                    <CheckCircle size={11} weight="fill" />
+                                    <span>Đã chi trả</span>
                                   </span>
                                 )}
                                 {w.status === "rejected" && (
-                                  <span className="w-badge w-rejected">
-                                    ❌ Bị từ chối
+                                  <span className="w-badge w-rejected inline-flex items-center gap-1">
+                                    <XCircle size={11} weight="fill" />
+                                    <span>Bị từ chối</span>
                                   </span>
                                 )}
                               </td>
@@ -2010,19 +2024,25 @@ export default function AdminUsersClient({
                                       type="button"
                                       disabled={isApproving}
                                       onClick={() => handleApproveWithdrawalDirect(w, "completed")}
-                                      className="btn-approve-direct"
+                                      className="btn-approve-direct flex items-center gap-1"
                                       title="Xác nhận đã chuyển tiền thành công qua ngân hàng"
                                     >
-                                      {isApproving ? "Đang xử lý…" : "✓ Duyệt chi"}
+                                      {isApproving ? "Đang xử lý…" : (
+                                        <>
+                                          <Check size={13} weight="bold" />
+                                          <span>Duyệt chi</span>
+                                        </>
+                                      )}
                                     </button>
                                     <button
                                       type="button"
                                       disabled={isApproving}
                                       onClick={() => handleApproveWithdrawalDirect(w, "rejected")}
-                                      className="btn-reject-direct"
+                                      className="btn-reject-direct flex items-center gap-1"
                                       title="Từ chối lệnh rút tiền và hoàn tiền về ví người dùng"
                                     >
-                                      ✕ Hủy
+                                      <X size={13} weight="bold" />
+                                      <span>Hủy</span>
                                     </button>
                                   </div>
                                 ) : (
