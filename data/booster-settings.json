@@ -1,9 +1,10 @@
 {
+  "userCashbackPercent": 88.0,
+  "safetyMarginPercent": 12.0,
   "boostFactor": 1,
   "maxBonusRate": 1,
   "minBonusRate": 0.3,
-  "safetyMarginPercent": 12,
   "autoScaleWithUsers": false,
-  "updatedAt": "2026-10-10T09:32:20.968Z",
+  "updatedAt": "2026-11-04T15:10:00.000Z",
   "updatedBy": "system"
 }

@@ -110,51 +110,31 @@ function applyLocalBalanceOverrides(usersList: AdminUserItem[]): AdminUserItem[]
 }
 
 const SIMULATION_ITEMS = [
-  { name: "📱 iPhone 16 Pro Max 256GB", category: "Điện thoại Flagship", price: 34990000, hnRate: 1.8 },
-  { name: "💻 Laptop ASUS ROG Gaming", category: "Laptop / Công nghệ", price: 22500000, hnRate: 2.5 },
-  { name: "🫖 Bình đun siêu tốc Lock&Lock", category: "Gia dụng đời sống", price: 420000, hnRate: 3.8 },
-  { name: "🎧 Tai nghe Sony WF-C710N", category: "Âm thanh Mall", price: 1540000, hnRate: 5.0 },
-  { name: "🍼 Sữa bột Meiji cho bé", category: "Mẹ & Bé / Tiêu dùng", price: 520000, hnRate: 6.2 },
-  { name: "👕 Áo thun nam nữ PTLuxury", category: "Thời trang", price: 120000, hnRate: 8.0 },
-  { name: "💄 Son môi lì Black Rouge", category: "Mỹ phẩm làm đẹp", price: 180000, hnRate: 9.5 },
+  { name: "✨ Quà Tặng Bính Ngọ Vàng 24k Huy Thanh", category: "Trang sức / Phụ kiện", price: 989040, shopeeCommission: 80021 },
+  { name: "🪞 Gương Cánh Trượt Pegboard Wood Decor", category: "Nhà cửa & Đời sống", price: 699000, shopeeCommission: 41698 },
+  { name: "🎧 Tai nghe chống ồn Sony WF-C710N", category: "Thiết bị điện tử Mall", price: 1540000, shopeeCommission: 77000 },
+  { name: "🫖 Nồi chiên không dầu điện tử Lock&Lock", category: "Gia dụng đời sống", price: 1890000, shopeeCommission: 66150 },
+  { name: "💄 Son môi lì Black Rouge Air Fit", category: "Mỹ phẩm làm đẹp", price: 180000, shopeeCommission: 16200 },
+  { name: "📱 iPhone 16 Pro Max 256GB Titan Sa Mạc", category: "Điện thoại Flagship", price: 34990000, shopeeCommission: 552842 },
 ];
 
-function calcSimResult(hnRate: number, price: number, settings: CashbackBoosterSettings) {
-  if (settings.boostFactor <= 0) {
-    const cash = Math.round(price * (hnRate / 100));
-    const shopeeEst = hnRate * 1.333;
-    const margin = ((shopeeEst - hnRate) / shopeeEst) * 100;
-    return {
-      bonus: 0,
-      finalRate: hnRate,
-      cashbackAmount: cash,
-      shopeeEst,
-      margin: Math.max(0, margin),
-    };
-  }
-
-  const maxB = settings.maxBonusRate * settings.boostFactor;
-  const minB = settings.minBonusRate * settings.boostFactor;
-  const scale = (maxB - minB) / 0.7;
-  const rawNorm = 1.0 - 0.0165 * Math.pow(Math.max(0, 8.0 - hnRate), 2);
-  const targetBonus = Math.max(minB, Math.min(maxB, minB + (rawNorm - 0.3) * scale));
-
-  const maxSafeBonus = Number((hnRate * 0.20 * Math.min(1.0, settings.boostFactor)).toFixed(2));
-  const floorBonus = Math.min(targetBonus, minB);
-  const effectiveBonus = Math.min(targetBonus, Math.max(floorBonus, maxSafeBonus));
-
-  const finalRate = Number((hnRate + effectiveBonus).toFixed(1));
-  const actualBonus = Number((finalRate - hnRate).toFixed(1));
-  const cash = Math.round(price * (finalRate / 100));
-  const shopeeEst = hnRate * 1.333;
-  const margin = ((shopeeEst - finalRate) / shopeeEst) * 100;
+function calcSimResult(shopeeCommission: number, price: number, settings: CashbackBoosterSettings) {
+  const userPercent = typeof settings.userCashbackPercent === "number" && !isNaN(settings.userCashbackPercent)
+    ? settings.userCashbackPercent
+    : (100 - (settings.safetyMarginPercent ?? 12.0));
+  const userShare = Math.max(0.5, Math.min(0.98, userPercent / 100));
+  const userCashback = Math.round(shopeeCommission * userShare);
+  const dealHoanProfit = shopeeCommission - userCashback;
+  const userRateOnPrice = price > 0 ? Number(((userCashback / price) * 100).toFixed(1)) : 0;
+  const profitPercent = Number((100 - userPercent).toFixed(1));
 
   return {
-    bonus: actualBonus,
-    finalRate,
-    cashbackAmount: cash,
-    shopeeEst,
-    margin: Math.max(0, margin),
+    shopeeCommission,
+    userCashback,
+    dealHoanProfit,
+    userRateOnPrice,
+    userPercent,
+    profitPercent,
   };
 }
 
@@ -1350,7 +1330,7 @@ export default function AdminUsersClient({
 
           <span>Tỷ lệ hoàn tiền</span>
           <span className="tab-pill tab-pill-boost">
-            {boosterSettings.boostFactor > 0 ? `${boosterSettings.boostFactor.toFixed(2)}x Boost` : "Tắt thưởng"}
+            {(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}% Hoàn
           </span>
         </button>
         <button
@@ -2009,14 +1989,13 @@ export default function AdminUsersClient({
 
         {activeTab === "settings" && (
           <section className="admin-settings-container">
-            {/* Card 1: Bảng Điều Khiển Cấu Hình */}
+            {/* Card 1: Cấu hình tỷ lệ hoàn tiền duy nhất */}
             <div className="admin-settings-card">
               <div className="admin-settings-header">
                 <div>
-                  <h3>⚙️ Cấu Hình Tỷ Lệ Hoàn Tiền (Smart Cashback Booster)</h3>
+                  <h3>⚙️ Cấu Hình % Hoàn Tiền Cho Khách</h3>
                   <p>
-                    Điều chỉnh mức hoàn tiền ưu đãi cạnh tranh của DealHoàn so với thị trường (Hoàn Ngay).
-                    Thuật toán Parabol đảm bảo luôn cao hơn đối thủ nhưng kiểm soát an toàn để DealHoàn luôn có lãi ròng.
+                    Chỉ cần 1 thông số duy nhất: tỷ lệ % tổng hoa hồng Shopee hoàn lại cho khách hàng. Phần còn lại hệ thống tự động tính làm lợi nhuận của DealHoàn.
                   </p>
                 </div>
                 <div className="admin-security-badge">
@@ -2024,203 +2003,132 @@ export default function AdminUsersClient({
                 </div>
               </div>
 
-              {/* Box 1: Hệ số Boost Factor Slider */}
-              <div className="settings-section-box">
-                <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                  <label className="text-sm font-bold text-stone-800">
-                    Hệ số Kích cầu (Boost Factor):
+              {/* 2 Card so sánh song song: % Hoàn khách & % Lợi nhuận DealHoàn */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                {/* Cột 1: % Hoàn tiền cho khách (Có ô nhập duy nhất) */}
+                <div className="p-5 rounded-2xl border-2 border-orange-500 bg-orange-50/40 relative shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-orange-700 bg-orange-100/80 px-2.5 py-1 rounded-full">
+                      🎁 Thông số cấu hình chính
+                    </span>
+                    <span className="text-xs text-stone-500 font-medium">Mặc định: 88.0%</span>
+                  </div>
+                  <label className="block text-base font-extrabold text-stone-900 mb-1">
+                    % Hoàn tiền cho khách:
                   </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xl font-black text-orange-600 bg-orange-50 border border-orange-200 px-3 py-1 rounded-xl">
-                      {boosterSettings.boostFactor.toFixed(2)}x
-                    </span>
-                    <span className="text-xs text-stone-500 font-medium">
-                      ({boosterSettings.boostFactor === 0 ? "Đang tắt thưởng thêm" : boosterSettings.boostFactor >= 1.0 ? "Thưởng tối đa" : `Thưởng ${Math.round(boosterSettings.boostFactor * 100)}%`})
-                    </span>
-                  </div>
-                </div>
+                  <p className="text-xs text-stone-500 mb-4 leading-relaxed">
+                    Tỷ lệ tổng hoa hồng Shopee trả về mà khách hàng nhận được khi mua đơn thành công. Hỗ trợ 1 số thập phân (ví dụ: 86.8%).
+                  </p>
 
-                <input
-                  type="range"
-                  min="0"
-                  max="1.2"
-                  step="0.05"
-                  value={boosterSettings.boostFactor}
-                  onChange={(e) =>
-                    setBoosterSettings((prev) => ({
-                      ...prev,
-                      boostFactor: parseFloat(e.target.value),
-                    }))
-                  }
-                  className="w-full accent-orange-600 cursor-pointer h-2 bg-stone-200 rounded-lg"
-                />
-
-                <div className="flex justify-between text-xs text-stone-500 mt-2 mb-4">
-                  <span>0.0x (Tắt thưởng - Tối đa lợi nhuận)</span>
-                  <span>0.6x (Giảm dần - Cân bằng)</span>
-                  <span>1.0x (Kích cầu tối đa)</span>
-                  <span>1.2x (Siêu ưu đãi)</span>
-                </div>
-
-                {/* 3 Preset Gợi Ý Theo Giai Đoạn Kinh Doanh */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-stone-200/80">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setBoosterSettings((prev) => ({
-                        ...prev,
-                        boostFactor: 1.0,
-                        maxBonusRate: 1.0,
-                        minBonusRate: 0.3,
-                        safetyMarginPercent: 12.0,
-                      }))
-                    }
-                    className={`preset-stage-btn ${boosterSettings.boostFactor === 1.0 ? "active" : ""}`}
-                  >
-                    <div className="preset-title">🚀 Giai đoạn 1: Kích cầu tối đa (1.0x)</div>
-                    <div className="preset-desc">
-                      DealHoàn hoàn cao hơn (+0.4% → +1.0%). Lãi giữ lại 12% – 15%. Dùng khi cần hút user từ Hoàn Ngay.
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="50.0"
+                        max="98.0"
+                        value={boosterSettings.userCashbackPercent ?? 88.0}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          const safeVal = isNaN(val) ? 88.0 : Math.max(50.0, Math.min(98.0, Number(val.toFixed(1))));
+                          setBoosterSettings((prev) => ({
+                            ...prev,
+                            userCashbackPercent: safeVal,
+                            safetyMarginPercent: Number((100 - safeVal).toFixed(1)),
+                          }));
+                        }}
+                        className="w-full text-3xl font-black text-orange-600 bg-white border-2 border-orange-300 rounded-xl px-4 py-2.5 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-100 transition-all text-left"
+                      />
+                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xl font-black text-orange-500 pointer-events-none">
+                        %
+                      </span>
                     </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setBoosterSettings((prev) => ({
-                        ...prev,
-                        boostFactor: 0.6,
-                        maxBonusRate: 0.6,
-                        minBonusRate: 0.2,
-                        safetyMarginPercent: 18.0,
-                      }))
-                    }
-                    className={`preset-stage-btn ${boosterSettings.boostFactor === 0.6 ? "active" : ""}`}
-                  >
-                    <div className="preset-title">⚖️ Giai đoạn 2: Giảm dần tối ưu (0.6x)</div>
-                    <div className="preset-desc">
-                      Thưởng nhẹ (+0.2% → +0.6%). Lãi giữ lại tăng lên 18% – 22%. Dùng khi đã có lượng user ổn định.
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setBoosterSettings((prev) => ({
-                        ...prev,
-                        boostFactor: 0.0,
-                        maxBonusRate: 0.0,
-                        minBonusRate: 0.0,
-                        safetyMarginPercent: 25.0,
-                      }))
-                    }
-                    className={`preset-stage-btn ${boosterSettings.boostFactor === 0.0 ? "active" : ""}`}
-                  >
-                    <div className="preset-title">💰 Giai đoạn 3: Bão hòa tối đa lãi (0.0x)</div>
-                    <div className="preset-desc">
-                      Tắt thưởng thêm, hoàn theo mức thị trường. DealHoàn giữ lại 25% – 30% hoa hồng sàn.
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Box 2: Thông số Nâng Cao */}
-              <div className="settings-advanced-grid">
-                <div className="setting-field-card">
-                  <div className="field-label">
-                    <span>Mức thưởng tối đa (Max Bonus):</span>
-                    <small>Áp dụng cho ngành hoa hồng cao (thời trang, mỹ phẩm)</small>
                   </div>
-                  <div className="input-unit-wrap">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="0.1"
-                      max="3.0"
-                      value={boosterSettings.maxBonusRate}
-                      onChange={(e) =>
-                        setBoosterSettings((prev) => ({
-                          ...prev,
-                          maxBonusRate: Math.max(0.1, parseFloat(e.target.value) || 0.1),
-                        }))
-                      }
-                      className="admin-field-input"
-                    />
-                    <span className="unit">%</span>
+
+                  {/* Nút bấm nhanh Presets */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs text-stone-500 font-medium mr-1">Chọn nhanh:</span>
+                    {[85.0, 86.8, 88.0, 90.0, 92.0].map((preset) => {
+                      const current = boosterSettings.userCashbackPercent ?? 88.0;
+                      const isActive = Math.abs(current - preset) < 0.05;
+                      return (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() =>
+                            setBoosterSettings((prev) => ({
+                              ...prev,
+                              userCashbackPercent: preset,
+                              safetyMarginPercent: Number((100 - preset).toFixed(1)),
+                            }))
+                          }
+                          className={`text-xs px-2.5 py-1 rounded-lg font-bold transition-all border ${
+                            isActive
+                              ? "bg-orange-600 text-white border-orange-600 shadow-sm"
+                              : "bg-white text-stone-700 border-stone-200 hover:border-orange-300 hover:bg-orange-50/50"
+                          }`}
+                        >
+                          {preset.toFixed(1)}%{preset === 88.0 ? " (Chuẩn)" : ""}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <div className="setting-field-card">
-                  <div className="field-label">
-                    <span>Mức thưởng tối thiểu (Min Bonus):</span>
-                    <small>Áp dụng cho ngành đồ điện tử / iPhone / laptop</small>
-                  </div>
-                  <div className="input-unit-wrap">
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0.0"
-                      max="1.0"
-                      value={boosterSettings.minBonusRate}
-                      onChange={(e) =>
-                        setBoosterSettings((prev) => ({
-                          ...prev,
-                          minBonusRate: Math.max(0, parseFloat(e.target.value) || 0),
-                        }))
-                      }
-                      className="admin-field-input"
-                    />
-                    <span className="unit">%</span>
-                  </div>
-                </div>
-
-                <div className="setting-field-card">
-                  <div className="field-label">
-                    <span>Biên lợi nhuận giữ lại tối thiểu:</span>
-                    <small>DealHoàn luôn giữ lại % hoa hồng sàn để đảm bảo không bù lỗ</small>
-                  </div>
-                  <div className="input-unit-wrap">
-                    <input
-                      type="number"
-                      step="1"
-                      min="5"
-                      max="40"
-                      value={boosterSettings.safetyMarginPercent}
-                      onChange={(e) =>
-                        setBoosterSettings((prev) => ({
-                          ...prev,
-                          safetyMarginPercent: Math.max(5, parseFloat(e.target.value) || 5),
-                        }))
-                      }
-                      className="admin-field-input"
-                    />
-                    <span className="unit">%</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Box 3: Tự động hạ dần theo User */}
-              <div className="settings-toggle-box">
-                <label className="flex items-center gap-3 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={boosterSettings.autoScaleWithUsers}
-                    onChange={(e) =>
-                      setBoosterSettings((prev) => ({
-                        ...prev,
-                        autoScaleWithUsers: e.target.checked,
-                      }))
-                    }
-                    className="w-5 h-5 accent-orange-600 rounded cursor-pointer"
-                  />
+                {/* Cột 2: % Lợi nhuận DealHoàn giữ lại (Tự động tính) */}
+                <div className="p-5 rounded-2xl border-2 border-emerald-300 bg-emerald-50/40 relative shadow-sm flex flex-col justify-between">
                   <div>
-                    <span className="font-bold text-stone-800 text-sm">
-                      Tự động hạ dần mức thưởng theo số lượng người dùng (Auto-scale by User Count)
-                    </span>
-                    <p className="text-xs text-stone-500 m-0">
-                      Khi hệ thống đạt trên 5.000 user, hệ thống sẽ tự động điều chỉnh hệ số boost giảm dần để tối ưu hóa biên lợi nhuận.
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/90 px-2.5 py-1 rounded-full">
+                        ✨ Tự động tính toán
+                      </span>
+                      <span className="text-xs text-stone-500 font-medium">= 100% - % hoàn khách</span>
+                    </div>
+                    <div className="text-base font-extrabold text-stone-900 mb-1">
+                      Lợi nhuận DealHoàn giữ lại:
+                    </div>
+                    <p className="text-xs text-stone-500 mb-4 leading-relaxed">
+                      Phần hoa hồng hệ thống tự động giữ lại để vận hành nền tảng và tạo biên lợi nhuận ròng.
                     </p>
                   </div>
-                </label>
+
+                  <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 py-2.5 mb-4 flex items-center justify-between">
+                    <span className="text-3xl font-black text-emerald-700">
+                      {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
+                    </span>
+                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">
+                      Lợi nhuận ròng
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-emerald-800/80 m-0 leading-relaxed font-medium">
+                    💡 Khách nhận <b>{(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%</b> thì DealHoàn sẽ giữ lại đúng <b>{(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%</b> tổng hoa hồng Shopee chi trả.
+                  </p>
+                </div>
+              </div>
+
+              {/* Thanh hiển thị phân bổ tổng thể (Visual Split Bar) */}
+              <div className="mb-6 p-4 bg-stone-50 border border-stone-200 rounded-xl">
+                <div className="flex justify-between items-center text-xs font-bold mb-2">
+                  <span className="text-orange-700 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span>
+                    Khách nhận: {(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%
+                  </span>
+                  <span className="text-emerald-700 flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+                    DealHoàn giữ: {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="w-full h-3 bg-stone-200 rounded-full overflow-hidden flex">
+                  <div
+                    style={{ width: `${boosterSettings.userCashbackPercent ?? 88.0}%` }}
+                    className="h-full bg-orange-500 transition-all duration-300"
+                  ></div>
+                  <div
+                    style={{ width: `${100 - (boosterSettings.userCashbackPercent ?? 88.0)}%` }}
+                    className="h-full bg-emerald-500 transition-all duration-300"
+                  ></div>
+                </div>
               </div>
 
               {/* Nút Lưu Cấu Hình */}
@@ -2250,53 +2158,47 @@ export default function AdminUsersClient({
                 <div>
                   <h3>📊 Mô Phỏng Kết Quả Thực Tế (Live Simulator)</h3>
                   <p>
-                    Bảng tính tự động áp dụng thông số trên để bạn nhìn thấy ngay % khách nhận được và % lợi nhuận DealHoàn giữ lại:
+                    Bảng tính tự động áp dụng tỷ lệ <b>{(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%</b> trên để bạn nhìn thấy ngay số tiền khách nhận được và tiền lời DealHoàn giữ lại cho các đơn mẫu:
                   </p>
                 </div>
-                <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-3 py-1 rounded-full border border-emerald-200">
-                  Hệ số: {boosterSettings.boostFactor.toFixed(2)}x
+                <span className="text-xs bg-orange-100 text-orange-800 font-bold px-3 py-1.5 rounded-full border border-orange-200">
+                  Tỷ lệ chia: {(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}% / {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
                 </span>
               </div>
 
               <div className="table-responsive">
-                <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
+                <table className="admin-data-table" aria-label="Bảng mô phỏng kết quả">
                   <thead>
                     <tr>
                       <th>Sản phẩm mẫu</th>
                       <th>Ngành hàng</th>
                       <th className="text-right">Giá niêm yết</th>
-                      <th className="text-center">Hoàn Ngay (%)</th>
-                      <th className="text-center">DealHoàn Thưởng</th>
-                      <th className="text-center">DealHoàn Hoàn (%)</th>
+                      <th className="text-right">Hoa hồng Shopee trả</th>
                       <th className="text-right">Tiền hoàn khách nhận</th>
                       <th className="text-right">Lợi nhuận DealHoàn</th>
-                      <th className="text-center">Đánh giá</th>
+                      <th className="text-center">Tỷ lệ hoàn trên đơn</th>
                     </tr>
                   </thead>
                   <tbody>
                     {SIMULATION_ITEMS.map((item, idx) => {
-                      const res = calcSimResult(item.hnRate, item.price, boosterSettings);
+                      const res = calcSimResult(item.shopeeCommission, item.price, boosterSettings);
                       return (
                         <tr key={idx} className="admin-table-row">
                           <td className="font-bold text-stone-900">{item.name}</td>
                           <td className="text-stone-500 text-xs">{item.category}</td>
-                          <td className="text-right font-medium">{formatVnd(item.price)}</td>
-                          <td className="text-center text-stone-500">{item.hnRate}%</td>
-                          <td className="text-center font-bold text-orange-600">
-                            {res.bonus > 0 ? `+${res.bonus}%` : "0%"}
+                          <td className="text-right font-medium text-stone-700">{formatVnd(item.price)}</td>
+                          <td className="text-right font-bold text-stone-900 bg-stone-50">
+                            {formatVnd(item.shopeeCommission)}
                           </td>
-                          <td className="text-center font-black text-stone-900 bg-orange-50/50">
-                            {res.finalRate}%
+                          <td className="text-right font-black text-orange-600 bg-orange-50/50">
+                            {formatVnd(res.userCashback)}
                           </td>
-                          <td className="text-right font-bold text-emerald-700">
-                            {formatVnd(res.cashbackAmount)}
+                          <td className="text-right font-bold text-emerald-700 bg-emerald-50/40">
+                            {formatVnd(res.dealHoanProfit)}
                           </td>
-                          <td className="text-right font-black text-emerald-600">
-                            {res.margin.toFixed(1)}%
-                          </td>
-                          <td className="text-center">
-                            <span className="status-badge badge-active text-[11px]">
-                              {res.margin >= 10 ? "✅ An toàn" : "⚠️ Cận biên"}
+                          <td className="text-center font-bold text-stone-800">
+                            <span className="inline-block bg-orange-100 text-orange-800 px-2 py-0.5 rounded text-xs">
+                              {res.userRateOnPrice}%
                             </span>
                           </td>
                         </tr>

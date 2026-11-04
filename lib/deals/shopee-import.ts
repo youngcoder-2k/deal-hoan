@@ -106,7 +106,7 @@ export function parseCsvRows(text: string): string[][] {
  */
 export function parseShopeeConversionReport(
   csvContent: string,
-  options?: { safetyMarginPercent?: number }
+  options?: { safetyMarginPercent?: number; userCashbackPercent?: number }
 ): ParseReportResult {
   const warnings: string[] = [];
   const rows = parseCsvRows(csvContent);
@@ -225,8 +225,10 @@ export function parseShopeeConversionReport(
     }
   });
 
-  const margin = options?.safetyMarginPercent ?? DEFAULT_BOOSTER_SETTINGS.safetyMarginPercent;
-  const safeMultiplier = Math.max(0.6, (100 - margin) / 100);
+  const userPercent = typeof options?.userCashbackPercent === "number" && !isNaN(options.userCashbackPercent)
+    ? options.userCashbackPercent
+    : (100 - (options?.safetyMarginPercent ?? DEFAULT_BOOSTER_SETTINGS.safetyMarginPercent));
+  const safeMultiplier = Math.max(0.5, Math.min(0.98, userPercent / 100));
 
   const validOrders: ParsedShopeeOrder[] = [];
   const unmatchedOrders: ParsedShopeeOrder[] = [];

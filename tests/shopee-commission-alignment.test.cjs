@@ -68,3 +68,34 @@ ORD002,dh87654321432143214321432109876cba,26643750654,41.698,completed`;
   assert.equal(report.validOrders[1].commissionAmount, 41698);
   assert.equal(report.validOrders[1].cashbackAmount, 36694, 'Wallet credit for Mirror must match 36.694đ');
 });
+
+test('Single config parameter: userCashbackPercent supports 1 decimal place (e.g. 86.8%) and auto-calculates profit', () => {
+  const { boostCashbackRate, normalizeBoosterSettings } = loadTs({})('lib/deals/cashback-booster.ts');
+  const { parseShopeeConversionReport } = loadTs({})('lib/deals/shopee-import.ts');
+
+  // 1. normalizeBoosterSettings
+  const normalized = normalizeBoosterSettings({ userCashbackPercent: 86.8 });
+  assert.equal(normalized.userCashbackPercent, 86.8, 'User percent must be 86.8%');
+  assert.equal(normalized.safetyMarginPercent, 13.2, 'DealHoàn profit must be 13.2%');
+
+  // 2. boostCashbackRate with 86.8%
+  const huyThanhGross = 80021;
+  const price = 989040;
+  const boosted = boostCashbackRate(
+    Number(((huyThanhGross / price) * 100).toFixed(2)),
+    price,
+    huyThanhGross,
+    { userCashbackPercent: 86.8 }
+  );
+
+  const expectedUserCashback = Math.round(huyThanhGross * 0.868); // 69.458đ
+  assert.equal(boosted.cashbackAmount, expectedUserCashback, 'User cashback must be exactly 69.458đ (86.8% of 80.021đ)');
+  const dealHoanProfit = huyThanhGross - boosted.cashbackAmount;
+  assert.equal(dealHoanProfit, 10563, 'DealHoàn profit must be 10.563đ');
+
+  // 3. parseShopeeConversionReport with userCashbackPercent: 86.8
+  const csv = `Order ID,Sub ID,Mã Sản Phẩm,Hoa Hồng,Trạng Thái
+ORD001,dh12345678123412341234123456789abc,56054818987,80.021,completed`;
+  const report = parseShopeeConversionReport(csv, { userCashbackPercent: 86.8 });
+  assert.equal(report.validOrders[0].cashbackAmount, 69458, 'CSV import must honor userCashbackPercent 86.8%');
+});

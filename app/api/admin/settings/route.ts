@@ -48,18 +48,19 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json().catch(() => ({}));
-    const boostFactor = typeof body.boostFactor === "number" ? Math.max(0, Math.min(2.0, body.boostFactor)) : undefined;
-    const maxBonusRate = typeof body.maxBonusRate === "number" ? Math.max(0.1, Math.min(3.0, body.maxBonusRate)) : undefined;
-    const minBonusRate = typeof body.minBonusRate === "number" ? Math.max(0.0, Math.min(1.0, body.minBonusRate)) : undefined;
-    const safetyMarginPercent = typeof body.safetyMarginPercent === "number" ? Math.max(5.0, Math.min(40.0, body.safetyMarginPercent)) : undefined;
-    const autoScaleWithUsers = typeof body.autoScaleWithUsers === "boolean" ? body.autoScaleWithUsers : undefined;
+    let userCashbackPercent: number | undefined = undefined;
+
+    if (typeof body.userCashbackPercent === "number" && !isNaN(body.userCashbackPercent)) {
+      userCashbackPercent = Math.max(50.0, Math.min(98.0, Number(body.userCashbackPercent.toFixed(1))));
+    } else if (typeof body.safetyMarginPercent === "number" && !isNaN(body.safetyMarginPercent)) {
+      userCashbackPercent = Math.max(50.0, Math.min(98.0, Number((100 - body.safetyMarginPercent).toFixed(1))));
+    }
 
     const partialSettings: Partial<CashbackBoosterSettings> = {};
-    if (boostFactor !== undefined) partialSettings.boostFactor = boostFactor;
-    if (maxBonusRate !== undefined) partialSettings.maxBonusRate = maxBonusRate;
-    if (minBonusRate !== undefined) partialSettings.minBonusRate = minBonusRate;
-    if (safetyMarginPercent !== undefined) partialSettings.safetyMarginPercent = safetyMarginPercent;
-    if (autoScaleWithUsers !== undefined) partialSettings.autoScaleWithUsers = autoScaleWithUsers;
+    if (userCashbackPercent !== undefined) {
+      partialSettings.userCashbackPercent = userCashbackPercent;
+      partialSettings.safetyMarginPercent = Number((100 - userCashbackPercent).toFixed(1));
+    }
 
     const userEmail = auth.user?.email || "admin";
     const updated = await updateBoosterSettings(partialSettings, userEmail);

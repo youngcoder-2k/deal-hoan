@@ -4,20 +4,24 @@
  */
 
 export interface CashbackBoosterSettings {
+  /** % hoàn tiền cho khách (mặc định 88.0%, hỗ trợ 1 số thập phân vd: 86.8%) */
+  userCashbackPercent: number;
+  /** % lợi nhuận DealHoàn giữ lại (tự tính: 100 - userCashbackPercent, vd: 12.0%) */
+  safetyMarginPercent: number;
   boostFactor: number;
   maxBonusRate: number;
   minBonusRate: number;
-  safetyMarginPercent: number;
   autoScaleWithUsers: boolean;
   updatedAt?: string;
   updatedBy?: string;
 }
 
 export const DEFAULT_BOOSTER_SETTINGS: CashbackBoosterSettings = {
+  userCashbackPercent: 88.0,
+  safetyMarginPercent: 12.0,
   boostFactor: 1.0,
   maxBonusRate: 1.0,
   minBonusRate: 0.3,
-  safetyMarginPercent: 12.0,
   autoScaleWithUsers: false,
   updatedAt: new Date().toISOString(),
   updatedBy: "system",

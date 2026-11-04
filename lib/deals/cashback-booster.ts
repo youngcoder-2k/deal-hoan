@@ -16,24 +16,47 @@ import path from "path";
  */
 
 export interface CashbackBoosterSettings {
+  /** % hoàn tiền cho khách (mặc định 88.0%, hỗ trợ 1 số thập phân vd: 86.8%) */
+  userCashbackPercent: number;
+  /** % lợi nhuận DealHoàn giữ lại (tự tính: 100 - userCashbackPercent, vd: 12.0%) */
+  safetyMarginPercent: number;
   boostFactor: number;
   maxBonusRate: number;
   minBonusRate: number;
-  safetyMarginPercent: number;
   autoScaleWithUsers: boolean;
   updatedAt?: string;
   updatedBy?: string;
 }
 
 export const DEFAULT_BOOSTER_SETTINGS: CashbackBoosterSettings = {
+  userCashbackPercent: 88.0,
+  safetyMarginPercent: 12.0,
   boostFactor: 1.0,
   maxBonusRate: 1.0,
   minBonusRate: 0.3,
-  safetyMarginPercent: 12.0,
   autoScaleWithUsers: false,
   updatedAt: new Date().toISOString(),
   updatedBy: "system",
 };
+
+export function normalizeBoosterSettings(raw?: Partial<CashbackBoosterSettings>): CashbackBoosterSettings {
+  if (!raw) return { ...DEFAULT_BOOSTER_SETTINGS };
+  let userPercent = typeof raw.userCashbackPercent === "number" && !isNaN(raw.userCashbackPercent)
+    ? Number(raw.userCashbackPercent.toFixed(1))
+    : typeof raw.safetyMarginPercent === "number" && !isNaN(raw.safetyMarginPercent)
+      ? Number((100 - raw.safetyMarginPercent).toFixed(1))
+      : 88.0;
+
+  userPercent = Math.max(50.0, Math.min(98.0, userPercent));
+  const profitMargin = Number((100 - userPercent).toFixed(1));
+
+  return {
+    ...DEFAULT_BOOSTER_SETTINGS,
+    ...raw,
+    userCashbackPercent: userPercent,
+    safetyMarginPercent: profitMargin,
+  };
+}
 
 // In-memory cache for fast read in hot API paths
 let cachedSettings: CashbackBoosterSettings = { ...DEFAULT_BOOSTER_SETTINGS };
@@ -46,10 +69,7 @@ function loadSettingsFromFile(): CashbackBoosterSettings {
     if (fs.existsSync(SETTINGS_FILE_PATH)) {
       const raw = fs.readFileSync(SETTINGS_FILE_PATH, "utf-8");
       const parsed = JSON.parse(raw);
-      return {
-        ...DEFAULT_BOOSTER_SETTINGS,
-        ...parsed,
-      };
+      return normalizeBoosterSettings(parsed);
     }
   } catch (err) {
     console.warn("Failed to read booster-settings.json, using defaults:", err);
@@ -95,12 +115,12 @@ export async function updateBoosterSettings(
   updatedBy = "admin"
 ): Promise<CashbackBoosterSettings> {
   const current = getBoosterSettingsSync();
-  const next: CashbackBoosterSettings = {
+  const next = normalizeBoosterSettings({
     ...current,
     ...partial,
     updatedAt: new Date().toISOString(),
     updatedBy,
-  };
+  });
 
   cachedSettings = next;
   isInitialized = true;
@@ -156,23 +176,15 @@ export function boostCashbackRate(
   const settings = customSettings || getBoosterSettingsSync();
   const baseRate = Number(rawHoanNgayRate.toFixed(2));
   
-  // Tỷ lệ nền tảng trích giữ lại (mặc định 12%), người dùng nhận 88%
-  const safetyMargin = Math.max(0, Math.min(50, settings.safetyMarginPercent ?? 12));
-  const baseUserShare = (100 - safetyMargin) / 100;
-
-  // Nếu có hệ số thưởng kích cầu, tăng nhẹ tỷ lệ người dùng nhận (giảm phần nền tảng giữ)
-  const bonusShare = settings.boostFactor > 0
-    ? Math.min(settings.maxBonusRate, calculateParabolaBonus(
-        baseRate,
-        settings.maxBonusRate * settings.boostFactor,
-        settings.minBonusRate * settings.boostFactor
-      ))
-    : 0;
-  const effectiveUserShare = Math.min(0.95, baseUserShare + (bonusShare / 100));
+  // Tỷ lệ % hoàn tiền cho người dùng (mặc định 88.0%, hỗ trợ 1 số thập phân vd: 86.8%)
+  const userSharePercent = typeof settings.userCashbackPercent === "number" && !isNaN(settings.userCashbackPercent)
+    ? settings.userCashbackPercent
+    : (100 - (settings.safetyMarginPercent ?? 12.0));
+  const baseUserShare = Math.max(0.5, Math.min(0.98, userSharePercent / 100));
 
   if (!Number.isFinite(baseRate) || baseRate <= 0) {
     const defaultGrossRate = 5.0;
-    const defaultUserRate = Number((defaultGrossRate * effectiveUserShare).toFixed(1));
+    const defaultUserRate = Number((defaultGrossRate * baseUserShare).toFixed(1));
     const amount = productPrice > 0 ? Math.round(productPrice * (defaultUserRate / 100)) : 0;
     return {
       baseRate: defaultGrossRate,
