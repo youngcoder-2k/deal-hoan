@@ -35,6 +35,12 @@ export function parseShopeeMoney(raw: unknown): number {
   str = str.replace(/[₫đVNDvndUSD$]/g, "").trim();
   if (!str) return 0;
 
+  // If format is plain integer with comma decimal (e.g. "41698,00" or "41698,5" or "0,00")
+  if (/^\d+,\d{1,2}$/.test(str)) {
+    str = str.replace(",", ".");
+    return Math.max(0, Math.round(parseFloat(str) || 0));
+  }
+
   // If format is Vietnamese dot separator: 250.000 or 1.250.000
   if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(str)) {
     str = str.replace(/\./g, "").replace(",", ".");
@@ -193,24 +199,62 @@ export function parseShopeeConversionReport(
       if (!("orderValue" in headerMap)) headerMap.orderValue = idx;
     }
 
-    // Commission
-    if (
-      h.includes("hoa hồng") ||
-      h.includes("thù lao") ||
-      h.includes("commission") ||
-      h.includes("pub_commission") ||
-      h.includes("thu nhập")
-    ) {
-      if (!("commission" in headerMap)) headerMap.commission = idx;
+    // Commission (Loại bỏ các cột trạng thái/tỷ lệ để tránh lấy nhầm 0đ)
+    const isExcludedComm =
+      h.includes("trạng thái") ||
+      h.includes("tình trạng") ||
+      h.includes("status") ||
+      h.includes("tỷ lệ") ||
+      h.includes("rate") ||
+      h.includes("%") ||
+      h.includes("loại") ||
+      h.includes("type") ||
+      h.includes("chính sách");
+
+    if (!isExcludedComm) {
+      if (
+        h.includes("tổng hoa hồng") ||
+        h.includes("total commission") ||
+        h.includes("hoa hồng thực nhận") ||
+        h.includes("hoa hồng ước tính") ||
+        h.includes("estimated commission") ||
+        h.includes("pub_commission") ||
+        h.includes("pub commission")
+      ) {
+        if (!("totalCommission" in headerMap)) headerMap.totalCommission = idx;
+      } else if (
+        h.includes("hoa hồng sản phẩm") ||
+        h.includes("product commission") ||
+        h.includes("item commission")
+      ) {
+        if (!("productCommission" in headerMap)) headerMap.productCommission = idx;
+      } else if (
+        h.includes("hoa hồng đơn hàng") ||
+        h.includes("order commission")
+      ) {
+        if (!("orderCommission" in headerMap)) headerMap.orderCommission = idx;
+      } else if (
+        h.includes("hoa hồng") ||
+        h.includes("thù lao") ||
+        h.includes("commission") ||
+        h.includes("thu nhập")
+      ) {
+        if (!("commission" in headerMap)) headerMap.commission = idx;
+      }
     }
 
     // Status
     if (
+      h.includes("trạng thái đơn hàng") ||
+      h.includes("tình trạng đơn hàng") ||
+      h.includes("order status") ||
       h.includes("trạng thái") ||
       h.includes("status") ||
       h.includes("tình trạng")
     ) {
-      if (!("status" in headerMap)) headerMap.status = idx;
+      if (h.includes("đơn hàng") || h.includes("order") || !("status" in headerMap)) {
+        headerMap.status = idx;
+      }
     }
 
     // Order time
@@ -243,7 +287,6 @@ export function parseShopeeConversionReport(
     const rawSubId = headerMap.subId !== undefined ? row[headerMap.subId] : "";
     const rawProductName = headerMap.productName !== undefined ? row[headerMap.productName] : "Sản phẩm Shopee";
     const rawOrderValue = headerMap.orderValue !== undefined ? row[headerMap.orderValue] : 0;
-    const rawCommission = headerMap.commission !== undefined ? row[headerMap.commission] : 0;
     const rawStatus = headerMap.status !== undefined ? row[headerMap.status] : "pending";
     const rawOrderedAt = headerMap.orderedAt !== undefined ? row[headerMap.orderedAt] : "";
 
@@ -252,7 +295,21 @@ export function parseShopeeConversionReport(
 
     const subId = String(rawSubId || "").trim();
     const orderValue = parseShopeeMoney(rawOrderValue);
-    const commissionAmount = parseShopeeMoney(rawCommission);
+
+    // Ưu tiên: tổng hoa hồng > (hoa hồng sản phẩm + hoa hồng đơn hàng) > hoa hồng chung
+    const totalComm = headerMap.totalCommission !== undefined ? parseShopeeMoney(row[headerMap.totalCommission]) : 0;
+    const prodComm = headerMap.productCommission !== undefined ? parseShopeeMoney(row[headerMap.productCommission]) : 0;
+    const orderComm = headerMap.orderCommission !== undefined ? parseShopeeMoney(row[headerMap.orderCommission]) : 0;
+    const anyComm = headerMap.commission !== undefined ? parseShopeeMoney(row[headerMap.commission]) : 0;
+
+    let commissionAmount = 0;
+    if (totalComm > 0) {
+      commissionAmount = totalComm;
+    } else if (prodComm > 0 || orderComm > 0) {
+      commissionAmount = prodComm + orderComm;
+    } else {
+      commissionAmount = anyComm;
+    }
 
     // Calculate safe cashback amount with margin guardrail
     const cashbackAmount = Math.round(commissionAmount * safeMultiplier);

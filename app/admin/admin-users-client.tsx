@@ -1352,10 +1352,9 @@ export default function AdminUsersClient({
             loadShopeeSyncConfig();
           }}
         >
-
-          <span>Đồng bộ Shopee</span>
+          <span>Nạp đơn Shopee</span>
           <span className="tab-pill">
-            {autoSyncEnabled ? "🟢 15p/lần" : "⚪ Tắt"}
+            CSV
           </span>
         </button>
       </div>
@@ -2097,134 +2096,46 @@ export default function AdminUsersClient({
 
         {(activeTab === "sync" || activeTab === "import") && (
           <section className="admin-import-container flex flex-col gap-5">
-            {/* 1. THẺ ĐIỀU KHIỂN CHÍNH: ĐỒNG BỘ ĐƠN HÀNG SHOPEE */}
-            <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-5">
-              {/* Top Row: Tiêu đề + Trạng thái chạy tự động */}
-              <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-stone-100">
+            {/* 1. THẺ NẠP ĐƠN HÀNG SHOPEE QUA CSV */}
+            <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex items-center justify-between flex-wrap gap-4">
+              <div>
                 <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2 m-0">
-                  <span className="text-2xl">🛒</span> Đồng Bộ Đơn Hàng Shopee
+                  <span className="text-2xl">📥</span> Nạp Đơn Hàng Shopee (File CSV)
                 </h3>
-
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-2 bg-stone-50 px-3 py-1.5 rounded-xl border border-stone-200 text-xs">
-                    <span className="text-stone-500">Lần quét gần nhất:</span>
-                    <strong className="text-stone-800">
-                      {lastSyncAt ? formatDate(lastSyncAt) : "Chưa có"}
-                    </strong>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`text-xs font-bold px-3 py-1.5 rounded-full border flex items-center gap-1.5 ${
-                        autoSyncEnabled
-                          ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                          : "bg-stone-100 text-stone-600 border-stone-300"
-                      }`}
-                    >
-                      <span className={`w-2 h-2 rounded-full ${autoSyncEnabled ? "bg-emerald-500 animate-pulse" : "bg-stone-400"}`} />
-                      <span>{autoSyncEnabled ? "🟢 Tự động quét: BẬT" : "⚪ ĐANG TẮT"}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => handleToggleAutoSync(!autoSyncEnabled)}
-                      className="text-xs bg-white hover:bg-stone-50 border border-stone-300 font-bold px-3 py-1.5 rounded-xl text-stone-700 transition-colors"
-                    >
-                      {autoSyncEnabled ? "Tạm dừng" : "Bật lại"}
-                    </button>
-                  </div>
-                </div>
               </div>
 
-              {/* 2 LỰA CHỌN ĐỒNG BỘ: 2 CARD ĐẸP, TRỰC QUAN */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Cách 1: Quét đơn bằng Cookie */}
-                <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/20 flex flex-col justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-orange-950 uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                      <span>⚡</span> Cách 1: Quét Đơn Bằng Cookie
-                    </span>
-                    <input
-                      type="password"
-                      placeholder="Dán Shopee Cookie (SPC_EC=...)..."
-                      value={shopeeCookie}
-                      onChange={(e) => setShopeeCookie(e.target.value)}
-                      className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
-                    />
-                  </div>
+              <div className="flex items-center gap-3">
+                <input
+                  ref={csvFileInputRef}
+                  type="file"
+                  accept=".csv,.txt"
+                  onChange={handleCsvUpload}
+                  className="hidden"
+                />
 
-                  <button
-                    type="button"
-                    onClick={() => handleSyncShopee(false)}
-                    disabled={isSyncingShopee || !shopeeCookie.trim()}
-                    className="w-full bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
-                  >
-                    {isSyncingShopee ? (
-                      <>
-                        <span className="animate-spin inline-block">🔄</span>
-                        <span>Đang quét đơn Shopee...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>🔄</span>
-                        <span>Kích Hoạt Quét Đơn Ngay</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                {/* Cách 2: Nạp nhanh File Báo Cáo CSV */}
-                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 flex flex-col justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide flex items-center gap-1.5 mb-2">
-                      <span>📁</span> Cách 2: Nạp File Báo Cáo CSV (Shopee)
-                    </span>
-                    <input
-                      ref={csvFileInputRef}
-                      type="file"
-                      accept=".csv,.txt"
-                      onChange={handleCsvUpload}
-                      className="hidden"
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => csvFileInputRef.current?.click()}
-                    disabled={isUploadingCsv}
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
-                  >
-                    {isUploadingCsv ? (
-                      <>
-                        <span className="animate-spin inline-block">⏳</span>
-                        <span>Đang nạp file CSV...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>📥</span>
-                        <span>Chọn File CSV Báo Cáo Shopee Để Nạp</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              {/* Thông báo kết quả quét cookie hoặc nạp CSV */}
-              {shopeeSyncResult && (
-                <div
-                  className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
-                    shopeeSyncResult.success
-                      ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
-                      : "bg-red-50 text-red-900 border border-red-300"
-                  }`}
+                <button
+                  type="button"
+                  onClick={() => csvFileInputRef.current?.click()}
+                  disabled={isUploadingCsv}
+                  className="bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-white font-bold py-2.5 px-5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
                 >
-                  <span>{shopeeSyncResult.success ? "✅" : "⚠️"}</span>
-                  <span>{shopeeSyncResult.message}</span>
-                </div>
-              )}
+                  {isUploadingCsv ? (
+                    <>
+                      <span className="animate-spin inline-block">⏳</span>
+                      <span>Đang nạp file CSV...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>📁</span>
+                      <span>Chọn File CSV Báo Cáo Shopee Để Nạp</span>
+                    </>
+                  )}
+                </button>
+              </div>
 
               {csvUploadResult && (
                 <div
-                  className={`p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
+                  className={`w-full p-3 rounded-xl text-xs font-medium flex items-center gap-2 ${
                     csvUploadResult.success
                       ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
                       : "bg-red-50 text-red-900 border border-red-300"
@@ -2244,8 +2155,7 @@ export default function AdminUsersClient({
                 </h4>
                 <button
                   type="button"
-                  onClick={() => handleSyncShopee(false)}
-                  disabled={isSyncingShopee || !shopeeCookie.trim()}
+                  onClick={() => loadShopeeSyncConfig()}
                   className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 font-semibold px-3 py-1.5 rounded-xl transition-colors flex items-center gap-1.5"
                 >
                   <span>🔄</span> Làm mới danh sách
