@@ -1311,7 +1311,6 @@ export default function AdminUsersClient({
           onClick={() => setActiveTab("users")}
         >
           <span>Người dùng</span>
-          <span className="tab-pill">{users.length}</span>
         </button>
         <button
           type="button"
@@ -1322,13 +1321,6 @@ export default function AdminUsersClient({
           }}
         >
           <span>Duyệt rút tiền</span>
-          {pendingWithdrawalsCount > 0 ? (
-            <span className="tab-pill tab-pill-pending-highlight animate-pulse">
-              ⏳ {pendingWithdrawalsCount} chờ duyệt
-            </span>
-          ) : (
-            <span className="tab-pill">{allWithdrawals.length}</span>
-          )}
         </button>
         <button
           type="button"
@@ -1338,11 +1330,7 @@ export default function AdminUsersClient({
             loadBoosterSettings();
           }}
         >
-
           <span>Tỷ lệ hoàn tiền</span>
-          <span className="tab-pill tab-pill-boost">
-            {(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}% Hoàn
-          </span>
         </button>
         <button
           type="button"
@@ -1353,9 +1341,6 @@ export default function AdminUsersClient({
           }}
         >
           <span>Nạp đơn Shopee</span>
-          <span className="tab-pill">
-            CSV
-          </span>
         </button>
       </div>
 

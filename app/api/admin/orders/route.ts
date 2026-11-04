@@ -22,6 +22,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ orders: [], total: 0 });
     }
 
+    // Tự động xóa vĩnh viễn các đơn test / fake trong CSDL
+    await supabaseAdmin
+      .from("cashback_orders")
+      .delete()
+      .or("order_id.like.SP_%,order_id.like.TT_%,product_name.ilike.%test%,note.ilike.%test%");
+
     let query = supabaseAdmin
       .from("cashback_orders")
       .select("*")
@@ -38,10 +44,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ orders: [], error: error.message });
     }
 
+    const realOrders = (orders || []).filter((o: Record<string, unknown>) => {
+      const id = String(o.order_id || "");
+      const name = String(o.product_name || "").toLowerCase();
+      return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test");
+    });
+
     return NextResponse.json({
       success: true,
-      orders: orders || [],
-      total: orders?.length || 0,
+      orders: realOrders,
+      total: realOrders.length,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";

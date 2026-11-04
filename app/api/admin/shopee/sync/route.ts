@@ -22,13 +22,23 @@ export async function GET(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdminClient();
     let recentOrders: Record<string, unknown>[] = [];
     if (supabaseAdmin) {
+      // Dọn sạch vĩnh viễn các đơn test / fake trong CSDL (như SP_150719, TT_...)
+      await supabaseAdmin
+        .from("cashback_orders")
+        .delete()
+        .or("order_id.like.SP_%,order_id.like.TT_%,product_name.ilike.%test%,note.ilike.%test%");
+
       const { data } = await supabaseAdmin
         .from("cashback_orders")
         .select("*")
         .eq("platform", "Shopee")
         .order("created_at", { ascending: false })
-        .limit(30);
-      recentOrders = data || [];
+        .limit(50);
+      recentOrders = (data || []).filter((o: Record<string, unknown>) => {
+        const id = String(o.order_id || "");
+        const name = String(o.product_name || "").toLowerCase();
+        return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test");
+      });
     }
 
     return NextResponse.json({

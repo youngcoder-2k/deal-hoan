@@ -99,3 +99,18 @@ ORD001,dh12345678123412341234123456789abc,56054818987,80.021,completed`;
   const report = parseShopeeConversionReport(csv, { userCashbackPercent: 86.8 });
   assert.equal(report.validOrders[0].cashbackAmount, 69458, 'CSV import must honor userCashbackPercent 86.8%');
 });
+
+test('Shopee real CSV export format: distinguishes Trạng thái hoa hồng from Hoa hồng sản phẩm', () => {
+  const { parseShopeeConversionReport } = loadTs({})('lib/deals/shopee-import.ts');
+
+  // Real format exported from affiliate.shopee.vn
+  const realShopeeCsv = `Mã đơn hàng,Tên cửa hàng,Tên sản phẩm,Mã sản phẩm,Trạng thái đơn hàng,Trạng thái hoa hồng,Giá trị đơn hàng,Hoa hồng sản phẩm,Hoa hồng đơn hàng,Sub ID 1
+2611039UXRQA3Q,Wood Decor,[KHÔNG LED] Gương Cánh Trượt,26643750654,Chờ duyệt,Chờ đối soát,490.566,41.698,0,dh668a48523510472f8fb2cfe6e8f5a58b`;
+
+  const res = parseShopeeConversionReport(realShopeeCsv, { userCashbackPercent: 88.0 });
+  assert.equal(res.validOrders.length, 1);
+  assert.equal(res.validOrders[0].orderId, '2611039UXRQA3Q');
+  assert.equal(res.validOrders[0].orderValue, 490566);
+  assert.equal(res.validOrders[0].commissionAmount, 41698, 'Must correctly capture 41.698đ commission instead of 0đ from Trạng thái hoa hồng');
+  assert.equal(res.validOrders[0].cashbackAmount, 36694, '88% of 41.698đ must be 36.694đ');
+});
