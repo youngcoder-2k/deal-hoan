@@ -183,15 +183,10 @@ export function boostCashbackRate(
     };
   }
 
-  // 1. Nếu có số tiền hoa hồng thực tế từ sàn (rawCashbackAmount)
+  // 1. Nếu có số tiền hoa hồng thực tế từ sàn (rawCashbackAmount):
+  // rawCashbackAmount (từ Longhouse / Shopee API) đã là tổng hoa hồng thực tế (Seller + Shopee đã tính cap sàn).
   if (typeof rawCashbackAmount === "number" && rawCashbackAmount > 0) {
     let netCashback = Math.round(rawCashbackAmount * effectiveUserShare);
-    if (typeof cap === "number" && cap > 0) {
-      const netCap = Math.round(cap * effectiveUserShare);
-      if (netCashback > netCap) {
-        netCashback = netCap;
-      }
-    }
     const finalRate = productPrice > 0
       ? Number(((netCashback / productPrice) * 100).toFixed(1))
       : Number((baseRate * effectiveUserShare).toFixed(1));
