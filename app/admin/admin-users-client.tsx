@@ -2102,15 +2102,10 @@ export default function AdminUsersClient({
             {/* 1. THẺ ĐIỀU KHIỂN CHÍNH: ĐỒNG BỘ ĐƠN HÀNG SHOPEE */}
             <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-5">
               {/* Top Row: Tiêu đề + Trạng thái chạy tự động */}
-              <div className="flex items-center justify-between flex-wrap gap-3 pb-4 border-b border-stone-100">
-                <div>
-                  <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2 m-0">
-                    <span className="text-2xl">🛒</span> Đồng Bộ Đơn Hàng Shopee
-                  </h3>
-                  <p className="text-xs text-stone-500 mt-1 m-0">
-                    Hệ thống tự động quét đơn mỗi 15 phút, đối chiếu Sub_ID khách hàng và cộng {boosterSettings.userCashbackPercent ?? 88}% tiền hoàn vào ví.
-                  </p>
-                </div>
+              <div className="flex items-center justify-between flex-wrap gap-3 pb-3 border-b border-stone-100">
+                <h3 className="text-lg font-bold text-stone-900 flex items-center gap-2 m-0">
+                  <span className="text-2xl">🛒</span> Đồng Bộ Đơn Hàng Shopee
+                </h3>
 
                 <div className="flex items-center gap-3 flex-wrap">
                   <div className="flex items-center gap-2 bg-stone-50 px-3 py-1.5 rounded-xl border border-stone-200 text-xs">
@@ -2147,21 +2142,9 @@ export default function AdminUsersClient({
                 {/* Cách 1: Quét đơn bằng Cookie */}
                 <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/20 flex flex-col justify-between gap-3">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-orange-950 uppercase tracking-wide flex items-center gap-1.5">
-                        <span>⚡</span> Cách 1: Quét Đơn Bằng Cookie
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowCookieGuide(!showCookieGuide)}
-                        className="text-[11px] text-orange-700 hover:text-orange-900 font-semibold underline"
-                      >
-                        {showCookieGuide ? "Ẩn hướng dẫn" : "❓ Hướng dẫn lấy Cookie"}
-                      </button>
-                    </div>
-                    <p className="text-xs text-stone-600 mb-2">
-                      Dán chuỗi Cookie Shopee Affiliate để máy chủ kết nối và kéo đơn tự động:
-                    </p>
+                    <span className="text-xs font-bold text-orange-950 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                      <span>⚡</span> Cách 1: Quét Đơn Bằng Cookie
+                    </span>
                     <input
                       type="password"
                       placeholder="Dán Shopee Cookie (SPC_EC=...)..."
@@ -2170,15 +2153,6 @@ export default function AdminUsersClient({
                       className="w-full px-3.5 py-2 text-xs font-mono rounded-xl border border-stone-300 focus:outline-none focus:border-orange-500 bg-white"
                     />
                   </div>
-
-                  {showCookieGuide && (
-                    <div className="p-3 bg-white rounded-lg border border-orange-200 text-[11px] text-stone-600 space-y-1">
-                      <div className="font-bold text-orange-900">Cách lấy nhanh trong 30 giây:</div>
-                      <div>1. Đăng nhập <b>affiliate.shopee.vn</b> trên máy tính.</div>
-                      <div>2. Nhấn phím <b>F12</b> &rarr; Chọn tab <b>Application</b> (hoặc Bộ nhớ) &rarr; <b>Cookies</b>.</div>
-                      <div>3. Tìm dòng <b>SPC_EC</b>, copy giá trị và dán vào ô trên.</div>
-                    </div>
-                  )}
 
                   <button
                     type="button"
@@ -2203,17 +2177,9 @@ export default function AdminUsersClient({
                 {/* Cách 2: Nạp nhanh File Báo Cáo CSV */}
                 <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/20 flex flex-col justify-between gap-3">
                   <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide flex items-center gap-1.5">
-                        <span>📁</span> Cách 2: Nạp File Báo Cáo CSV (Shopee)
-                      </span>
-                      <span className="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">
-                        Không cần Cookie
-                      </span>
-                    </div>
-                    <p className="text-xs text-stone-600 mb-2">
-                      Vào <b>affiliate.shopee.vn</b> &rarr; <b>Báo cáo chuyển đổi</b> &rarr; Xuất file CSV rồi chọn tải lên tại đây:
-                    </p>
+                    <span className="text-xs font-bold text-emerald-950 uppercase tracking-wide flex items-center gap-1.5 mb-2">
+                      <span>📁</span> Cách 2: Nạp File Báo Cáo CSV (Shopee)
+                    </span>
                     <input
                       ref={csvFileInputRef}
                       type="file"
@@ -2223,29 +2189,24 @@ export default function AdminUsersClient({
                     />
                   </div>
 
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => csvFileInputRef.current?.click()}
-                      disabled={isUploadingCsv}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
-                    >
-                      {isUploadingCsv ? (
-                        <>
-                          <span className="animate-spin inline-block">⏳</span>
-                          <span>Đang đọc và nạp đơn hàng...</span>
-                        </>
-                      ) : (
-                        <>
-                          <span>📥</span>
-                          <span>Chọn File CSV Báo Cáo Shopee Để Nạp</span>
-                        </>
-                      )}
-                    </button>
-                    <span className="text-[11px] text-center text-stone-500">
-                      Tự động tính tiền hoàn {boosterSettings.userCashbackPercent ?? 88}% và cộng thẳng vào ví thành viên.
-                    </span>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => csvFileInputRef.current?.click()}
+                    disabled={isUploadingCsv}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    {isUploadingCsv ? (
+                      <>
+                        <span className="animate-spin inline-block">⏳</span>
+                        <span>Đang nạp file CSV...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>📥</span>
+                        <span>Chọn File CSV Báo Cáo Shopee Để Nạp</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -2280,14 +2241,9 @@ export default function AdminUsersClient({
             {/* 2. BẢNG ĐƠN HÀNG SHOPEE ĐÃ GHI NHẬN (TRUNG TÂM) */}
             <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <div>
-                  <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
-                    <span>📋</span> Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({recentSyncedOrders.length})
-                  </h4>
-                  <p className="text-xs text-stone-500 m-0 mt-0.5">
-                    Toàn bộ đơn hàng được đối chiếu Sub_ID và chia {boosterSettings.userCashbackPercent ?? 88}% tiền hoàn:
-                  </p>
-                </div>
+                <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
+                  <span>📋</span> Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({recentSyncedOrders.length})
+                </h4>
                 <button
                   type="button"
                   onClick={() => handleSyncShopee(false)}
@@ -2302,9 +2258,6 @@ export default function AdminUsersClient({
                 <div className="p-8 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-500 text-sm">
                   <p className="text-3xl mb-2">🛒</p>
                   <p className="font-bold text-stone-800">Chưa có đơn hàng nào được ghi nhận</p>
-                  <p className="text-xs text-stone-500 mt-1 max-w-md mx-auto">
-                    Dán Cookie Shopee rồi bấm <b>&quot;Kích Hoạt Quét Ngay&quot;</b> hoặc tải file <b>CSV Báo Cáo Chuyển Đổi</b> lên để hệ thống nhận diện đơn của 2 khách hàng ngay.
-                  </p>
                 </div>
               ) : (
                 <div className="table-responsive">
@@ -2312,11 +2265,11 @@ export default function AdminUsersClient({
                     <thead>
                       <tr>
                         <th>Mã đơn Shopee</th>
-                        <th>Thành viên (Khách nhận)</th>
+                        <th>Thành viên</th>
                         <th>Sản phẩm</th>
                         <th className="text-right">Giá trị đơn</th>
                         <th className="text-right">Hoa hồng Shopee</th>
-                        <th className="text-right">Tiền hoàn khách nhận ({boosterSettings.userCashbackPercent ?? 88}%)</th>
+                        <th className="text-right">Tiền hoàn ({boosterSettings.userCashbackPercent ?? 88}%)</th>
                         <th className="text-center">Trạng thái</th>
                         <th className="text-right">Thời gian</th>
                       </tr>
@@ -2390,14 +2343,9 @@ export default function AdminUsersClient({
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">⚙️</span>
-                  <div>
-                    <h5 className="font-bold text-stone-800 m-0 text-sm">
-                      Cài đặt nâng cao & Tích hợp khác (Shopee Open API, Ghim Deal Xtra, TikTok Shop)
-                    </h5>
-                    <p className="text-xs text-stone-500 m-0 mt-0.5">
-                      Dành cho cấu hình kỹ thuật, kết nối API hoặc ghim sản phẩm hoa hồng cao lên trang chủ.
-                    </p>
-                  </div>
+                  <h5 className="font-bold text-stone-800 m-0 text-sm">
+                    Cài đặt nâng cao (Shopee Open API, Ghim Deal, TikTok Shop)
+                  </h5>
                 </div>
                 <span className={`text-stone-400 font-bold transition-transform duration-200 ${showAdvanced ? "rotate-90" : ""}`}>
                   ▶
