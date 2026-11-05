@@ -2149,108 +2149,101 @@ export default function AdminUsersClient({
         )}
 
         {activeTab === "settings" && (
-          <section className="admin-settings-container">
-            <div className="admin-settings-card">
-              <div className="admin-settings-header mb-6">
-                <div>
-                  <h3 className="flex items-center gap-2.5 text-lg font-bold text-stone-900 m-0">
-                    <GearSix size={22} weight="bold" className="text-orange-600" />
-                    <span>Cấu Hình % Hoàn Tiền</span>
-                  </h3>
-                </div>
+          <section className="admin-settings-section">
+            {/* Header & Actions chuẩn style titleBar của tab Người dùng */}
+            <div className={design.titleBar}>
+              <div>
+                <h1>Cấu hình tỷ lệ hoàn tiền</h1>
+                <span>Điều chỉnh tỷ lệ hoàn tiền cho khách và lợi nhuận DealHoàn</span>
               </div>
-
-              {/* 2 Card so sánh trực quan */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                {/* Cột 1: % Hoàn tiền cho khách */}
-                <div className="p-5 rounded-2xl border-2 border-orange-500 bg-orange-50/40 shadow-sm flex flex-col justify-center">
-                  <label className="block text-base font-extrabold text-stone-900 mb-2">
-                    % Hoàn tiền cho khách:
-                  </label>
-                  <div className="relative flex items-center h-[58px]">
-                    <input
-                      type="number"
-                      step="0.1"
-                      min="50.0"
-                      max="98.0"
-                      value={boosterSettings.userCashbackPercent ?? 88.0}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        const safeVal = isNaN(val) ? 88.0 : Math.max(50.0, Math.min(98.0, Number(val.toFixed(1))));
-                        setBoosterSettings((prev) => ({
-                          ...prev,
-                          userCashbackPercent: safeVal,
-                          safetyMarginPercent: Number((100 - safeVal).toFixed(1)),
-                        }));
-                      }}
-                      className="w-full h-full text-3xl font-black text-orange-600 bg-white border-2 border-orange-300 rounded-xl px-4 outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-100 transition-all text-left"
-                    />
-                    <span className="absolute right-4 text-xl font-black text-orange-500 pointer-events-none">
-                      %
-                    </span>
-                  </div>
-                </div>
-
-                {/* Cột 2: % Lợi nhuận DealHoàn giữ lại */}
-                <div className="p-5 rounded-2xl border-2 border-emerald-400 bg-emerald-50/40 shadow-sm flex flex-col justify-center">
-                  <div className="text-base font-extrabold text-stone-900 mb-2">
-                    % Lợi nhuận DealHoàn giữ lại:
-                  </div>
-                  <div className="bg-white border-2 border-emerald-200 rounded-xl px-4 h-[58px] flex items-center justify-between">
-                    <span className="text-3xl font-black text-emerald-700">
-                      {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
-                    </span>
-                    <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-md">
-                      Tự động tính
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Thanh hiển thị phân bổ tổng thể */}
-              <div className="mb-6 p-4 bg-stone-50 border border-stone-200 rounded-xl">
-                <div className="flex justify-between items-center text-xs font-bold mb-2">
-                  <span className="text-orange-700 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-orange-500 inline-block"></span>
-                    Khách nhận: {(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%
-                  </span>
-                  <span className="text-emerald-700 flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
-                    DealHoàn giữ: {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
-                  </span>
-                </div>
-                <div className="w-full h-3 bg-stone-200 rounded-full overflow-hidden flex">
-                  <div
-                    style={{ width: `${boosterSettings.userCashbackPercent ?? 88.0}%` }}
-                    className="h-full bg-orange-500 transition-all duration-300"
-                  ></div>
-                  <div
-                    style={{ width: `${100 - (boosterSettings.userCashbackPercent ?? 88.0)}%` }}
-                    className="h-full bg-emerald-500 transition-all duration-300"
-                  ></div>
-                </div>
-              </div>
-
-              {/* Nút Lưu Cấu Hình */}
-              <div className="flex justify-end pt-4 border-t border-stone-200">
+              <div className="admin-actions-area">
                 <button
                   type="button"
+                  className="admin-btn-primary"
                   onClick={handleSaveSettings}
                   disabled={savingSettings}
-                  className="admin-save-settings-btn flex items-center gap-2"
                 >
                   {savingSettings ? (
                     <>
-                      <ArrowClockwise size={18} weight="bold" className="animate-spin" />
-                      <span>Đang lưu cấu hình…</span>
+                      <ArrowClockwise size={18} className="animate-spin" />
+                      <span>Đang lưu…</span>
                     </>
                   ) : (
                     <>
                       <FloppyDisk size={18} weight="bold" />
-                      <span>Lưu Cấu Hình Ngay</span>
+                      <span>Lưu thay đổi</span>
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+
+            {/* 2 Card thống kê cân đối chuẩn style admin-kpi-grid của tab Người dùng */}
+            <section className="admin-kpi-grid settings-kpi-grid" aria-label="Cấu hình tỷ lệ hoàn tiền">
+              {/* Cột 1: % Hoàn tiền cho khách */}
+              <div className="admin-kpi-card">
+                <span className="kpi-label">Tỷ lệ hoàn tiền cho khách</span>
+                <div className="flex items-center gap-2 mt-1 h-[46px]">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="50.0"
+                    max="98.0"
+                    value={boosterSettings.userCashbackPercent ?? 88.0}
+                    onChange={(e) => {
+                      const val = parseFloat(e.target.value);
+                      const safeVal = isNaN(val) ? 88.0 : Math.max(50.0, Math.min(98.0, Number(val.toFixed(1))));
+                      setBoosterSettings((prev) => ({
+                        ...prev,
+                        userCashbackPercent: safeVal,
+                        safetyMarginPercent: Number((100 - safeVal).toFixed(1)),
+                      }));
+                    }}
+                    className="kpi-value text-[#ee4c23] bg-stone-50 hover:bg-white focus:bg-white border border-[#dfe5ed] focus:border-[#ee4c23] rounded-lg px-3 w-32 h-[42px] outline-none transition-all text-left"
+                  />
+                  <span className="text-xl font-bold text-[#ee4c23]">%</span>
+                </div>
+                <span className="kpi-subtext">Khách nhận trên tổng hoa hồng Shopee</span>
+              </div>
+
+              {/* Cột 2: % Lợi nhuận DealHoàn giữ lại */}
+              <div className="admin-kpi-card">
+                <span className="kpi-label">Lợi nhuận DealHoàn giữ lại</span>
+                <div className="flex items-center gap-2.5 mt-1 h-[46px]">
+                  <strong className="kpi-value text-green">
+                    {(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%
+                  </strong>
+                  <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md">
+                    Tự động tính
+                  </span>
+                </div>
+                <span className="kpi-subtext">Hệ thống giữ lại để vận hành nền tảng</span>
+              </div>
+            </section>
+
+            {/* Thanh hiển thị phân bổ tổng thể chuẩn style card trắng viền nhẹ */}
+            <div className="bg-white border border-[#dfe5ed] rounded-xl p-6 mb-6">
+              <div className="flex justify-between items-center text-xs font-semibold text-[#657084] mb-3">
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#ee4c23]"></span>
+                  <span className="text-stone-700">Khách nhận:</span>
+                  <strong className="text-[#ee4c23] text-sm">{(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%</strong>
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#109452]"></span>
+                  <span className="text-stone-700">DealHoàn giữ:</span>
+                  <strong className="text-[#109452] text-sm">{(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%</strong>
+                </span>
+              </div>
+              <div className="w-full h-3 bg-[#eef2f6] rounded-full overflow-hidden flex">
+                <div
+                  style={{ width: `${boosterSettings.userCashbackPercent ?? 88.0}%` }}
+                  className="h-full bg-[#ee4c23] transition-all duration-300"
+                ></div>
+                <div
+                  style={{ width: `${100 - (boosterSettings.userCashbackPercent ?? 88.0)}%` }}
+                  className="h-full bg-[#109452] transition-all duration-300"
+                ></div>
               </div>
             </div>
           </section>
