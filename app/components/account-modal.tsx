@@ -657,9 +657,16 @@ export default function AccountModal({
               <div className={s.empty}>
                 <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span>
                 <h3>Chưa có đơn hoàn tiền</h3>
+                <p className={s.emptyHint}>
+                  Đơn hàng của bạn sẽ được Shopee cập nhật sau 9h hàng ngày
+                </p>
               </div>
             ) : (
               <div className={s.list}>
+                <div className={s.orderNotice}>
+                  <Info size={16} weight="bold" />
+                  <span>Đơn hàng của bạn sẽ được Shopee cập nhật sau 9h hàng ngày</span>
+                </div>
                 {orders.map((order) => (
                   <article className={s.record} key={order.id}>
                     <div className={s.recordTop}>
