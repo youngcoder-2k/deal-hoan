@@ -6,7 +6,6 @@ import shopeeFoodLogo from "@/public/brand/shopeefood-logo.png";
 import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { ArrowClockwiseIcon } from "@phosphor-icons/react/dist/csr/ArrowClockwise";
 import { ArrowArcRightIcon } from "@phosphor-icons/react/dist/csr/ArrowArcRight";
-import { CheckIcon } from "@phosphor-icons/react/dist/csr/Check";
 import { CopyIcon } from "@phosphor-icons/react/dist/csr/Copy";
 import { CurrencyCircleDollarIcon } from "@phosphor-icons/react/dist/csr/CurrencyCircleDollar";
 import { SparkleIcon } from "@phosphor-icons/react/dist/csr/Sparkle";
@@ -214,39 +213,6 @@ export function CashbackReceipt({
       {/* Tạm thời ẩn phần voucher theo yêu cầu */}
       {/* {product.matchedVouchers && <CouponSheet key={product.matchedVouchers.map(v => v.coupon.code).join("|")} vouchers={product.matchedVouchers} copiedCode={copiedCode} onCopy={handleCopyVoucher} />} */}
 
-      {trackedLink && (
-        <div className={styles.linkSection}>
-          <p>Link nhận hoàn</p>
-          <div className={styles.linkRow}>
-            {isLoggedIn ? (
-              <a href={targetUrl} target="_blank" rel="noopener noreferrer" title={targetUrl}>{trackedLink}</a>
-            ) : (
-              <button
-                type="button"
-                className={styles.linkRowUnauth}
-                title="Vui lòng đăng nhập để nhận hoàn tiền"
-                onClick={() => onRequireAuth?.("link")}
-              >
-                {trackedLink}
-              </button>
-            )}
-            <button
-              type="button"
-              className={copied ? styles.copied : ""}
-              onClick={() => {
-                if (!isLoggedIn) {
-                  onRequireAuth?.("copy");
-                  return;
-                }
-                onCopy();
-              }}
-            >
-              {copied ? <CheckIcon size={19} weight="bold" aria-hidden="true" /> : <CopyIcon size={19} aria-hidden="true" />}
-              <span aria-live="polite">{copied ? "Đã copy" : "Copy link"}</span>
-            </button>
-          </div>
-        </div>
-      )}
       {isLoggedIn ? (
         <a
           href={targetUrl}

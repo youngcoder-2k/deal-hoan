@@ -75,38 +75,19 @@ test('CashbackReceipt unauthenticated behavior vs authenticated behavior', () =>
   buyBtn.props.onClick();
   assert.equal(authAction, 'buy', 'Clicking unauthenticated buy button must trigger onRequireAuth("buy")');
 
-  // Find link section
+  // Verify link section has been removed for streamlined UI
   const linkSection = unauthVNode.props.children.find(
     (c) => c && c.props && c.props.className && c.props.className.includes('linkSection')
   );
-  assert.ok(linkSection, 'Link section must exist');
-  const linkRow = linkSection.props.children.find(
-    (c) => c && c.props && c.props.className && c.props.className.includes('linkRow')
-  );
-  assert.ok(linkRow, 'Link row must exist');
-
-  const [linkEl, copyBtn] = linkRow.props.children;
-  assert.equal(linkEl.type, 'button', 'Unauthenticated link element must be a button, not a direct redirect anchor');
-  assert.equal(linkEl.props.href, undefined, 'Unauthenticated link must not have href redirecting to Shopee');
-
-  // Trigger click on unauthenticated link
-  linkEl.props.onClick();
-  assert.equal(authAction, 'link', 'Clicking unauthenticated link must trigger onRequireAuth("link")');
-
-  // Trigger click on unauthenticated copy button
-  authAction = null;
-  copyBtn.props.onClick();
-  assert.equal(authAction, 'copy', 'Clicking unauthenticated copy button must trigger onRequireAuth("copy")');
-  assert.equal(copyCalled, false, 'onCopy must NOT be called when unauthenticated');
+  assert.equal(linkSection, undefined, 'Redundant link section has been removed for streamlined UI');
 
   // 2. Authenticated state
-  let authCopyCalled = false;
   let authBuyCalled = false;
   const authVNode = CashbackReceipt({
     product: dummyProduct,
     trackedLink: dummyProduct.trackedLink,
     copied: false,
-    onCopy: () => { authCopyCalled = true; },
+    onCopy: () => {},
     onBuy: () => { authBuyCalled = true; },
     onClear: () => {},
     isLoggedIn: true,
@@ -126,15 +107,7 @@ test('CashbackReceipt unauthenticated behavior vs authenticated behavior', () =>
   const authLinkSection = authVNode.props.children.find(
     (c) => c && c.props && c.props.className && c.props.className.includes('linkSection')
   );
-  const authLinkRow = authLinkSection.props.children.find(
-    (c) => c && c.props && c.props.className && c.props.className.includes('linkRow')
-  );
-  const [authLinkEl, authCopyBtn] = authLinkRow.props.children;
-  assert.equal(authLinkEl.type, 'a', 'Authenticated link must be an anchor');
-  assert.equal(authLinkEl.props.href, dummyProduct.trackedLink);
-
-  authCopyBtn.props.onClick();
-  assert.equal(authCopyCalled, true, 'onCopy must be called when authenticated');
+  assert.equal(authLinkSection, undefined, 'Authenticated receipt also has no redundant link section');
 });
 
 test('home-client.tsx passes isLoggedIn and onRequireAuth, guards copy and link redirect', () => {
