@@ -34,7 +34,7 @@ export const helpArticles: HelpArticle[] = [
         "id": "phan-4",
         "title": "Theo dõi và rút tiền",
         "paragraphs": [
-          "Đơn cần được sàn và đối tác đối soát. Sau khi bạn nhận hàng thành công và hết thời hạn đổi trả (thường từ 7–15 ngày), số dư sẽ được duyệt vào ví khả dụng để rút về ngân hàng; mức rút tối thiểu hiện tại là 10.000đ. Đơn hủy hoặc trả hàng sẽ không được hoàn tiền."
+          "Đơn cần được sàn và đối tác đối soát. Sau khi bạn nhận hàng thành công và hết thời hạn đổi trả (thường từ 10–15 ngày), số dư sẽ được duyệt vào ví khả dụng để rút về ngân hàng; mức rút tối thiểu hiện tại là 10.000đ. Đơn hủy hoặc trả hàng sẽ không được hoàn tiền."
         ]
       }
     ]
