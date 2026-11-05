@@ -28,5 +28,37 @@ test('user Shopee video link gets actionable error, not a product',async()=>{
  const post=route('app/api/deals/resolve/route.ts');const response=await post({json:async()=>({url:'https://sv.shopee.vn/share-video/gkGKGyjOCQD8L9gKAAAAAA=='})});const data=await response.json();
  assert.equal(response.status,422);assert.equal(data.error,'video_link_not_product');assert.match(data.message,/Chia sẻ/);assert.equal(data.product,undefined);
 });
+test('Shopee shortlink resolving to video returns actionable video guidance',async()=>{
+ const old=global.fetch;
+ global.fetch=async()=>({
+   ok:true,
+   url:'https://vn.shp.ee/94ouchky',
+   text:async()=>'<script>var CONFIG={httpUrl:"https:\\/\\/sv.shopee.vn\\/share-video\\/abc123xyz"}</script>'
+ });
+ try{
+   const post=route('app/api/deals/resolve/route.ts');
+   const response=await post({json:async()=>({url:'https://vn.shp.ee/94ouchky?fromSource=copy_link'})});
+   const data=await response.json();
+   assert.equal(response.status,422);
+   assert.equal(data.error,'video_link_not_product');
+   assert.match(data.message,/Chia sẻ/);
+ }finally{global.fetch=old;}
+});
+test('Shopee shortlink resolving to live returns actionable live guidance',async()=>{
+ const old=global.fetch;
+ global.fetch=async()=>({
+   ok:true,
+   url:'https://vn.shp.ee/live123',
+   text:async()=>'<script>var CONFIG={httpUrl:"https:\\/\\/live.shopee.vn\\/p\\/stream_123"}</script>'
+ });
+ try{
+   const post=route('app/api/deals/resolve/route.ts');
+   const response=await post({json:async()=>({url:'https://vn.shp.ee/live123'})});
+   const data=await response.json();
+   assert.equal(response.status,422);
+   assert.equal(data.error,'live_link_not_product');
+   assert.match(data.message,/Chia sẻ/);
+ }finally{global.fetch=old;}
+});
 for(const url of ['not a link','https://example.com/?link=shopee.vn','https://shopee.vn.evil.test/product/1/2']) test('invalid or unrelated URL rejected: '+url,async()=>{const response=await route('app/api/deals/resolve/route.ts')({json:async()=>({url})});assert.equal(response.status,400);assert.equal((await response.json()).product,undefined);});
 test('client never uses demo data for pasted links and clears stale receipts before validation',()=>{const s=fs.readFileSync('app/home-client.tsx','utf8');assert.ok(!s.includes('SAMPLE_CHIP_PRODUCTS'));assert.ok(s.indexOf('setCalculatedProduct(null);',s.indexOf('const executeCalculation'))<s.indexOf('if (!trimmed)',s.indexOf('const executeCalculation')));});

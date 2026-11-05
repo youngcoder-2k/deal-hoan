@@ -82,7 +82,13 @@ export async function POST(request: NextRequest) {
     if (inputUrl?.hostname === "sv.shopee.vn" && inputUrl.pathname.startsWith("/share-video/")) {
       return NextResponse.json({
         error: "video_link_not_product",
-        message: "Link video: mở sản phẩm trong video → Chia sẻ → Sao chép link.",
+        message: "Link Shopee Video: mở giỏ hàng trong video → chọn sản phẩm → Chia sẻ → Sao chép link.",
+      }, { status: 422 });
+    }
+    if (inputUrl?.hostname === "live.shopee.vn" || inputUrl?.pathname.startsWith("/live/")) {
+      return NextResponse.json({
+        error: "live_link_not_product",
+        message: "Link Shopee Live: mở giỏ hàng trong livestream → chọn sản phẩm → Chia sẻ → Sao chép link.",
       }, { status: 422 });
     }
     const auth = await createSupabaseServerClient();
@@ -152,7 +158,7 @@ export async function POST(request: NextRequest) {
         const res = await fetch(canonicalUrl, {
           headers: fetchHeaders,
           redirect: "follow",
-          signal: AbortSignal.timeout(1800),
+          signal: AbortSignal.timeout(2500),
         });
 
         if (res.ok) {
@@ -173,6 +179,55 @@ export async function POST(request: NextRequest) {
     if (metaResult) {
       canonicalUrl = metaResult.finalFetchedUrl;
       const html = metaResult.html;
+
+      // Extract destination URL if shortlink contains CONFIG.httpUrl
+      let unpackedUrl = "";
+      const configMatch = html.match(/CONFIG\s*=\s*(\{[\s\S]*?\});/);
+      if (configMatch) {
+        const httpMatch = configMatch[1].match(/httpUrl:\s*"([^"]+)"/);
+        if (httpMatch) {
+          try {
+            unpackedUrl = httpMatch[1].replace(/\\u0026/g, "&").replace(/\\\//g, "/");
+          } catch {}
+        }
+      }
+
+      // Detect Shopee Video (sv.shopee.vn, /share-video/, or share_obj=video)
+      const isVideoLink =
+        canonicalUrl.includes("sv.shopee.vn") ||
+        canonicalUrl.includes("/share-video/") ||
+        unpackedUrl.includes("sv.shopee.vn") ||
+        unpackedUrl.includes("/share-video/") ||
+        html.includes("sv.shopee.vn") ||
+        html.includes("share_obj=video");
+
+      if (isVideoLink) {
+        return NextResponse.json({
+          error: "video_link_not_product",
+          message: "Link Shopee Video: mở giỏ hàng trong video → chọn sản phẩm → Chia sẻ → Sao chép link.",
+        }, { status: 422 });
+      }
+
+      // Detect Shopee Live (live.shopee.vn, /live/, or share_obj=live)
+      const isLiveLink =
+        canonicalUrl.includes("live.shopee.vn") ||
+        canonicalUrl.includes("/live/") ||
+        unpackedUrl.includes("live.shopee.vn") ||
+        unpackedUrl.includes("/live/") ||
+        html.includes("live.shopee.vn") ||
+        html.includes("share_obj=live");
+
+      if (isLiveLink) {
+        return NextResponse.json({
+          error: "live_link_not_product",
+          message: "Link Shopee Live: mở giỏ hàng trong livestream → chọn sản phẩm → Chia sẻ → Sao chép link.",
+        }, { status: 422 });
+      }
+
+      // If shortlink unpacked into a direct product URL, use it as canonicalUrl
+      if (unpackedUrl && isShopeeUrl(unpackedUrl)) {
+        canonicalUrl = unpackedUrl;
+      }
 
       // Extract image
       const img = extractMeta(html, "og:image") || extractMeta(html, "twitter:image");
