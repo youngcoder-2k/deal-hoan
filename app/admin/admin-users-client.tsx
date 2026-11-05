@@ -1221,21 +1221,11 @@ export default function AdminUsersClient({
 
   const filteredUsers = [...filtered].sort((a, b) => {
     if (sortBy === "smart_desc" || !sortBy) {
-      const now = Date.now();
-      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-      const aIsNew = now - new Date(a.createdAt).getTime() < SEVEN_DAYS_MS;
-      const bIsNew = now - new Date(b.createdAt).getTime() < SEVEN_DAYS_MS;
-
-      // Cả 2 đều mới (trong 7 ngày): ưu tiên số dư, nếu bằng nhau thì ai mới hơn lên trước
-      if (aIsNew && bIsNew) {
-        if (b.balance !== a.balance) return b.balance - a.balance;
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      }
-      if (aIsNew && !bIsNew) return -1;
-      if (!aIsNew && bIsNew) return 1;
-
-      // Cả 2 đều đã đăng ký > 7 ngày: ưu tiên số dư khả dụng cao nhất
+      const aTotal = (a.balance || 0) + (a.pendingBalance || 0);
+      const bTotal = (b.balance || 0) + (b.pendingBalance || 0);
+      if (bTotal !== aTotal) return bTotal - aTotal;
       if (b.balance !== a.balance) return b.balance - a.balance;
+      if (b.pendingBalance !== a.pendingBalance) return b.pendingBalance - a.pendingBalance;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
     if (sortBy === "balance_desc") {
@@ -1499,11 +1489,12 @@ export default function AdminUsersClient({
               <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
                 <thead>
                   <tr>
-                    <th scope="col">Người dùng</th>
-                    <th scope="col" className={design.numeric}>Khả dụng</th><th scope="col" className={design.numeric}>Chờ hoàn</th>
-                    <th scope="col">Ngân hàng</th>
-                    <th scope="col">Lệnh rút gần nhất</th>
-                    <th scope="col" className="text-right"><span className={design.srOnly}>Thao tác</span></th>
+                    <th scope="col" className="w-[28%]">Người dùng</th>
+                    <th scope="col" className={`w-[14%] ${design.numeric}`}>Chờ hoàn</th>
+                    <th scope="col" className={`w-[14%] ${design.numeric}`}>Khả dụng</th>
+                    <th scope="col" className="w-[18%]">Ngân hàng</th>
+                    <th scope="col" className="w-[16%]">Lệnh rút gần nhất</th>
+                    <th scope="col" className="w-[10%] text-right"><span className={design.srOnly}>Thao tác</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1526,33 +1517,43 @@ export default function AdminUsersClient({
                             )}
                           </div>
                           <div className="user-cell-texts">
-                            <div className="user-name-line">
-                              <span className="user-name-text">{u.fullName}</span>
-                              <button
-                                type="button"
-                                className="user-ref-tag"
-                                onClick={() => copyToClipboard(u.refCode, "Mã ref")}
-                                title="Bấm để sao chép mã"
-                              >
-                                {u.refCode}
-                              </button>
-                            </div>
+                            <span className="user-name-text">{u.fullName}</span>
                             <span className="user-email-text">{u.email}</span>
-                            <span className="user-date-text">
-                              Gia nhập: {formatDateShort(u.createdAt)}
-                            </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className={design.numeric}><strong className={u.balance > 0 ? design.positive : ""}>{formatVnd(u.balance)}</strong></td>
-                      <td className={design.numeric}>{formatVnd(u.pendingBalance)}</td>
+                      {/* Cột 2: Tiền chờ hoàn */}
+                      <td className={design.numeric}>
+                        {u.pendingBalance > 0 ? (
+                          <strong className="text-stone-900 font-bold">{formatVnd(u.pendingBalance)}</strong>
+                        ) : (
+                          <span className="text-stone-400">0đ</span>
+                        )}
+                      </td>
 
-                      {/* Cột 3: Ngân hàng */}
+                      {/* Cột 3: Số dư khả dụng */}
+                      <td className={design.numeric}>
+                        {u.balance > 0 ? (
+                          <strong className="text-[#109452] font-bold">{formatVnd(u.balance)}</strong>
+                        ) : (
+                          <span className="text-stone-400">0đ</span>
+                        )}
+                      </td>
+
+                      {/* Cột 4: Ngân hàng */}
                       <td className="cell-bank">
                         {u.isBankConfigured ? (
-                          <div className={design.bankSummary}><Bank size={21} /><div><strong>{u.bankName}</strong><span>•••• {u.bankAccountNo.slice(-4)}</span></div></div>
-                        ) : <span className={design.muted}>Chưa liên kết</span>}
+                          <div className={design.bankSummary}>
+                            <Bank size={20} className="text-stone-500 shrink-0" />
+                            <div>
+                              <strong>{u.bankName}</strong>
+                              <span>•••• {u.bankAccountNo.slice(-4)}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className={design.muted}>Chưa liên kết</span>
+                        )}
                       </td>
 
                       {/* Cột 4: Lệnh rút gần nhất */}
