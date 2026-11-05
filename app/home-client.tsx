@@ -235,6 +235,14 @@ export default function HomeClient({
   const pasteActionRef = useRef<HTMLButtonElement>(null);
   const linkInputRef = useRef<HTMLInputElement>(null);
   const [showManualInput, setShowManualInput] = useState(true);
+
+  // Mặc định vào trang tự động focus vào ô input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      linkInputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
   const calculationIdRef = useRef(0);
   const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -914,6 +922,7 @@ export default function HomeClient({
                 <div className={styles.manualPasteInputWrap}>
                   <input
                     ref={linkInputRef}
+                    autoFocus
                     type="url"
                     inputMode="url"
                     autoComplete="off"
