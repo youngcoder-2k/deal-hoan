@@ -72,40 +72,18 @@ export async function POST(request: NextRequest) {
 
   const db = await createSupabaseServerClient();
   if (!db) {
-    return NextResponse.json({
-      success: true,
-      order: {
-        id: `claim_${Date.now()}`,
-        user_id: "demo-user",
-        order_id: orderId,
-        platform,
-        order_value: orderValue,
-        product_name: String(body?.productName || "Đơn hàng Shopee chờ tra cứu"),
-        status: "pending",
-        cashback_amount: 0,
-        ordered_at: new Date().toISOString(),
-        note: "Yêu cầu tra cứu — đang đối soát cùng Shopee.",
-      },
-    });
+    return NextResponse.json(
+      { error: "Hệ thống chưa kết nối cơ sở dữ liệu. Vui lòng thử lại sau." },
+      { status: 503 }
+    );
   }
 
   const { data: { user }, error: authError } = await db.auth.getUser();
   if (authError || !user) {
-    return NextResponse.json({
-      success: true,
-      order: {
-        id: `claim_${Date.now()}`,
-        user_id: "demo-user",
-        order_id: orderId,
-        platform,
-        order_value: orderValue,
-        product_name: String(body?.productName || "Đơn hàng Shopee chờ tra cứu"),
-        status: "pending",
-        cashback_amount: 0,
-        ordered_at: new Date().toISOString(),
-        note: "Yêu cầu tra cứu — đang đối soát cùng Shopee.",
-      },
-    });
+    return NextResponse.json(
+      { error: "Vui lòng đăng nhập để gửi yêu cầu tra cứu đơn hàng." },
+      { status: 401 }
+    );
   }
   const { data, error } = await db.from("cashback_order_claims").insert({
     user_id: user.id, order_id: orderId, platform, order_value: orderValue,

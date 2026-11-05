@@ -121,37 +121,49 @@ export function buildShopeeAffiliateUrl(
   return target.toString();
 }
 
+function parseHost(rawUrl: string): { host: string; pathname: string } | null {
+  try {
+    const extracted = extractUrlFromText(rawUrl);
+    if (!extracted) return null;
+    const urlStr = extracted.startsWith("http://") || extracted.startsWith("https://")
+      ? extracted
+      : `https://${extracted}`;
+    const parsed = new URL(urlStr);
+    return { host: parsed.hostname.toLowerCase(), pathname: parsed.pathname.toLowerCase() };
+  } catch {
+    return null;
+  }
+}
+
+function matchesDomain(host: string, domain: string): boolean {
+  return host === domain || host.endsWith("." + domain);
+}
+
 /**
  * Checks if a URL belongs to ShopeeFood (now.vn, food.shopee.vn, shopeefood.vn, shopee.vn/now-food)
  */
 export function isShopeeFoodUrl(rawUrl: string): boolean {
-  try {
-    const extracted = extractUrlFromText(rawUrl);
-    let decoded = extracted;
-    try {
-      decoded = decodeURIComponent(extracted);
-    } catch {}
-    const lower = extracted.toLowerCase();
-    const lowerDecoded = decoded.toLowerCase();
-    return (
-      lower.includes("shopeefood") ||
-      lowerDecoded.includes("shopeefood") ||
-      lower.includes("food.shopee.vn") ||
-      lowerDecoded.includes("food.shopee.vn") ||
-      lower.includes("shopee.vn/now-food") ||
-      lowerDecoded.includes("shopee.vn/now-food") ||
-      lower.includes("shopee.vn/universal-link/now-food") ||
-      lowerDecoded.includes("shopee.vn/universal-link/now-food") ||
-      lower.includes("shopee.vn/universal-link/shopeefood") ||
-      lowerDecoded.includes("shopee.vn/universal-link/shopeefood") ||
-      lower.includes("now.vn") ||
-      lowerDecoded.includes("now.vn") ||
-      lower.includes("spf.shopee.vn") ||
-      lowerDecoded.includes("spf.shopee.vn")
-    );
-  } catch {
-    return false;
+  const parsed = parseHost(rawUrl);
+  if (!parsed) return false;
+  const { host, pathname } = parsed;
+  if (
+    matchesDomain(host, "shopeefood.vn") ||
+    matchesDomain(host, "shopeefood.com.vn") ||
+    matchesDomain(host, "now.vn")
+  ) {
+    return true;
   }
+  if (matchesDomain(host, "shopee.vn")) {
+    if (host.startsWith("food.") || host.startsWith("spf.")) return true;
+    if (
+      pathname.startsWith("/now-food") ||
+      pathname.startsWith("/universal-link/now-food") ||
+      pathname.startsWith("/universal-link/shopeefood")
+    ) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export const DEFAULT_SHOPEEFOOD_URL = "https://shopeefood.vn";
@@ -280,38 +292,30 @@ export function buildShopeeFoodAffiliateUrl(
  * Checks if a URL belongs to Shopee (web, shortlink, universal link, or ShopeeFood)
  */
 export function isShopeeUrl(rawUrl: string): boolean {
-  try {
-    const extracted = extractUrlFromText(rawUrl);
-    const lower = extracted.toLowerCase();
-    return (
-      lower.includes("shopee.vn") ||
-      lower.includes("s.shopee.vn") ||
-      lower.includes("shope.ee") ||
-      lower.includes("shp.ee") ||
-      lower.includes("vn.shp.ee") ||
-      isShopeeFoodUrl(rawUrl)
-    );
-  } catch {
-    return false;
+  const parsed = parseHost(rawUrl);
+  if (!parsed) return false;
+  const { host } = parsed;
+  if (
+    matchesDomain(host, "shopee.vn") ||
+    matchesDomain(host, "shope.ee") ||
+    matchesDomain(host, "shp.ee")
+  ) {
+    return true;
   }
+  return isShopeeFoodUrl(rawUrl);
 }
 
 /**
  * Checks if a URL belongs to TikTok or TikTok Shop
  */
 export function isTikTokUrl(rawUrl: string): boolean {
-  try {
-    const extracted = extractUrlFromText(rawUrl);
-    const lower = extracted.toLowerCase();
-    return (
-      lower.includes("tiktok.com") ||
-      lower.includes("vt.tiktok.com") ||
-      lower.includes("shop.tiktok.com") ||
-      lower.includes("v.douyin.com")
-    );
-  } catch {
-    return false;
-  }
+  const parsed = parseHost(rawUrl);
+  if (!parsed) return false;
+  const { host } = parsed;
+  return (
+    matchesDomain(host, "tiktok.com") ||
+    matchesDomain(host, "douyin.com")
+  );
 }
 
 /**

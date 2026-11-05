@@ -85,23 +85,69 @@ export async function PATCH(
       );
     }
 
-    let targetAmount = 0;
+    const finalNote = note || (status === "completed" ? "Đã chuyển khoản Napas247" : "Từ chối yêu cầu rút");
 
+    // 1. Thử gọi RPC nguyên tử process_withdrawal_decision (chống replay refund)
+    try {
+      const { data: rpcRes, error: rpcErr } = await clientToUse.rpc(
+        "process_withdrawal_decision",
+        {
+          p_withdrawal_id: withdrawalId,
+          p_status: status,
+          p_note: finalNote,
+        }
+      );
+      if (!rpcErr && rpcRes && rpcRes.success) {
+        return NextResponse.json({
+          success: true,
+          message:
+            status === "completed"
+              ? "✅ Đã duyệt và xác nhận chuyển tiền thành công!"
+              : "❌ Đã từ chối lệnh rút tiền và hoàn tiền về ví người dùng.",
+          withdrawalId,
+          status,
+          note: finalNote,
+        });
+      }
+      if (rpcErr && rpcErr.message?.includes("withdrawal_already_processed")) {
+        return NextResponse.json(
+          { error: "Lệnh rút tiền này đã được xử lý trước đó, không thể thay đổi lại." },
+          { status: 400 }
+        );
+      }
+    } catch (rpcCatchErr) {
+      console.warn("RPC process_withdrawal_decision fallback in user withdrawals:", rpcCatchErr);
+    }
+
+    // 2. Fallback nếu Stored Procedure chưa có trên DB: kiểm tra trạng thái pending
     const { data: wRow } = await clientToUse
       .from("withdrawal_requests")
-      .select("amount")
+      .select("user_id, amount, status")
       .eq("id", withdrawalId)
       .maybeSingle();
 
-    if (wRow) {
-      targetAmount = Number(wRow.amount || 0);
+    if (!wRow) {
+      return NextResponse.json(
+        { error: "Không tìm thấy thông tin lệnh rút tiền." },
+        { status: 404 }
+      );
     }
+
+    if (wRow.status !== "pending") {
+      return NextResponse.json(
+        { error: `Lệnh rút tiền này đã ở trạng thái "${wRow.status}", không thể xử lý lại.` },
+        { status: 400 }
+      );
+    }
+
+    const targetAmount = Number(wRow.amount || 0);
+    const targetUserId = String(wRow.user_id || userId);
 
     const { error: updateErr } = await clientToUse
       .from("withdrawal_requests")
       .update({
         status,
-        note: note || (status === "completed" ? "Đã chuyển khoản Napas247" : "Từ chối yêu cầu rút"),
+        note: finalNote,
         updated_at: new Date().toISOString(),
       })
       .eq("id", withdrawalId);
@@ -110,13 +156,13 @@ export async function PATCH(
       console.warn("DB update withdrawal error:", updateErr);
     }
 
-    // Hoàn trả số dư ví nếu từ chối
-    if (status === "rejected" && targetAmount > 0 && userId) {
+    // Hoàn trả số dư ví nếu từ chối (chỉ 1 lần duy nhất từ pending)
+    if (status === "rejected" && targetAmount > 0 && targetUserId) {
       try {
         const { data: wallet } = await clientToUse
           .from("user_wallets")
           .select("balance, total_withdrawn")
-          .eq("user_id", userId)
+          .eq("user_id", targetUserId)
           .maybeSingle();
 
         if (wallet) {
@@ -127,7 +173,7 @@ export async function PATCH(
               total_withdrawn: Math.max(0, Number(wallet.total_withdrawn || 0) - targetAmount),
               updated_at: new Date().toISOString(),
             })
-            .eq("user_id", userId);
+            .eq("user_id", targetUserId);
         }
       } catch (err) {
         console.warn("Failed refund in user withdrawal patch:", err);

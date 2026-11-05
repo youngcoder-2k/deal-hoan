@@ -11,6 +11,7 @@ import {
   generateAccessTradeTikTokLink,
   buildCustomShortUrl,
   formatSubIdForUser,
+  DEFAULT_SHOPEE_AFFILIATE_ID,
 } from "@/lib/deals/affiliate";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     if (isShopeeFoodUrl(rawUrl)) {
       const cleanUrl = cleanShopeeUrl(rawUrl);
       const affiliateUrl = buildShopeeFoodAffiliateUrl(cleanUrl, {
-        affiliateId: "17333200656",
+        affiliateId: DEFAULT_SHOPEE_AFFILIATE_ID,
         subId,
       });
       const customShortLink = buildCustomShortUrl(cleanUrl, {
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     if (isShopeeUrl(rawUrl)) {
       const cleanUrl = cleanShopeeUrl(rawUrl);
       const affiliateUrl = buildShopeeAffiliateUrl(cleanUrl, {
-        affiliateId: "17333200656",
+        affiliateId: DEFAULT_SHOPEE_AFFILIATE_ID,
         subId,
       });
       const customShortLink = buildCustomShortUrl(cleanUrl, {

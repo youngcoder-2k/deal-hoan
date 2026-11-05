@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { hasSupabaseConfig, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
+import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { createClient } from "@supabase/supabase-js";
 
 const CACHE_DIR = path.join(process.cwd(), "lib/deals/cache");
@@ -87,11 +88,11 @@ async function runBackgroundScrape(): Promise<CachePayload | null> {
       console.warn("[Background Worker] Không thể ghi file cục bộ (có thể do môi trường serverless):", fsErr);
     }
 
-    // Đồng bộ lên Supabase Cloud
-    if (sessions.length > 0 && hasSupabaseConfig && supabaseUrl && supabasePublishableKey) {
+    // Đồng bộ lên Supabase Cloud bằng Service Role
+    const sbAdmin = getSupabaseServiceClient();
+    if (sessions.length > 0 && sbAdmin) {
       try {
-        const sb = createClient(supabaseUrl, supabasePublishableKey);
-        await sb
+        await sbAdmin
           .from("flash_sale_cache")
           .upsert({ id: "latest", data: payload, updated_at: new Date().toISOString() });
         console.log("[Background Worker] Đã đồng bộ lên Supabase Cloud!");

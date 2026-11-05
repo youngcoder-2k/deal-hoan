@@ -71,58 +71,6 @@ export async function GET(request: NextRequest) {
           }
         } catch {}
       }
-
-      // 3. Tự động đồng bộ / đối soát (auto-heal) nếu người dùng thật có lệnh rút đã trừ ví nhưng chưa ghi vào bảng
-      try {
-        const { data: userWallets } = await clientToUse
-          .from("user_wallets")
-          .select("user_id, balance, total_withdrawn, bank_name, bank_account_no, bank_account_name");
-
-        if (Array.isArray(userWallets)) {
-          for (const uw of userWallets) {
-            const totalWithdrawn = Number(uw.total_withdrawn || 0);
-            if (totalWithdrawn <= 0) continue;
-
-            const userRequests = dbWithdrawals.filter(
-              (w) => String(w.user_id) === String(uw.user_id)
-            );
-            const recordedSum = userRequests.reduce(
-              (sum, w) => sum + Number(w.amount || 0),
-              0
-            );
-
-            const missingDiff = totalWithdrawn - recordedSum;
-            // Nếu có sự chênh lệch do giao dịch trước đó bị trừ ví nhưng lỗi insert RLS
-            if (missingDiff >= 10000) {
-              const autoPendingRecord = {
-                id: crypto.randomUUID(),
-                user_id: uw.user_id,
-                amount: missingDiff,
-                bank_name: uw.bank_name || "MB Bank (MBB)",
-                bank_account_no: uw.bank_account_no || "",
-                bank_account_name: (uw.bank_account_name || "").toUpperCase(),
-                status: "pending",
-                note: "Đang chờ đối soát & chuyển khoản qua Napas247",
-                created_at: new Date().toISOString(),
-              };
-
-              const { data: insData, error: insErr } = await clientToUse
-                .from("withdrawal_requests")
-                .insert(autoPendingRecord)
-                .select()
-                .maybeSingle();
-
-              if (!insErr && insData) {
-                dbWithdrawals.unshift(insData);
-              } else {
-                dbWithdrawals.unshift(autoPendingRecord);
-              }
-            }
-          }
-        }
-      } catch (syncErr) {
-        console.warn("Auto-heal reconciliation error:", syncErr);
-      }
     }
 
     // 4. Lấy thông tin người dùng từ auth để map email và họ tên chính xác

@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "invalid_url", message: "Link chưa hợp lệ. Hãy sao chép liên kết sản phẩm rồi dán lại." }, { status: 400 });
     }
     const host = inputUrl.hostname.toLowerCase();
-    const isFoodHost = host.includes("shopeefood") || host.includes("food.shopee") || host === "now.vn" || host.endsWith(".now.vn");
-    const allowedHost = isFoodHost || ["shopee.vn", "shopeefood.vn", "now.vn", "shope.ee", "shp.ee"].some(domain => host === domain || host.endsWith(`.${domain}`));
+    const allowedDomains = ["shopee.vn", "shopeefood.vn", "shopeefood.com.vn", "now.vn", "shope.ee", "shp.ee"];
+    const allowedHost = allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
     if (!allowedHost) {
       return NextResponse.json({ error: "unsupported_platform", message: "Hãy dán link sản phẩm Shopee hoặc ShopeeFood." }, { status: 400 });
     }

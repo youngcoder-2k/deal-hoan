@@ -151,35 +151,6 @@ export async function GET(request: NextRequest) {
       const orders = [...verified, ...claims].sort((a,b) => Date.parse(b.ordered_at)-Date.parse(a.ordered_at));
 
       const dbHistory = Array.isArray(historyRes.data) ? [...historyRes.data] : [];
-
-      // Tự động kiểm tra đối soát nếu ví đã trừ tiền nhưng chưa có bản ghi lệnh rút tương ứng
-      const totalWithdrawn = Number(mergedWallet.total_withdrawn || 0);
-      const recordedSum = dbHistory.reduce(
-        (sum, item) => sum + Number(item.amount || 0),
-        0
-      );
-      const missingDiff = totalWithdrawn - recordedSum;
-      if (missingDiff >= 10000) {
-        const autoPending = {
-          id: crypto.randomUUID(),
-          user_id: user.id,
-          amount: missingDiff,
-          bank_name: mergedWallet.bank_name || "MB Bank (MBB)",
-          bank_account_no: mergedWallet.bank_account_no || "",
-          bank_account_name: (mergedWallet.bank_account_name || "").toUpperCase(),
-          status: "pending",
-          note: "Đang chờ đối soát & chuyển khoản qua Napas247",
-          created_at: new Date().toISOString(),
-        };
-        const adminClient = getSupabaseAdminClient();
-        const clientToUse = adminClient || supabase;
-        void clientToUse
-          .from("withdrawal_requests")
-          .insert(autoPending)
-          .then(null, () => {});
-        dbHistory.unshift(autoPending);
-      }
-
       dbHistory.sort(
         (a, b) =>
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()

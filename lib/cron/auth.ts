@@ -16,12 +16,10 @@ export function isAuthorizedCron(request: Request): boolean {
   const secret = process.env.CRON_SECRET?.trim();
   if (secret) {
     const expected = Buffer.from(`Bearer ${secret}`);
-    if (supplied.length === expected.length && timingSafeEqual(supplied, expected)) {
-      return true;
-    }
+    return supplied.length === expected.length && timingSafeEqual(supplied, expected);
   }
 
-  // 3. Cho phép token nội bộ từ Supabase pg_cron (schema-cron.sql)
+  // 3. Cho phép token nội bộ từ Supabase pg_cron (schema-cron.sql) khi chưa cài CRON_SECRET riêng
   const defaultExpected = Buffer.from(`Bearer ${DEFAULT_SYNC_TOKEN}`);
   if (supplied.length === defaultExpected.length && timingSafeEqual(supplied, defaultExpected)) {
     return true;

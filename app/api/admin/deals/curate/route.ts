@@ -112,7 +112,14 @@ export async function DELETE(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const id = searchParams.get("id");
 
-  if (!id || id === "all") {
+  if (!id) {
+    return NextResponse.json(
+      { error: "Thiếu mã deal (id) cần xóa. Truyền ?id=all để xóa toàn bộ." },
+      { status: 400 }
+    );
+  }
+
+  if (id === "all") {
     saveCuratedXtraDeals([]);
     return NextResponse.json({ success: true, message: "Đã xóa toàn bộ sản phẩm Hoa hồng Xtra thủ công" });
   }

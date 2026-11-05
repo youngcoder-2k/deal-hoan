@@ -32,52 +32,6 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     const dbHistory = Array.isArray(history) ? [...history] : [];
-
-    // Kiểm tra đối soát nếu user_wallets đã trừ tiền nhưng thiếu bản ghi trong bảng
-    try {
-      const { data: wallet } = await dbClient
-        .from("user_wallets")
-        .select("total_withdrawn, bank_name, bank_account_no, bank_account_name")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (wallet) {
-        const totalWithdrawn = Number(wallet.total_withdrawn || 0);
-        const recordedSum = dbHistory.reduce(
-          (sum, item) => sum + Number(item.amount || 0),
-          0
-        );
-        const missingDiff = totalWithdrawn - recordedSum;
-        if (missingDiff >= 10000) {
-          const autoPending: WithdrawalRecord = {
-            id: crypto.randomUUID(),
-            user_id: user.id,
-            amount: missingDiff,
-            bank_name: wallet.bank_name || "MB Bank (MBB)",
-            bank_account_no: wallet.bank_account_no || "",
-            bank_account_name: (wallet.bank_account_name || "").toUpperCase(),
-            status: "pending",
-            note: "Đang chờ đối soát & chuyển khoản qua Napas247",
-            created_at: new Date().toISOString(),
-          };
-
-          const { data: insData, error: insErr } = await dbClient
-            .from("withdrawal_requests")
-            .insert(autoPending)
-            .select()
-            .maybeSingle();
-
-          if (!insErr && insData) {
-            dbHistory.unshift(insData);
-          } else {
-            dbHistory.unshift(autoPending);
-          }
-        }
-      }
-    } catch (checkErr) {
-      console.warn("Wallet history reconciliation warning:", checkErr);
-    }
-
     dbHistory.sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
