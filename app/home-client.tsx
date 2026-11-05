@@ -872,9 +872,6 @@ export default function HomeClient({
                     {userBalance !== null ? `${userBalance.toLocaleString("vi-VN")}đ` : "Ví tiền"}
                   </span>
                 </button>
-                <button disabled={authPending} onClick={signOut} className="account-logout-btn">
-                  {authPending ? "…" : "Đăng xuất"}
-                </button>
               </>
             ) : (
               <button disabled={authPending} onClick={() => void signInWithGoogle()} className="account-login-btn">

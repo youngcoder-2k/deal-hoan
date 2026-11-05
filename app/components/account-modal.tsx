@@ -620,7 +620,7 @@ export default function AccountModal({
               <strong>{displayName}</strong><span className={s.email}>{user.email}</span>
               {/* Tạm thời ẩn mã giới thiệu */}
               {false && <button type="button" onClick={copyRefCode}><Copy size={18} /> Mã: {refCode}</button>}
-              <button type="button" onClick={onSignOut}><SignOut size={18} /> Đăng xuất tài khoản</button>
+              <button type="button" onClick={onSignOut}><SignOut size={18} /> Đăng xuất</button>
             </div>
           </details>
           <button type="button" className={s.close} onClick={onClose} aria-label="Đóng ví hoàn tiền"><X size={20} /></button>
