@@ -122,7 +122,7 @@
 }
 @media (max-width: 600px) {
   .calculatorIntro .calculatorState::before,
-  .calculatorIntro .calculatorState::after { inset: 8px 0 -12px; border-radius: 22px; }
+  .calculatorIntro .calculatorState::after { inset: 8px 0 -8px; border-radius: 22px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .calculatorIntro .calculatorState::before,
@@ -170,7 +170,7 @@
 .stepArrow { position: absolute; right: -27px; top: 26px; width: 36px; height: 27px; color: #ffb48e; transform: scaleY(-1); pointer-events: none; }
 .stepSparkle { position: absolute; top: 22px; left: calc(50% + 41px); color: #ffae1b; }
 .emptySupport { margin: 25px 0 0; color: #405d78; font-size: 14px; line-height: 1.6; text-wrap: balance; }
-.guideFooter { width: 100%; margin-top: 20px; padding-top: 13px; border-top: 1px solid #ffd5bd; }
+.guideFooter { width: 100%; margin-top: 20px; padding-top: 13px; padding-bottom: 16px; border-top: 1px solid #ffd5bd; }
 .guideLink { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 44px; color: #b8320e; font-size: 15px; text-decoration: underline; text-underline-offset: 5px; transition: color .18s; }
 .guideLink svg { flex-shrink: 0; transition: translate .18s; }
 .guideLink:hover { color: #b92f0f; }
@@ -447,8 +447,8 @@
   .stepArrow { width: 30px; height: 24px; top: 23px; right: -22px; }
   .stepSparkle { width: 10px; left: calc(50% + 34px); }
   .emptySupport { margin-top: 18px; font-size: 12px; line-height: 1.7; }
-  .guideFooter { margin-top: 15px; padding-top: 8px; }
-  .guideLink { font-size: 14px; gap: 10px; }
+  .guideFooter { margin-top: 15px; padding-top: 12px; padding-bottom: 18px; }
+  .guideLink { font-size: 14px; gap: 10px; min-height: 36px; }
 }
 @media (max-width: 374px) {
   .calculatorIntro .calculator { padding: 12px; gap: 6px; }
