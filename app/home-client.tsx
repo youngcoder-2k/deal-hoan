@@ -6,6 +6,7 @@ import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { ClipboardTextIcon } from "@phosphor-icons/react/dist/csr/ClipboardText";
+import { GearSixIcon } from "@phosphor-icons/react/dist/csr/GearSix";
 import HomeDiscovery from "./components/home-discovery";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
 import TopToast, { type ToastData } from "./components/top-toast";
@@ -202,6 +203,17 @@ function getNextShopeeSlotEndMs(): number {
 
   const diffMs = target.getTime() - vnTime.getTime();
   return Date.now() + diffMs;
+}
+
+function formatHeaderBalance(amount: number): string {
+  if (amount <= 0) return "0đ";
+  if (amount < 1000) return `${amount}đ`;
+  const inK = amount / 1000;
+  if (Number.isInteger(inK)) {
+    return `${inK}k`;
+  }
+  const rounded = Math.round(inK * 10) / 10;
+  return `${rounded}k`;
 }
 
 export default function HomeClient({
@@ -849,7 +861,8 @@ export default function HomeClient({
                     className="header-admin-btn"
                     title="Bảng Quản Trị Hệ Thống (Admin)"
                   >
-                    🛡️ Quản trị
+                    <GearSixIcon size={15} weight="bold" aria-hidden="true" />
+                    <span>Quản trị</span>
                   </Link>
                 )}
                 <button
@@ -869,7 +882,7 @@ export default function HomeClient({
                     {String(user.user_metadata?.full_name ?? user.email ?? "Tài khoản").split(" ")[0]}
                   </span>
                   <span className="account-balance-tag">
-                    {userBalance !== null ? `${userBalance.toLocaleString("vi-VN")}đ` : "Ví tiền"}
+                    {userBalance !== null ? formatHeaderBalance(userBalance) : "Ví tiền"}
                   </span>
                 </button>
               </>

@@ -2673,7 +2673,7 @@ h2,
 .header-admin-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
   background: #fff7ed;
   border: 1.5px solid #fed7aa;
   color: #ea580c;
@@ -2685,6 +2685,9 @@ h2,
   height: 36px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   box-shadow: 0 1px 3px rgba(234, 88, 12, 0.08);
+}
+.header-admin-btn svg {
+  flex-shrink: 0;
 }
 .header-admin-btn:hover {
   background: #ea580c;
