@@ -22,38 +22,6 @@ export async function GET(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdminClient();
     let recentOrders: Record<string, unknown>[] = [];
     if (supabaseAdmin) {
-      // Dọn sạch vĩnh viễn các đơn test / fake trong CSDL (như SP_150719, TT_...)
-      await supabaseAdmin
-        .from("cashback_orders")
-        .delete()
-        .or("order_id.like.SP_%,order_id.like.TT_%,product_name.ilike.%test%,note.ilike.%test%");
-
-      // Tự động kiểm tra và đồng bộ lại tiền hoàn vào ví người dùng nếu trước đó bị nhận diện 0đ
-      const { data: zeroOrders } = await supabaseAdmin
-        .from("cashback_orders")
-        .select("*")
-        .eq("platform", "Shopee")
-        .eq("commission_amount", 0);
-
-      if (zeroOrders && zeroOrders.length > 0) {
-        const { recordCashbackOrder } = await import("@/lib/deals/cashback");
-        for (const zo of zeroOrders) {
-          if (zo.order_id === "2611039UXRQA3Q") {
-            await recordCashbackOrder({
-              orderId: "2611039UXRQA3Q",
-              subId: zo.sub_id || "dh668a48523510472f8fb2cfe6e8f5a58b",
-              userId: zo.user_id || "668a4852-3510-472f-8fb2-cfe6e8f5a58b",
-              platform: "Shopee",
-              productName: zo.product_name || "[KHÔNG LED] Gương Cánh Trượt Toàn Thân Có Đèn LED & Pegboard Gỗ",
-              orderValue: 490566,
-              commissionAmount: 41698,
-              cashbackAmount: 36694,
-              status: zo.status || "pending",
-            });
-          }
-        }
-      }
-
       const { data } = await supabaseAdmin
         .from("cashback_orders")
         .select("*")
