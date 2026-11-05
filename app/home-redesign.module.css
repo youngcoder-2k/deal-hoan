@@ -566,12 +566,10 @@
   border: 1.5px solid #fdba74;
   border-radius: 12px;
   padding: 4px 14px;
-  box-shadow: 0 2px 8px rgba(251, 105, 40, 0.08);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s;
 }
 .manualPasteInputWrap:focus-within {
   border-color: #ea580c;
-  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
 }
 .manualPasteInputWrap input {
   flex: 1;
