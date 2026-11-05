@@ -6,6 +6,7 @@ import {
   cleanShopeeUrl,
   isShopeeUrl,
   isShopeeFoodUrl,
+  unshortenShopeeFoodUrl,
   isTikTokUrl,
   cleanTikTokUrl,
   generateAccessTradeTikTokLink,
@@ -108,6 +109,12 @@ export async function POST(request: NextRequest) {
     const isTikTok = isTikTokUrl(rawUrl);
 
     let canonicalUrl = rawUrl;
+    if (isShopeeFood) {
+      const unshortened = await unshortenShopeeFoodUrl(rawUrl).catch(() => null);
+      if (unshortened && unshortened !== rawUrl) {
+        canonicalUrl = unshortened;
+      }
+    }
     let ogTitle: string | null = null;
     let ogImage: string | null = null;
     let extractedPrice: number | null = null;
@@ -121,28 +128,35 @@ export async function POST(request: NextRequest) {
     // 2. Concurrently expand shortlink or fetch OpenGraph metadata with quick 1800ms timeout
     const metadataPromise = (async () => {
       try {
-        const fetchHeaders: HeadersInit = isShopee
+        const fetchHeaders: HeadersInit = isShopeeFood
           ? {
               "User-Agent":
-                "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
               Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
               "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
             }
-          : {
-              "User-Agent":
-                "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
-              Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-              "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
-            };
+          : isShopee
+            ? {
+                "User-Agent":
+                  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+              }
+            : {
+                "User-Agent":
+                  "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+                Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7",
+              };
 
-        const res = await fetch(rawUrl, {
+        const res = await fetch(canonicalUrl, {
           headers: fetchHeaders,
           redirect: "follow",
           signal: AbortSignal.timeout(1800),
         });
 
         if (res.ok) {
-          const finalFetchedUrl = res.url || rawUrl;
+          const finalFetchedUrl = res.url || canonicalUrl;
           const html = await res.text();
           return { finalFetchedUrl, html };
         }
@@ -176,7 +190,14 @@ export async function POST(request: NextRequest) {
           .replace(/&amp;/g, "&")
           .replace(/\s*[|–-]\s*(Shopee Việt Nam|ShopeeFood(\.vn)?|Now\.vn|Lazada\.vn|TikTok Shop|Tiki\.vn|Mua và Bán.*|Đặt Món.*)$/i, "")
           .trim();
-        if (cleaned.length > 3 && !cleaned.toLowerCase().startsWith("shopee việt nam")) {
+        const isGenericShopeeFood =
+          cleaned.toLowerCase().includes("đặt đồ ăn trực tuyến ở 25 tỉnh thành") ||
+          cleaned.toLowerCase().includes("giao hàng tận nơi") ||
+          cleaned.toLowerCase().includes("đặt món & giao ship tận nơi") ||
+          cleaned.toLowerCase().startsWith("shopeefood") ||
+          cleaned.toLowerCase().startsWith("now.vn");
+
+        if (!isGenericShopeeFood && cleaned.length > 3 && !cleaned.toLowerCase().startsWith("shopee việt nam")) {
           ogTitle = cleaned;
         }
       }
@@ -285,13 +306,15 @@ export async function POST(request: NextRequest) {
       : (hoanNgayProduct?.imageUrl || atProduct?.imageUrl || ogImage || baseProduct.imageUrl);
 
     const finalPrice = isCurrentShopeeFood
-      ? (extractedPrice || baseProduct.price || 65000)
+      ? (extractedPrice || 0)
       : (hoanNgayProduct?.price ?? atProduct?.price ?? (extractedPrice || baseProduct.price));
 
     const finalOriginalPrice = isCurrentShopeeFood
-      ? (baseProduct.originalPrice > finalPrice
-          ? baseProduct.originalPrice
-          : Math.round((finalPrice * 1.3) / 1000) * 1000)
+      ? (finalPrice > 0
+          ? (baseProduct.originalPrice > finalPrice
+              ? baseProduct.originalPrice
+              : Math.round((finalPrice * 1.3) / 1000) * 1000)
+          : 0)
       : (hoanNgayProduct?.originalPrice ??
          atProduct?.originalPrice ??
          (baseProduct.originalPrice > finalPrice
@@ -328,9 +351,9 @@ export async function POST(request: NextRequest) {
     let cashbackRate = 0;
 
     if (isCurrentShopeeFood) {
-      // ShopeeFood fixed rate 6.0%
+      // ShopeeFood fixed rate 6.0% (applied to actual cart/order total on checkout)
       cashbackRate = 6.0;
-      finalCashback = Math.round((finalPrice * 0.06) / 1000) * 1000;
+      finalCashback = finalPrice > 0 ? Math.round((finalPrice * 0.06) / 1000) * 1000 : 0;
     } else if (hasRealCommission && (hoanNgayProduct?.cashbackRate ?? 0) === 0 && (hoanNgayProduct?.commission ?? 0) === 0) {
       finalCashback = 0;
       cashbackRate = 0;

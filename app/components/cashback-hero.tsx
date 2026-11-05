@@ -164,9 +164,10 @@ export function CashbackReceipt({
   };
 
   // Savings may include marketplace discounts, so it is not the cashback rate.
-  const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : 0);
+  const isFood = product.platform?.toLowerCase().includes("food");
+  const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : (isFood ? 6.0 : 0));
   const hasPrice = price > 0;
-  const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : "Chưa xác định";
+  const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : (isFood ? "Hoàn 6%" : "Chưa xác định");
   const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.com");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
@@ -182,7 +183,7 @@ export function CashbackReceipt({
         <div>
           <h3 title={product.name}>{product.name}</h3>
           <div className={styles.productPrice}>
-            <strong>{hasPrice ? formatPrice(price) : "Chưa có giá"}</strong>
+            <strong>{hasPrice ? formatPrice(price) : (isFood ? "Đơn đặt món ShopeeFood" : "Chưa có giá")}</strong>
           </div>
         </div>
         <span className={styles.platformBadge}><MarketplaceBrand platform={product.platform} /></span>
@@ -193,21 +194,34 @@ export function CashbackReceipt({
         onPointerLeave={(event) => resetGlassLight(event, event.currentTarget)}
         onPointerCancel={(event) => resetGlassLight(event, event.currentTarget)}
       >
-        {hasPrice && <>
+        {(hasPrice || isFood) && <>
           <PercentIcon className={styles.rewardPercent} weight="bold" aria-hidden="true" />
           <PercentIcon className={`${styles.rewardPercent} ${styles.rewardPercentRight}`} weight="bold" aria-hidden="true" />
         </>}
         <div className={styles.rewardContent}>
-          <p>Bạn được hoàn dự kiến</p>
+          <p>{isFood ? "Ưu đãi hoàn tiền ShopeeFood" : "Bạn được hoàn dự kiến"}</p>
           <div className={styles.rewardAmountRow}>
-            {hasPrice && <Image className={styles.rewardCoin} src="/hero/cashback-coin-stack.webp" width={272} height={216} alt="" sizes="(max-width: 600px) 28px, 34px" />}
-            <strong className={reward.length > 9 ? styles.longAmount : ""}>{reward}{hasPrice && <span className={styles.rewardCurrency}> đồng</span>}</strong>
+            {(hasPrice || isFood) && <Image className={styles.rewardCoin} src="/hero/cashback-coin-stack.webp" width={272} height={216} alt="" sizes="(max-width: 600px) 28px, 34px" />}
+            <strong className={(reward.length > 9 || (isFood && !hasPrice)) ? styles.longAmount : ""}>
+              {reward}{hasPrice && <span className={styles.rewardCurrency}> đồng</span>}
+            </strong>
           </div>
-          {!hasPrice && <span className={styles.rewardTiming}>Chưa có giá và tiền hoàn từ sàn cho sản phẩm này.</span>}
+          {isFood && !hasPrice && (
+            <span className={styles.rewardTiming}>Tính trên toàn bộ tổng tiền thanh toán thực tế khi chốt đơn.</span>
+          )}
+          {!hasPrice && !isFood && (
+            <span className={styles.rewardTiming}>Chưa có giá và tiền hoàn từ sàn cho sản phẩm này.</span>
+          )}
         </div>
-        {hasPrice && <div className={styles.rewardRate}>
-          <span className={styles.ratePill}>Hoàn {cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng</span>
-        </div>}
+        {(hasPrice || isFood) && (
+          <div className={styles.rewardRate}>
+            <span className={styles.ratePill}>
+              {isFood
+                ? "Hoàn 6% toàn bộ đơn hàng (Ví dụ: Đơn 100k hoàn 6.000đ)"
+                : `Hoàn ${cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng`}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Tạm thời ẩn phần voucher theo yêu cầu */}
@@ -252,7 +266,7 @@ export function CashbackReceipt({
       )}
       {product.platform?.toLowerCase().includes("food") && (
         <p className={styles.foodAppNote}>
-          💡 Mở trực tiếp ứng dụng ShopeeFood để đặt món và nhận hoàn tiền 6%.
+          💡 Mở ứng dụng ShopeeFood để đặt món &amp; nhận hoàn 6% tự động vào tài khoản DealHoàn.
         </p>
       )}
       <div className={styles.receiptFooter}>

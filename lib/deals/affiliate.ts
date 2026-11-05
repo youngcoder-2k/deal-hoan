@@ -157,8 +157,61 @@ export function isShopeeFoodUrl(rawUrl: string): boolean {
 export const DEFAULT_SHOPEEFOOD_URL = "https://shopeefood.vn";
 
 /**
+ * Unshortens ShopeeFood shortlinks (e.g. shopeefood.vn/u/<slug> or food.shopee.vn/u/<slug>)
+ * by performing a quick HTTP HEAD/GET with desktop User-Agent to follow the 301/302 redirect
+ * to the canonical restaurant / deal URL.
+ */
+export async function unshortenShopeeFoodUrl(rawUrl: string): Promise<string> {
+  if (!rawUrl) return rawUrl;
+  try {
+    const extracted = extractUrlFromText(rawUrl);
+    if (!extracted.startsWith("http://") && !extracted.startsWith("https://")) {
+      return extracted;
+    }
+    const parsed = new URL(extracted);
+    const isShort =
+      parsed.pathname.startsWith("/u/") ||
+      parsed.pathname.startsWith("/s/") ||
+      parsed.hostname.includes("food.shopee");
+
+    if (!isShort) return extracted;
+
+    // Use desktop Chrome UA so Shopee SGW returns an HTTP 301 Location header
+    // instead of an app-install interstitial HTML page
+    const res = await fetch(extracted, {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      redirect: "manual",
+      signal: AbortSignal.timeout(3000),
+    });
+
+    const location = res.headers.get("location");
+    if (location) {
+      return new URL(location, extracted).toString();
+    }
+
+    // Fallback: If 200 with HTML, check if HTML contains ULS deepLinkUrl with destination url=
+    if (res.ok) {
+      const html = await res.text();
+      const matchUrl = html.match(/[?&]url=([^"&'\s]+)/i);
+      if (matchUrl && matchUrl[1]) {
+        try {
+          return decodeURIComponent(matchUrl[1]);
+        } catch {}
+      }
+    }
+  } catch {}
+  return rawUrl;
+}
+
+/**
  * Converts any ShopeeFood, Now.vn, or Shopee universal food link into a valid shopeefood.vn link.
- * Opening shopeefood.vn on a mobile device triggers the ShopeeFood app directly to the restaurant.
+ * Preserves the canonical path (/now-food/shop/:id, /now-food/presale-deals-detail/:id, or /:city/:slug)
+ * and merchant/restaurant identifiers so opening the link on mobile opens the exact restaurant/dish screen.
  */
 export function toShopeeFoodUniversalUrl(rawUrl?: string): string {
   if (!rawUrl || !rawUrl.trim()) return DEFAULT_SHOPEEFOOD_URL;
@@ -171,17 +224,22 @@ export function toShopeeFoodUniversalUrl(rawUrl?: string): string {
 
     let pathname = parsed.pathname;
     if (pathname.startsWith("/universal-link/now-food")) {
-      pathname = pathname.replace(/^\/universal-link\/now-food/, "");
+      pathname = pathname.replace(/^\/universal-link/, "");
     } else if (pathname.startsWith("/universal-link/shopeefood")) {
-      pathname = pathname.replace(/^\/universal-link\/shopeefood/, "");
-    } else if (pathname.startsWith("/now-food")) {
-      pathname = pathname.replace(/^\/now-food/, "");
+      pathname = pathname.replace(/^\/universal-link\/shopeefood/, "/now-food");
     }
 
     const cleanPath = pathname.replace(/^\/+/, "");
     const cleanSearch = new URLSearchParams();
     for (const [key, val] of parsed.searchParams.entries()) {
-      if (!key.startsWith("utm_") && !key.startsWith("aff_") && key !== "shareChannel" && key !== "fbclid") {
+      if (
+        !key.startsWith("utm_") &&
+        !key.startsWith("aff_") &&
+        !key.startsWith("stm_") &&
+        key !== "shareChannel" &&
+        key !== "fbclid" &&
+        key !== "uls_trackid"
+      ) {
         cleanSearch.set(key, val);
       }
     }

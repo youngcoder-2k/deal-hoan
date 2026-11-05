@@ -232,6 +232,7 @@ export function parseSlugFromUrl(rawUrl: string): string | null {
         "shopeefood",
         "shop",
         "restaurant",
+        "presale-deals-detail",
         "item",
         "food",
         "app",
@@ -251,7 +252,7 @@ export function parseSlugFromUrl(rawUrl: string): string | null {
       if (meaningful.length > 0) {
         s = meaningful[meaningful.length - 1];
         if (/^\d+$/.test(s)) {
-          return `Quán ăn ShopeeFood #${s}`;
+          return s.length > 8 ? "Quán ngon ShopeeFood" : `Quán ăn ShopeeFood #${s}`;
         }
       } else {
         return "Quán ngon ShopeeFood";
