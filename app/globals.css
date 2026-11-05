@@ -6777,6 +6777,15 @@ select.account-input.select-bank-field:focus {
   pointer-events: auto;
 }
 
+body[data-pwa-guide="open"] .scroll-to-top,
+body[data-pwa-guide="open"] button.scroll-to-top,
+body.modal-open .scroll-to-top {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
 .scroll-to-top:hover {
   background: #ea580c;
   border-color: #f97316;

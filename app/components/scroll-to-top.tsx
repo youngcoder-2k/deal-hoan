@@ -4,25 +4,47 @@ import React, { useState, useEffect } from "react";
 
 export default function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
 
   useEffect(() => {
     let ticking = false;
 
+    const checkGuideOpen = () => {
+      if (typeof document === "undefined") return false;
+      const open = document.body.getAttribute("data-pwa-guide") === "open";
+      setIsGuideOpen(open);
+      return open;
+    };
+
     const handleScroll = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          setIsVisible(window.scrollY > 300);
+          const guideOpen = checkGuideOpen();
+          setIsVisible(window.scrollY > 300 && !guideOpen);
           ticking = false;
         });
         ticking = true;
       }
     };
 
+    // Theo dõi thuộc tính data-pwa-guide trên <body> để ẩn ngay khi modal mở
+    let observer: MutationObserver | null = null;
+    if (typeof MutationObserver !== "undefined" && typeof document !== "undefined") {
+      observer = new MutationObserver(() => {
+        checkGuideOpen();
+      });
+      observer.observe(document.body, { attributes: true, attributeFilter: ["data-pwa-guide"] });
+    }
+
+    const handleGuideEvent = () => checkGuideOpen();
+    window.addEventListener("pwa-guide-change", handleGuideEvent);
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("pwa-guide-change", handleGuideEvent);
+      if (observer) observer.disconnect();
     };
   }, []);
 
@@ -36,6 +58,9 @@ export default function ScrollToTop() {
       behavior: prefersReducedMotion ? "auto" : "smooth",
     });
   };
+
+  // Không hiển thị nếu modal hướng dẫn cài đặt đang mở
+  if (isGuideOpen) return null;
 
   return (
     <button
