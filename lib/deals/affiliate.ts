@@ -229,6 +229,7 @@ export function isShopeeUrl(rawUrl: string): boolean {
       lower.includes("shopee.vn") ||
       lower.includes("s.shopee.vn") ||
       lower.includes("shope.ee") ||
+      lower.includes("shp.ee") ||
       lower.includes("vn.shp.ee") ||
       isShopeeFoodUrl(rawUrl)
     );

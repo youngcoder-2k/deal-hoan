@@ -532,6 +532,85 @@
 @media(max-width:374px) { .glassPasteButton { font-size:15px; gap:8px; padding-inline:10px; } .glassPasteButton svg { width:21px; height:21px; } }
 @media(prefers-reduced-motion:reduce) { .glassPasteButton { transition:none; } }
 
+.manualPasteToggle {
+  margin-top: 10px;
+  background: none;
+  border: 0;
+  color: #c2410c;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  align-self: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: opacity 0.15s, background-color 0.15s;
+}
+.manualPasteToggle:hover {
+  background-color: #fff7ed;
+  opacity: 0.9;
+}
+
+.manualPasteBox {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.manualPasteInputWrap {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border: 1.5px solid #fdba74;
+  border-radius: 12px;
+  padding: 4px 14px;
+  box-shadow: 0 2px 8px rgba(251, 105, 40, 0.08);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.manualPasteInputWrap:focus-within {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15);
+}
+.manualPasteInputWrap input {
+  flex: 1;
+  min-width: 0;
+  height: 44px;
+  border: 0;
+  outline: none;
+  font-size: 14px;
+  color: #0f172a;
+  background: transparent;
+  font-family: inherit;
+}
+.manualClearBtn {
+  background: #f1f5f9;
+  border: 0;
+  color: #64748b;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: background-color 0.15s;
+}
+.manualClearBtn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+.manualPasteHint {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0;
+  padding: 0 4px;
+  line-height: 1.4;
+}
+
 /* Matched Vouchers Component in CashbackReceipt */
 .voucherSection {
   margin-top: 14px;

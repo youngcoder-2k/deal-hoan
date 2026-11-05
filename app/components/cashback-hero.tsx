@@ -220,7 +220,15 @@ export function CashbackReceipt({
           rel="noopener noreferrer nofollow"
           className={styles.buyButton}
           onClick={(event) => {
-            if (onBuy?.() === false) event.preventDefault();
+            if (onBuy?.() === false) {
+              event.preventDefault();
+              return;
+            }
+            const isMobile = typeof navigator !== "undefined" && /android|iphone|ipad|ipod/i.test(navigator.userAgent);
+            if (isMobile) {
+              event.preventDefault();
+              window.location.href = targetUrl;
+            }
           }}
         >
           <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" />

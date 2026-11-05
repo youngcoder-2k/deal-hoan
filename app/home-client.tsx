@@ -234,6 +234,8 @@ export default function HomeClient({
   const pageRef = useRef<HTMLElement>(null);
   useEffect(() => setupHomeMotion(pageRef.current), []);
   const pasteActionRef = useRef<HTMLButtonElement>(null);
+  const linkInputRef = useRef<HTMLInputElement>(null);
+  const [showManualInput, setShowManualInput] = useState(false);
   const calculationIdRef = useRef(0);
   const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -709,24 +711,28 @@ export default function HomeClient({
       const text = await readPromise;
       const url = extractUrlFromText(text);
       if (!url && !text.trim()) {
+        setShowManualInput(true);
         showTopToast({
-          type: "error",
+          type: "info",
           title: "Chưa sao chép link",
-          message: "Bộ nhớ tạm chưa có link. Vui lòng sao chép link sản phẩm Shopee hoặc ShopeeFood trước nhé.",
+          message: "Bộ nhớ tạm chưa có link. Hãy sao chép link hoặc chạm giữ vào ô bên dưới để Dán nhé.",
         });
-        notify("Vui lòng sao chép link sản phẩm trước.");
+        notify("Vui lòng sao chép link hoặc dán vào ô bên dưới.");
+        setTimeout(() => linkInputRef.current?.focus(), 150);
         return;
       }
       const target = url || text.trim();
       setLink(target);
       await executeCalculation(target);
     } catch {
+      setShowManualInput(true);
       showTopToast({
-        type: "error",
-        title: "Không thể đọc bộ nhớ tạm",
-        message: "Vui lòng cho phép quyền truy cập bộ nhớ tạm trên trình duyệt hoặc sao chép lại link sản phẩm.",
+        type: "info",
+        title: "Dán link thủ công",
+        message: "Trình duyệt chưa cho phép đọc tự động. Hãy chạm giữ vào ô bên dưới và chọn “Dán”.",
       });
-      notify("Không thể truy cập bộ nhớ tạm.");
+      notify("Chạm giữ vào ô bên dưới để Dán link nhé!");
+      setTimeout(() => linkInputRef.current?.focus(), 150);
     } finally { setReadingClipboard(false); }
   };
   const calc = (e: React.FormEvent) => {
@@ -747,10 +753,10 @@ export default function HomeClient({
         setCalculatedProduct(null);
         setTrackedLink("");
         setResultClosing(false);
-        if (clearInput) pasteActionRef.current?.focus({ preventScroll: true });
+        if (clearInput) (showManualInput ? linkInputRef.current : pasteActionRef.current)?.focus({ preventScroll: true });
       }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 320);
     } else if (clearInput) {
-      pasteActionRef.current?.focus({ preventScroll: true });
+      (showManualInput ? linkInputRef.current : pasteActionRef.current)?.focus({ preventScroll: true });
     }
   };
   // A calculation made before login must not keep an anonymous sub_id after login.
@@ -904,6 +910,60 @@ export default function HomeClient({
                 <span aria-live="polite">{busy ? `Đang kiểm tra ${calcPercent}%` : readingClipboard ? "Đang dán…" : "Dán link vừa sao chép"}</span>
                 <ArrowRightIcon size={24} weight="bold" aria-hidden="true" />
               </button>
+
+              {/* Ô dán thủ công: Tự động mở khi trình duyệt (Samsung, Webview) chặn đọc clipboard tự động */}
+              {showManualInput && (
+                <div className={styles.manualPasteBox}>
+                  <div className={styles.manualPasteInputWrap}>
+                    <input
+                      ref={linkInputRef}
+                      type="url"
+                      inputMode="url"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={link}
+                      placeholder="Chạm giữ vào đây → Chọn “Dán”..."
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setLink(next);
+                        const extracted = extractUrlFromText(next);
+                        if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted))) {
+                          executeCalculation(extracted);
+                        }
+                      }}
+                      onPaste={(e) => {
+                        const pasted = e.clipboardData.getData("text");
+                        const extracted = extractUrlFromText(pasted) || pasted.trim();
+                        if (extracted) {
+                          setLink(extracted);
+                          executeCalculation(extracted);
+                        }
+                      }}
+                    />
+                    {link && (
+                      <button type="button" className={styles.manualClearBtn} onClick={() => setLink("")} aria-label="Xóa">
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                  <p className={styles.manualPasteHint}>
+                    💡 Mẹo: Chạm giữ 1 giây vào ô trên rồi chọn <b>Dán</b> (Paste) từ bàn phím.
+                  </p>
+                </div>
+              )}
+
+              {!showManualInput && (
+                <button
+                  type="button"
+                  className={styles.manualPasteToggle}
+                  onClick={() => {
+                    setShowManualInput(true);
+                    setTimeout(() => linkInputRef.current?.focus(), 150);
+                  }}
+                >
+                  Hoặc chạm để tự dán link thủ công
+                </button>
+              )}
             </form>
             <div className={styles.calculatorState}>
               {result && calculatedProduct ? (
