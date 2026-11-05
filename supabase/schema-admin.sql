@@ -18,7 +18,6 @@ as $$
           'quangvh.technical@gmail.com',
           'trungquan2000bg@gmail.com'
         )
-        or (raw_user_meta_data->>'role') = 'admin'
         or (raw_app_meta_data->>'role') = 'admin'
       )
   );

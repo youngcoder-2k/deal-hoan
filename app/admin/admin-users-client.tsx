@@ -291,9 +291,9 @@ export default function AdminUsersClient({
   };
 
   const getAdminFetchHeaders = (): Record<string, string> => {
-    if (typeof window === "undefined") return { "x-admin-key": "dealhoan2026" };
-    const key = new URLSearchParams(window.location.search).get("key") || "dealhoan2026";
-    return { "x-admin-key": key };
+    if (typeof window === "undefined") return {};
+    const key = new URLSearchParams(window.location.search).get("key") || "";
+    return key ? { "x-admin-key": key } : {};
   };
 
   const loadShopeeSyncConfig = async () => {
@@ -763,8 +763,10 @@ export default function AdminUsersClient({
     // Lưu secret key vào cookie nếu được truyền qua URL query (?key=...)
     if (typeof window !== "undefined") {
       const urlParams = new URLSearchParams(window.location.search);
-      const key = urlParams.get("key") || "dealhoan2026";
-      document.cookie = `dealhoan_admin_key=${encodeURIComponent(key)}; path=/; max-age=2592000; SameSite=Lax`;
+      const key = urlParams.get("key");
+      if (key) {
+        document.cookie = `dealhoan_admin_key=${encodeURIComponent(key)}; path=/; max-age=2592000; SameSite=Lax`;
+      }
     }
 
     async function syncRealData() {

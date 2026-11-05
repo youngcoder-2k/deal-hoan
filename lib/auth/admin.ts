@@ -77,8 +77,7 @@ export function getSupabaseAdminClient() {
   const serviceRoleKey =
     process.env.SUPABASE_SERVICE_ROLE_KEY ||
     process.env.SUPABASE_SERVICE_KEY ||
-    process.env.SUPABASE_SECRET_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+    process.env.SUPABASE_SECRET_KEY;
   if (!supabaseUrl) return null;
 
   // Sử dụng Service Role Key nếu có để bỏ qua RLS và gọi admin API

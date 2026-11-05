@@ -12,8 +12,42 @@ import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function isAllowedRedirectUrl(urlStr: string): boolean {
+  try {
+    const u = new URL(urlStr);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    const h = u.hostname.toLowerCase();
+    const allowed = [
+      "shopee.vn",
+      "shope.ee",
+      "shp.ee",
+      "tiktok.com",
+      "lazada.vn",
+      "shopeefood.vn",
+      "now.vn",
+      "accesstrade.vn",
+    ];
+    return allowed.some((d) => h === d || h.endsWith(`.${d}`));
+  } catch {
+    return false;
+  }
+}
+
 function renderZaloRedirectHtml(targetUrl: string): string {
   const cleanTarget = targetUrl.replace(/^https?:\/\//, "");
+  const safeTargetHref = escapeHtml(targetUrl);
+  const jsonTarget = JSON.stringify(targetUrl);
+  const jsonCleanTarget = JSON.stringify(cleanTarget);
+
   return `<!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -37,15 +71,15 @@ function renderZaloRedirectHtml(targetUrl: string): string {
       <b>⚠️ Bạn đang mở qua Zalo:</b><br />
       Vui lòng bấm dấu <b>[ ··· ]</b> ở góc trên bên phải màn hình → chọn <b>"Mở bằng trình duyệt"</b> (Safari / Chrome) để Shopee tự động cộng tiền hoàn.
     </div>
-    <a href="${targetUrl}" class="btn" id="openBtn">Bấm vào đây để mở Shopee</a>
+    <a href="${safeTargetHref}" class="btn" id="openBtn">Bấm vào đây để mở Shopee</a>
     <p class="hint">Đang tự động chuyển tiếp trong giây lát...</p>
   </div>
   <script>
-    var target = "${targetUrl}";
+    var target = ${jsonTarget};
     var isAndroid = /android/i.test(navigator.userAgent);
     if (isAndroid) {
       try {
-        window.location.href = "intent://" + "${cleanTarget}" + "#Intent;scheme=https;package=com.android.chrome;end";
+        window.location.href = "intent://" + ${jsonCleanTarget} + "#Intent;scheme=https;package=com.android.chrome;end";
       } catch(e) {}
     }
     setTimeout(function() {
@@ -127,11 +161,16 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 3. Direct redirect for other URLs
-  return NextResponse.redirect(targetUrl, {
-    status: 307,
-    headers: {
-      "Cache-Control": "no-store, max-age=0",
-    },
-  });
+  // 3. Bảo vệ Open Redirect: Chỉ chuyển hướng nếu URL thuộc danh sách sàn đối tác tin cậy
+  if (isAllowedRedirectUrl(targetUrl)) {
+    return NextResponse.redirect(targetUrl, {
+      status: 307,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  }
+
+  // Nếu là domain lạ hoặc không an toàn, chuyển hướng an toàn về trang chủ
+  return NextResponse.redirect(new URL("/", request.url));
 }

@@ -123,8 +123,8 @@ export default function AdminForbiddenView({
           </div>
           <form onSubmit={handleSecretKeySubmit} style={{ display: "flex", gap: "8px" }}>
             <input
-              type="text"
-              placeholder="Nhập mã bí mật (mặc định: dealhoan2026)..."
+              type="password"
+              placeholder="Nhập mã ADMIN_SECRET_KEY..."
               value={keyInput}
               onChange={(e) => setKeyInput(e.target.value)}
               style={{

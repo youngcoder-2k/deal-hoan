@@ -207,7 +207,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rule 7: Kiểm tra số dư ví
+    // Rule 7: Thử gọi Stored Procedure nguyên tử create_withdrawal_request (Chống Race Condition)
+    try {
+      const { data: rpcRes, error: rpcErr } = await dbClient.rpc(
+        "create_withdrawal_request",
+        {
+          p_user_id: user.id,
+          p_amount: amount,
+          p_bank_name: bank_name,
+          p_bank_account_no: bank_account_no,
+          p_bank_account_name: bank_account_name,
+        }
+      );
+
+      if (!rpcErr && rpcRes && rpcRes.success) {
+        return NextResponse.json({
+          success: true,
+          message: `Đã gửi yêu cầu rút ${amount.toLocaleString(
+            "vi-VN"
+          )}đ về ${bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
+          request: rpcRes.request,
+          newBalance: rpcRes.new_balance,
+        });
+      }
+
+      if (rpcErr && rpcErr.message?.includes("insufficient_balance")) {
+        return NextResponse.json(
+          {
+            error: "Số dư khả dụng không đủ để thực hiện yêu cầu rút tiền này.",
+          },
+          { status: 400 }
+        );
+      }
+    } catch (rpcCatchErr) {
+      console.warn("RPC create_withdrawal_request fallback to direct atomic query:", rpcCatchErr);
+    }
+
+    // Fallback nếu Stored Procedure chưa được chạy trên Supabase:
+    // Kiểm tra số dư và trừ tiền với điều kiện an toàn
     const currentBalance = Number(wallet?.balance ?? 0);
     if (currentBalance < 10000) {
       return NextResponse.json(
@@ -220,7 +257,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Rule 8: Số tiền rút không được vượt quá số dư khả dụng
     if (amount > currentBalance) {
       return NextResponse.json(
         {
@@ -261,7 +297,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Sau khi ghi CSDL thành công, mới trừ số dư trong user_wallets
+    // 2. Sau khi ghi CSDL thành công, trừ số dư trong user_wallets
     const newBalance = Math.max(0, currentBalance - amount);
     const newWithdrawn = Number(wallet?.total_withdrawn ?? 0) + amount;
 

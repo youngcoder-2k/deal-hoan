@@ -226,7 +226,39 @@ export async function PATCH(request: NextRequest) {
         : "Thông tin tài khoản ngân hàng chưa chính xác";
     const finalNote = typeof note === "string" && note.trim() ? note.trim() : defaultNote;
 
-    // 1. Cập nhật trong cơ sở dữ liệu Supabase
+    // 1. Thử gọi hàm Stored Procedure nguyên tử process_withdrawal_decision
+    try {
+      const { data: rpcRes, error: rpcErr } = await clientToUse.rpc(
+        "process_withdrawal_decision",
+        {
+          p_withdrawal_id: withdrawalId,
+          p_status: status,
+          p_note: finalNote,
+        }
+      );
+      if (!rpcErr && rpcRes && rpcRes.success) {
+        return NextResponse.json({
+          success: true,
+          message:
+            status === "completed"
+              ? "✅ Đã duyệt và xác nhận chuyển tiền thành công!"
+              : "❌ Đã từ chối lệnh rút tiền và hoàn tiền về ví người dùng.",
+          withdrawalId,
+          status,
+          note: finalNote,
+        });
+      }
+      if (rpcErr && rpcErr.message?.includes("withdrawal_already_processed")) {
+        return NextResponse.json(
+          { error: "Lệnh rút tiền này đã được xử lý trước đó, không thể thay đổi lại." },
+          { status: 400 }
+        );
+      }
+    } catch (rpcCatchErr) {
+      console.warn("RPC process_withdrawal_decision fallback:", rpcCatchErr);
+    }
+
+    // Fallback nếu Stored Procedure chưa tạo trong CSDL:
     let targetUserId = "";
     let targetAmount = 0;
 
@@ -236,10 +268,23 @@ export async function PATCH(request: NextRequest) {
       .eq("id", withdrawalId)
       .maybeSingle();
 
-    if (currentWr) {
-      targetUserId = String(currentWr.user_id);
-      targetAmount = Number(currentWr.amount || 0);
+    if (!currentWr) {
+      return NextResponse.json(
+        { error: "Không tìm thấy thông tin lệnh rút tiền." },
+        { status: 404 }
+      );
     }
+
+    // Bảo mật: Chặn đứng nguy cơ hoàn tiền lặp lại (Replay Refund Attack)
+    if (currentWr.status !== "pending") {
+      return NextResponse.json(
+        { error: `Lệnh rút tiền này đã ở trạng thái "${currentWr.status}", không thể xử lý lại.` },
+        { status: 400 }
+      );
+    }
+
+    targetUserId = String(currentWr.user_id);
+    targetAmount = Number(currentWr.amount || 0);
 
     const { error: updateWrErr } = await clientToUse
       .from("withdrawal_requests")
@@ -254,7 +299,7 @@ export async function PATCH(request: NextRequest) {
       console.warn("Error updating withdrawal_requests in DB:", updateWrErr);
     }
 
-    // 2. Nếu TỪ CHỐI (rejected), tự động hoàn tiền lại vào số dư ví của người dùng trong CSDL
+    // 2. Nếu TỪ CHỐI (rejected) và trạng thái trước đó là 'pending': Hoàn tiền 1 lần duy nhất về ví
     if (status === "rejected" && targetUserId && targetAmount > 0) {
       try {
         const { data: walletData } = await clientToUse

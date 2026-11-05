@@ -35,7 +35,7 @@ create index if not exists idx_withdrawal_requests_user_id on public.withdrawal_
 alter table public.user_wallets enable row level security;
 alter table public.withdrawal_requests enable row level security;
 
--- Policies cho user_wallets: Người dùng chỉ có thể xem và sửa ví của chính mình
+-- Policies cho user_wallets: Người dùng chỉ có thể xem và sửa thông tin ngân hàng của chính mình
 create policy "Users can view own wallet"
   on public.user_wallets for select
   using (auth.uid() = user_id);
@@ -43,6 +43,11 @@ create policy "Users can view own wallet"
 create policy "Users can update own bank details"
   on public.user_wallets for update
   using (auth.uid() = user_id);
+
+-- Bảo mật nghiêm ngặt: Thu hồi quyền update số dư, người dùng chỉ được sửa thông tin ngân hàng
+revoke update on public.user_wallets from authenticated;
+grant update (bank_name, bank_account_no, bank_account_name, updated_at)
+  on public.user_wallets to authenticated;
 
 create policy "Users can insert own wallet"
   on public.user_wallets for insert

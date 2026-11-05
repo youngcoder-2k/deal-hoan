@@ -38,16 +38,12 @@ export async function checkAdminApiAuth(request: NextRequest): Promise<{
     console.warn("Check admin API auth error:", err);
   }
 
-  // Manual order crediting requires configured credentials or master admin key
-  const configuredKey = process.env.ADMIN_SECRET_KEY?.trim() || "dealhoan2026";
+  // 2. Kiểm tra mã bí mật ADMIN_SECRET_KEY nếu được cấu hình an toàn trong biến môi trường
+  const configuredKey = process.env.ADMIN_SECRET_KEY?.trim();
   const supplied =
     request.headers.get("x-admin-key")?.trim() ||
-    request.cookies.get("dealhoan_admin_key")?.value?.trim() ||
-    new URL(request.url).searchParams.get("key")?.trim();
+    request.cookies.get("dealhoan_admin_key")?.value?.trim();
 
-  if (supplied && (supplied === configuredKey || supplied === "dealhoan2026")) {
-    return { isAuthorized: true, method: "admin_key" };
-  }
   if (configuredKey && supplied) {
     const a = Buffer.from(configuredKey);
     const b = Buffer.from(supplied);

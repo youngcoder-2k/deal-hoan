@@ -20,7 +20,7 @@ export default async function AdminPage(props: {
   const searchParams = props.searchParams ? await props.searchParams : undefined;
   const adminKey = cookieStore.get("dealhoan_admin_key")?.value?.trim();
   const queryKey = searchParams?.key?.trim();
-  const configuredKey = process.env.ADMIN_SECRET_KEY?.trim() || "dealhoan2026";
+  const configuredKey = process.env.ADMIN_SECRET_KEY?.trim();
 
   let isAuthorized = false;
   let currentUserEmail: string | null = null;
@@ -43,13 +43,8 @@ export default async function AdminPage(props: {
     console.warn("Server admin auth check error:", err);
   }
 
-  // Cho phép xác thực qua ADMIN_SECRET_KEY hoặc mã master key dealhoan2026
-  if (
-    adminKey === configuredKey ||
-    queryKey === configuredKey ||
-    queryKey === "dealhoan2026" ||
-    adminKey === "dealhoan2026"
-  ) {
+  // Cho phép xác thực qua ADMIN_SECRET_KEY nếu được cấu hình
+  if (configuredKey && (adminKey === configuredKey || queryKey === configuredKey)) {
     isAuthorized = true;
   }
 

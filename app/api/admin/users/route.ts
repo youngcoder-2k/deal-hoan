@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   AdminUserItem,
   DEMO_ADMIN_USERS,
-  getAdminEmails,
   getSupabaseAdminClient,
 } from "@/lib/auth/admin";
 import {
@@ -24,7 +23,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           error: "Không có quyền truy cập trang quản trị. Vui lòng đăng nhập với tài khoản Admin.",
-          adminEmails: getAdminEmails(),
         },
         { status: 403 }
       );
