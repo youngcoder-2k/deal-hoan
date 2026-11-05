@@ -1415,7 +1415,7 @@ export default function HomeClient({
             </div>
             <footer>
               Mở <strong>{result || "Shopee Mall"}</strong> trong tab mới · ghi nhận trong 24 giờ · nhận
-              hoàn sau 14–15 ngày
+              hoàn 7–15 ngày sau khi nhận hàng
             </footer>
           </div>
         </div>
