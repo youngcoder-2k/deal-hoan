@@ -125,7 +125,7 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
           </li>
         ))}
       </ol>
-      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee, ShopeeFood, TikTok Shop và Lazada.</p>
+      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee và ShopeeFood.</p>
       <div className={styles.guideFooter}>
         <a href="#how" className={styles.guideLink}>Cách lấy link sản phẩm <ArrowRightIcon size={22} aria-hidden="true" /></a>
       </div>

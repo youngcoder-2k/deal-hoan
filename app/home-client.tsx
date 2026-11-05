@@ -1001,10 +1001,10 @@ export default function HomeClient({
                   Minh T. vừa nhận hoàn <strong>86.000đ</strong> từ Shopee
                 </span>
                 <span>
-                  Hằng N. vừa nhận hoàn <strong>42.500đ</strong> từ TikTok Shop
+                  Hằng N. vừa nhận hoàn <strong>42.500đ</strong> từ ShopeeFood
                 </span>
                 <span>
-                  Quốc B. vừa nhận hoàn <strong>129.000đ</strong> từ Lazada
+                  Quốc B. vừa nhận hoàn <strong>129.000đ</strong> từ Shopee
                 </span>
                 <span>
                   Thảo V. vừa nhận hoàn <strong>58.000đ</strong> từ Shopee
