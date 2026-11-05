@@ -922,7 +922,7 @@ export default function HomeClient({
                       autoComplete="off"
                       spellCheck={false}
                       value={link}
-                      placeholder="Chạm giữ vào đây → Chọn “Dán”..."
+                      placeholder="Dán link sản phẩm vào đây..."
                       onChange={(e) => {
                         const next = e.target.value;
                         setLink(next);
