@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
     const proto = request.headers.get("x-forwarded-proto") || (host?.includes("localhost") ? "http" : "https");
-    const origin = host ? `${proto}://${host}` : request.nextUrl.origin || "https://dealhoan.vn";
+    const origin = host ? `${proto}://${host}` : request.nextUrl.origin || "https://dealhoan.com";
 
     // 1. SHOPEEFOOD
     if (isShopeeFoodUrl(rawUrl)) {

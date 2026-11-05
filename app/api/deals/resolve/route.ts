@@ -373,7 +373,7 @@ export async function POST(request: NextRequest) {
     const proto = request.headers.get("x-forwarded-proto") || (requestHost?.includes("localhost") ? "http" : "https");
     const siteBase = requestHost
       ? `${proto}://${requestHost}`
-      : request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.vn";
+      : request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.com";
     let trackedLink: string;
     if (isCurrentShopeeFood) {
       trackedLink = buildShopeeFoodAffiliateUrl(canonicalUrl, {

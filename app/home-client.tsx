@@ -532,7 +532,7 @@ export default function HomeClient({
   }, []);
   const getAffiliateUrl = (url?: string | null) => {
     if (!url) return "https://shopee.vn";
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://dealhoan.vn";
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : (process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.com");
     const subId = user ? formatSubIdForUser(user.id) : "dealhoan";
     if (isShopeeUrl(url)) {
       return buildShopeeAffiliateUrl(url, { affiliateId: "17333200656", subId });

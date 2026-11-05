@@ -375,7 +375,7 @@ export function buildCustomShortUrl(
     itemId?: string;
   },
 ): string {
-  let base = (options?.baseUrl || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.vn").trim();
+  let base = (options?.baseUrl || process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.com").trim();
   if (!base.startsWith("http://") && !base.startsWith("https://")) {
     base = `https://${base}`;
   }

@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://deal-hoan.vercel.app"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "https://dealhoan.com"),
   title: "DealHoàn — Săn deal & hoàn tiền",
   description: "Nền tảng săn deal và hoàn tiền cho người mua sắm thông minh.",
   openGraph: {
