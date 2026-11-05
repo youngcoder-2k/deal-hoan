@@ -189,7 +189,7 @@ export default function PwaInstallPrompt() {
         </div>
       </div>
 
-      {/* Modal / Sheet hướng dẫn chi tiết trực quan cho iOS Safari & Android */}
+      {/* Modal / Sheet hướng dẫn chi tiết trực quan, đơn giản, tinh tế */}
       {showIOSGuide && (
         <div
           role="dialog"
@@ -200,9 +200,9 @@ export default function PwaInstallPrompt() {
             if (e.target === e.currentTarget) setShowIOSGuide(false);
           }}
         >
-          <div className="bg-[#18181b] text-white w-full max-w-[390px] rounded-3xl p-4 sm:p-5 shadow-2xl border border-white/15 animate-in slide-in-from-bottom-6 duration-300 max-h-[90vh] overflow-y-auto">
+          <div className="bg-[#18181b] text-white w-full max-w-[380px] rounded-3xl p-5 shadow-2xl border border-white/15 animate-in slide-in-from-bottom-6 duration-300">
             {/* Thanh kéo trang trí kiểu iOS Sheet */}
-            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-3" />
+            <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-3.5" />
 
             {/* Header modal */}
             <div className="flex items-center justify-between pb-3.5 border-b border-white/10">
@@ -218,10 +218,10 @@ export default function PwaInstallPrompt() {
                 </div>
                 <div>
                   <h3 id="pwa-guide-title" className="font-extrabold text-[15px] sm:text-base text-white tracking-tight">
-                    {isIOS ? "Thêm DealHoàn vào iPhone" : "Cài DealHoàn ra màn hình"}
+                    {isIOS ? "Thêm DealHoàn vào iPhone" : "Cài đặt DealHoàn"}
                   </h3>
-                  <p className="text-[11.5px] text-zinc-400 mt-0.5">
-                    {isIOS ? "Chỉ 3 bước đơn giản trên Safari" : "Dùng mượt như App • 1 chạm săn deal"}
+                  <p className="text-xs text-zinc-400 mt-0.5">
+                    Chỉ 2 bước đơn giản để dùng như App
                   </p>
                 </div>
               </div>
@@ -235,128 +235,102 @@ export default function PwaInstallPrompt() {
               </button>
             </div>
 
-            {/* Danh sách các bước trực quan */}
-            <div className="space-y-3 my-3.5 text-xs">
+            {/* Danh sách 2 bước đơn giản, trực quan, không rườm rà */}
+            <div className="space-y-3 my-4">
               {isIOS ? (
                 <>
-                  {/* Bước 1: Bấm nút Chia sẻ */}
-                  <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm">
-                        1
-                      </span>
-                      <span className="font-semibold text-zinc-100 text-xs">
-                        Chạm biểu tượng <strong>Chia sẻ (Share)</strong> ở thanh dưới Safari:
-                      </span>
+                  {/* Bước 1 */}
+                  <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/[0.05] border border-white/10">
+                    <div className="w-11 h-11 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0">
+                      {/* Biểu tượng Chia sẻ iOS */}
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
                     </div>
-
-                    {/* Mô phỏng thanh dưới Safari */}
-                    <div className="bg-black/60 rounded-xl px-3 py-2 flex items-center justify-between border border-white/10 shadow-inner">
-                      <span className="text-zinc-600 text-base select-none">‹</span>
-                      <span className="text-zinc-600 text-base select-none">›</span>
-                      
-                      {/* Nút Chia sẻ nổi bật với viền sáng & icon chuẩn Apple */}
-                      <div className="relative flex items-center gap-1.5 px-3 py-1 rounded-lg bg-orange-500/20 text-orange-300 border border-orange-500/60 shadow-sm ring-2 ring-orange-500/20">
-                        <svg className="w-4 h-4 text-orange-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                        </svg>
-                        <span className="text-[11px] font-bold">Chia sẻ</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+                          Bước 1
+                        </span>
+                        <span className="text-sm font-bold text-white">
+                          Bấm nút Chia sẻ
+                        </span>
                       </div>
-
-                      <span className="text-zinc-600 text-xs select-none">📖</span>
-                      <span className="text-zinc-600 text-xs select-none">⊡</span>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        Nhấn biểu tượng <span className="text-orange-400 font-semibold">Chia sẻ</span> ở thanh công cụ dưới đáy Safari
+                      </p>
                     </div>
                   </div>
 
-                  {/* Bước 2: Chọn Thêm vào MH chính */}
-                  <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm">
-                        2
-                      </span>
-                      <span className="font-semibold text-zinc-100 text-xs">
-                        Cuộn menu xuống, chọn <strong>&ldquo;Thêm vào MH chính&rdquo;</strong>:
-                      </span>
+                  {/* Bước 2 */}
+                  <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/[0.05] border border-white/10">
+                    <div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                      {/* Biểu tượng Thêm vào MH chính */}
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <rect x="3" y="3" width="18" height="18" rx="5" strokeWidth={2} />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.4} d="M12 8v8m-4-4h8" />
+                      </svg>
                     </div>
-
-                    {/* Mô phỏng mục menu iOS */}
-                    <div className="bg-black/60 rounded-xl px-3 py-2 flex items-center justify-between border border-white/10 shadow-inner">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-lg bg-zinc-700/90 border border-white/20 flex items-center justify-center text-white shrink-0 shadow-sm">
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.6} d="M12 4v16m8-8H4" />
-                          </svg>
-                        </div>
-                        <div>
-                          <span className="text-xs font-bold text-amber-300 block">Thêm vào MH chính</span>
-                          <span className="text-[10px] text-zinc-400 block -mt-0.5">Add to Home Screen</span>
-                        </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                          Bước 2
+                        </span>
+                        <span className="text-sm font-bold text-white">
+                          Thêm vào MH chính
+                        </span>
                       </div>
-                      <span className="text-zinc-400 text-sm font-bold">➕</span>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        Chọn <span className="text-amber-300 font-semibold">&ldquo;Thêm vào MH chính&rdquo;</span> rồi bấm <span className="text-white font-semibold">&ldquo;Thêm&rdquo;</span>
+                      </p>
                     </div>
-                  </div>
-
-                  {/* Bước 3: Nhấn nút Thêm ở góc trên */}
-                  <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm">
-                        3
-                      </span>
-                      <span className="font-semibold text-zinc-100 text-xs">
-                        Bấm <strong>&ldquo;Thêm&rdquo; (Add)</strong> ở góc trên bên phải:
-                      </span>
-                    </div>
-
-                    {/* Mô phỏng thanh tiêu đề hộp thoại xác nhận iOS */}
-                    <div className="bg-black/60 rounded-xl px-3 py-1.5 flex items-center justify-between border border-white/10 shadow-inner">
-                      <span className="text-xs text-zinc-400">Hủy</span>
-                      <span className="text-xs font-semibold text-zinc-200">Thêm vào MH chính</span>
-                      <span className="px-2.5 py-0.5 bg-blue-500 text-white font-bold text-xs rounded-md shadow-sm">
-                        Thêm
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Gợi ý vị trí trực quan */}
-                  <div className="text-[11.5px] text-amber-300/95 font-medium flex items-center justify-center gap-1.5 py-1 px-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-center">
-                    <span className="animate-bounce">👇</span> Nút Chia sẻ nằm ở thanh công cụ dưới đáy màn hình
                   </div>
                 </>
               ) : (
                 <>
                   {/* Android Chrome: Bước 1 */}
-                  <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm">
-                        1
-                      </span>
-                      <span className="font-semibold text-zinc-100 text-xs">
-                        Bấm biểu tượng <strong>3 chấm ⋮</strong> ở góc trên bên phải Chrome.
-                      </span>
+                  <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/[0.05] border border-white/10">
+                    <div className="w-11 h-11 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0">
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="2" />
+                        <circle cx="12" cy="12" r="2" />
+                        <circle cx="12" cy="19" r="2" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+                          Bước 1
+                        </span>
+                        <span className="text-sm font-bold text-white">
+                          Bấm menu 3 chấm
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        Nhấn biểu tượng <span className="text-orange-400 font-semibold">⋮ (3 chấm)</span> ở góc trên trình duyệt Chrome
+                      </p>
                     </div>
                   </div>
 
                   {/* Android Chrome: Bước 2 */}
-                  <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm">
-                        2
-                      </span>
-                      <span className="font-semibold text-zinc-100 text-xs">
-                        Chọn dòng <strong>&ldquo;Cài đặt ứng dụng&rdquo;</strong> hoặc <strong>&ldquo;Thêm vào Màn hình chính&rdquo;</strong>.
-                      </span>
+                  <div className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-white/[0.05] border border-white/10">
+                    <div className="w-11 h-11 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
                     </div>
-                  </div>
-
-                  {/* Android Chrome: Bước 3 */}
-                  <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center font-black text-[11px] shrink-0 shadow-sm">
-                        3
-                      </span>
-                      <span className="font-semibold text-zinc-100 text-xs">
-                        Bấm <strong>&ldquo;Cài đặt&rdquo;</strong> để đưa icon DealHoàn ra màn hình.
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400">
+                          Bước 2
+                        </span>
+                        <span className="text-sm font-bold text-white">
+                          Cài đặt ứng dụng
+                        </span>
+                      </div>
+                      <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
+                        Chọn <span className="text-amber-300 font-semibold">&ldquo;Cài đặt ứng dụng&rdquo;</span> (hoặc Thêm vào Màn hình chính)
+                      </p>
                     </div>
                   </div>
                 </>
