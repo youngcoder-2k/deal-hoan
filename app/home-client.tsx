@@ -1386,11 +1386,16 @@ export default function HomeClient({
                   className="primary"
                   onClick={() => {
                     setBuyOpen(false);
-                    window.open(
-                      currentTrackedLink || (link ? getAffiliateUrl(link) : "https://shopee.vn"),
-                      "_blank",
-                      "noopener",
+                    const targetUrl = currentTrackedLink || (link ? getAffiliateUrl(link) : "https://shopee.vn");
+                    const isMobileOrInApp = typeof navigator !== "undefined" && (
+                      /iphone|ipad|ipod|android/i.test(navigator.userAgent) ||
+                      /zalo|fbav|fban|tiktok/i.test(navigator.userAgent)
                     );
+                    if (isMobileOrInApp) {
+                      window.location.href = targetUrl;
+                    } else {
+                      window.open(targetUrl, "_blank", "noopener");
+                    }
                     notify(`Đang chuyển tới ${result}...`);
                   }}
                 >

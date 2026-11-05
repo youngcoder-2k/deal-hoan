@@ -3,6 +3,7 @@ import { Be_Vietnam_Pro } from "next/font/google";
 import ScrollToTop from "@/app/components/scroll-to-top";
 import ServiceWorkerRegister from "@/app/components/sw-register";
 import PwaInstallPrompt from "@/app/components/pwa-install-prompt";
+import InAppBrowserGuard from "@/app/components/in-app-browser-guard";
 import "./globals.css";
 
 const beVietnamPro = Be_Vietnam_Pro({
@@ -73,6 +74,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${beVietnamPro.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <InAppBrowserGuard />
         {children}
         <ScrollToTop />
         <ServiceWorkerRegister />
