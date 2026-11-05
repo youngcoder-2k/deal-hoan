@@ -11,26 +11,6 @@
     to { clip-path: inset(0); }
   }
 
-  /* Native scroll timelines avoid per-frame JS and gracefully fall back. */
-  @supports (animation-timeline: scroll()) {
-    .motionPage[data-home-motion="on"]::before {
-      content: "";
-      position: fixed;
-      z-index: 110;
-      inset: 0 0 auto;
-      height: 3px;
-      pointer-events: none;
-      background: linear-gradient(90deg, #ffb34e, #fa4b23 65%, #ed6c88);
-      transform-origin: left;
-      animation: readingProgress linear both;
-      animation-timeline: scroll(root block);
-    }
-    @keyframes readingProgress {
-      from { transform: scaleX(0); }
-      to { transform: scaleX(1); }
-    }
-  }
-
   @media (min-width: 901px) and (hover: hover) {
     @supports (animation-timeline: view()) {
       .motionPage[data-home-motion="on"] [data-motion-art] {
