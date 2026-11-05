@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
-import { ClipboardTextIcon } from "@phosphor-icons/react/dist/csr/ClipboardText";
+import { LightningIcon } from "@phosphor-icons/react/dist/csr/Lightning";
 import { GearSixIcon } from "@phosphor-icons/react/dist/csr/GearSix";
 import HomeDiscovery from "./components/home-discovery";
 import { CashbackStory, CashbackEmpty, CashbackReceipt } from "./components/cashback-hero";
@@ -722,9 +722,9 @@ export default function HomeClient({
         showTopToast({
           type: "info",
           title: "Chưa sao chép link",
-          message: "Bộ nhớ tạm chưa có link. Hãy sao chép link hoặc chạm giữ vào ô bên dưới để Dán nhé.",
+          message: "Bộ nhớ tạm chưa có link. Hãy sao chép link hoặc chạm giữ vào ô để Dán nhé.",
         });
-        notify("Vui lòng sao chép link hoặc dán vào ô bên dưới.");
+        notify("Vui lòng sao chép link hoặc dán vào ô nhé.");
         setTimeout(() => linkInputRef.current?.focus(), 150);
         return;
       }
@@ -736,9 +736,9 @@ export default function HomeClient({
       showTopToast({
         type: "info",
         title: "Dán link thủ công",
-        message: "Trình duyệt chưa cho phép đọc tự động. Hãy chạm giữ vào ô bên dưới và chọn “Dán”.",
+        message: "Trình duyệt chưa cho phép đọc tự động. Hãy chạm giữ vào ô và chọn “Dán”.",
       });
-      notify("Chạm giữ vào ô bên dưới để Dán link nhé!");
+      notify("Chạm giữ vào ô để Dán link nhé!");
       setTimeout(() => linkInputRef.current?.focus(), 150);
     } finally { setReadingClipboard(false); }
   };
@@ -912,46 +912,57 @@ export default function HomeClient({
           <CashbackStory />
           <div className={`${styles.calculatorPanel} ${result && calculatedProduct ? "" : styles.calculatorIntro}`} aria-busy={busy}>
             <form className={`${styles.calculator} ${styles.pasteActionForm}`} onSubmit={calc}>
-              <button ref={pasteActionRef} type="button" className={styles.glassPasteButton} onClick={() => void pasteCopiedLink()} disabled={busy || readingClipboard} aria-busy={busy || readingClipboard}>
-                <ClipboardTextIcon size={28} weight="bold" aria-hidden="true" />
-                <span aria-live="polite">{busy ? `Đang kiểm tra ${calcPercent}%` : readingClipboard ? "Đang dán…" : "Dán link vừa sao chép"}</span>
-              </button>
-
-              {/* Ô dán thủ công: Hiển thị mặc định */}
-              <div className={styles.manualPasteBox}>
-                <div className={styles.manualPasteInputWrap}>
-                  <input
-                    ref={linkInputRef}
-                    autoFocus
-                    type="url"
-                    inputMode="url"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={link}
-                    placeholder="Dán link sản phẩm vào đây..."
-                    onChange={(e) => {
-                      const next = e.target.value;
-                      setLink(next);
-                      const extracted = extractUrlFromText(next);
-                      if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted))) {
-                        executeCalculation(extracted);
-                      }
-                    }}
-                    onPaste={(e) => {
-                      const pasted = e.clipboardData.getData("text");
-                      const extracted = extractUrlFromText(pasted) || pasted.trim();
-                      if (extracted) {
-                        setLink(extracted);
-                        executeCalculation(extracted);
-                      }
-                    }}
-                  />
-                  {link && (
-                    <button type="button" className={styles.manualClearBtn} onClick={() => setLink("")} aria-label="Xóa">
-                      ✕
-                    </button>
-                  )}
-                </div>
+              <div className={styles.inputActionRow}>
+                <input
+                  ref={linkInputRef}
+                  autoFocus
+                  type="url"
+                  inputMode="url"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={link}
+                  placeholder="Dán link sản phẩm vào đây"
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setLink(next);
+                    const extracted = extractUrlFromText(next);
+                    if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted))) {
+                      executeCalculation(extracted);
+                    }
+                  }}
+                  onPaste={(e) => {
+                    const pasted = e.clipboardData.getData("text");
+                    const extracted = extractUrlFromText(pasted) || pasted.trim();
+                    if (extracted) {
+                      setLink(extracted);
+                      executeCalculation(extracted);
+                    }
+                  }}
+                />
+                {link && (
+                  <button type="button" className={styles.manualClearBtn} onClick={() => setLink("")} aria-label="Xóa">
+                    ✕
+                  </button>
+                )}
+                <button
+                  ref={pasteActionRef}
+                  type="button"
+                  className={styles.inlineCalcBtn}
+                  disabled={busy || readingClipboard}
+                  aria-busy={busy || readingClipboard}
+                  onClick={() => {
+                    if (link.trim()) {
+                      void executeCalculation(link);
+                    } else {
+                      void pasteCopiedLink();
+                    }
+                  }}
+                >
+                  <LightningIcon size={16} weight="fill" aria-hidden="true" />
+                  <span aria-live="polite">
+                    {busy ? `${calcPercent}%` : readingClipboard ? "Đang dán…" : "Tính"}
+                  </span>
+                </button>
               </div>
             </form>
             <div className={styles.calculatorState}>
@@ -1337,7 +1348,7 @@ export default function HomeClient({
                     onClick={() => {
                       pasteActionRef.current?.scrollIntoView({ behavior: homeScrollBehavior(), block: "center" });
                       pasteActionRef.current?.focus();
-                      notify("⚡ Bấm nút Dán link vừa sao chép ở trên nhé");
+                      notify("⚡ Dán link vào ô trên rồi bấm Tính nhé");
                     }}
                   >
                     Lấy mã ngay <span>→</span>

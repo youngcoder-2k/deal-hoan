@@ -521,66 +521,157 @@
 
 /* Clipboard-first action: exact shared width with the guide/result below. */
 .calculatorPanel .pasteActionForm { display:flex; flex-direction:column; width:100%; gap:0; padding:0; margin:0 0 14px; border-radius:0; background:transparent; box-shadow:none; }
-.glassPasteButton { position:relative; isolation:isolate; overflow:hidden; display:flex; align-items:center; justify-content:center; gap:14px; width:100%; min-height:56px; padding:12px 18px; border:0; border-radius:12px; background:linear-gradient(110deg,#fe8a2c,#fb6928 50%,#fa4f26); color:#fff; font:inherit; font-size:18px; font-weight:750; line-height:1.4; cursor:pointer; backdrop-filter:blur(22px) saturate(145%); -webkit-backdrop-filter:blur(22px) saturate(145%); box-shadow:0 6px 16px #fb692826; transition:box-shadow .2s,filter .2s; }
-.glassPasteButton::before { content:none; }
-.glassPasteButton svg { flex-shrink:0; width:24px; height:24px; }
-.glassPasteButton span { font-variant-numeric:tabular-nums; }
-.glassPasteButton:hover:not(:disabled) { filter:brightness(1.03); box-shadow:0 8px 20px #fb692833; }
-.glassPasteButton:focus-visible { outline:3px solid #173d59; outline-offset:4px; }
-.glassPasteButton:disabled { cursor:wait; opacity:.8; }
-@media(max-width:600px) { .glassPasteButton { min-height:52px; padding:10px 12px; gap:10px; font-size:16px; border-radius:12px; } .glassPasteButton svg { width:22px; height:22px; } }
-@media(max-width:374px) { .glassPasteButton { font-size:15px; gap:8px; padding-inline:10px; } .glassPasteButton svg { width:21px; height:21px; } }
-@media(prefers-reduced-motion:reduce) { .glassPasteButton { transition:none; } }
-
-.manualPasteToggle {
-  margin-top: 10px;
-  background: none;
-  border: 0;
-  color: #c2410c;
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  cursor: pointer;
-  align-self: center;
-  padding: 6px 12px;
-  border-radius: 8px;
-  transition: opacity 0.15s, background-color 0.15s;
-}
-.manualPasteToggle:hover {
-  background-color: #fff7ed;
-  opacity: 0.9;
-}
-
-.manualPasteBox {
-  margin-top: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-}
-.manualPasteInputWrap {
+/* Single row input with inline "Tính" action (Image 2 design) */
+.inputActionRow {
   display: flex;
   align-items: center;
+  position: relative;
+  width: 100%;
+  height: 54px;
   background: #ffffff;
-  border: 1.5px solid #fdba74;
-  border-radius: 12px;
-  padding: 4px 14px;
-  transition: border-color 0.2s;
+  border: 2px solid #ff4b26;
+  border-radius: 16px;
+  padding: 4px 6px 4px 16px;
+  box-shadow: 0 4px 16px rgba(255, 75, 38, 0.08);
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.manualPasteInputWrap:focus-within {
+
+.inputActionRow:focus-within {
   border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.15), 0 4px 16px rgba(255, 75, 38, 0.12);
 }
-.manualPasteInputWrap input {
+
+.inputActionRow input {
   flex: 1;
   min-width: 0;
-  height: 44px;
+  height: 100%;
   border: 0;
   outline: none;
-  font-size: 14px;
+  font-size: 15px;
   color: #0f172a;
   background: transparent;
   font-family: inherit;
+  padding: 0;
+}
+
+.inputActionRow input::placeholder {
+  color: #64748b;
+  font-size: 15px;
+  font-weight: 400;
+}
+
+.manualClearBtn {
+  background: #f1f5f9;
+  border: 0;
+  color: #64748b;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  cursor: pointer;
+  margin-right: 8px;
+  flex-shrink: 0;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.manualClearBtn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.inlineCalcBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%);
+  color: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px rgba(234, 88, 12, 0.35);
+  transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+}
+
+.inlineCalcBtn:hover:not(:disabled) {
+  filter: brightness(1.04);
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.45);
+}
+
+.inlineCalcBtn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.inlineCalcBtn:focus-visible {
+  outline: 3px solid #173d59;
+  outline-offset: 2px;
+}
+
+.inlineCalcBtn:disabled {
+  cursor: wait;
+  opacity: 0.85;
+}
+
+.inlineCalcBtn svg {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: #ffffff;
+}
+
+@media (max-width: 600px) {
+  .inputActionRow {
+    height: 50px;
+    padding: 3px 5px 3px 14px;
+    border-radius: 14px;
+  }
+  .inputActionRow input {
+    font-size: 14px;
+  }
+  .inputActionRow input::placeholder {
+    font-size: 13.5px;
+  }
+  .inlineCalcBtn {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 14px;
+    gap: 5px;
+    border-radius: 10px;
+  }
+  .inlineCalcBtn svg {
+    width: 15px;
+    height: 15px;
+  }
+}
+
+@media (max-width: 374px) {
+  .inputActionRow {
+    height: 46px;
+    padding: 3px 4px 3px 10px;
+  }
+  .inputActionRow input {
+    font-size: 13px;
+  }
+  .inputActionRow input::placeholder {
+    font-size: 12.5px;
+  }
+  .inlineCalcBtn {
+    height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
+    gap: 4px;
+  }
 }
 .manualClearBtn {
   background: #f1f5f9;
