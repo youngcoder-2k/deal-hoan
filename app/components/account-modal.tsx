@@ -507,23 +507,6 @@ export default function AccountModal({
         setWallet((prev) => {
           const nextBalance = typeof data.newBalance === "number" ? data.newBalance : Math.max(0, prev.balance - parsedAmount);
           const nextWithdrawn = prev.total_withdrawn + parsedAmount;
-          if (typeof window !== "undefined") {
-            try {
-              const raw = localStorage.getItem("dealhoan_admin_balance_overrides");
-              const map = raw ? JSON.parse(raw) : {};
-              map[user.id] = {
-                balance: nextBalance,
-                pendingBalance: prev.pending_balance,
-                updatedAt: Date.now(),
-              };
-              map["usr_dh_001"] = {
-                balance: nextBalance,
-                pendingBalance: prev.pending_balance,
-                updatedAt: Date.now(),
-              };
-              localStorage.setItem("dealhoan_admin_balance_overrides", JSON.stringify(map));
-            } catch {}
-          }
           return {
             ...prev,
             balance: nextBalance,

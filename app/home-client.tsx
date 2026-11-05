@@ -15,7 +15,6 @@ import { setupHomeMotion, homeScrollBehavior } from "@/lib/ui/home-motion";
 import confetti from "canvas-confetti";
 import type { User } from "@supabase/supabase-js";
 import AccountModal from "@/app/components/account-modal";
-import { isAdminUser } from "@/lib/auth/admin";
 import { formatPrice, formatSold, formatCashbackPercent } from "@/lib/deals/format";
 import type { Deal, DealBundle, Coupon, CouponCategory, Platform } from "@/lib/deals/types";
 import { getDailyShopeeCoupons } from "@/lib/deals/coupons-static";
@@ -325,6 +324,8 @@ export default function HomeClient({
   const [calculatedProduct, setCalculatedProduct] = useState<CalculatedProduct | null>(null);
   const [buyOpen, setBuyOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [isServerAdmin, setIsServerAdmin] = useState(false);
+  const isUserAdmin = Boolean(user?.app_metadata?.role === "admin" || isServerAdmin);
   const [authPending, setAuthPending] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [userBalance, setUserBalance] = useState<number | null>(null);
@@ -334,6 +335,9 @@ export default function HomeClient({
       .then((data) => {
         if (data?.wallet && typeof data.wallet.balance === "number") {
           setUserBalance(data.wallet.balance);
+        }
+        if (data?.isAdmin) {
+          setIsServerAdmin(true);
         }
       })
       .catch(() => {});
@@ -347,6 +351,9 @@ export default function HomeClient({
       .then((data) => {
         if (mounted && data?.wallet && typeof data.wallet.balance === "number") {
           setUserBalance(data.wallet.balance);
+        }
+        if (mounted && data?.isAdmin) {
+          setIsServerAdmin(true);
         }
       })
       .catch(() => {});
@@ -868,7 +875,7 @@ export default function HomeClient({
           <div className="account">
             {user ? (
               <>
-                {isAdminUser(user) && (
+                {isUserAdmin && (
                   <Link
                     href="/admin"
                     className="header-admin-btn"

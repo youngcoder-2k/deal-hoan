@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { handleApiError } from "@/lib/api/response";
 
 export const dynamic = "force-dynamic";
 
@@ -32,8 +33,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, sessions: data || [] });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể tải phiên hoàn tiền.");
   }
 }
 
@@ -134,7 +134,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể lưu phiên hoàn tiền.");
   }
 }

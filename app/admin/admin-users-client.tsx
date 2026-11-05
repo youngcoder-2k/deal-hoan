@@ -119,10 +119,9 @@ function applyLocalBalanceOverrides(usersList: AdminUserItem[]): AdminUserItem[]
     return usersList.map((u) => {
       const ov = map[u.id];
       if (ov && now - ov.updatedAt < 24 * 3600 * 1000) {
-        // Đồng bộ số dư nếu user usr_dh_001 đã rút 60k (từ 100k xuống 40k)
-        const balance = u.id === "usr_dh_001" && ov.balance === 100000 ? 40000 : ov.balance;
-        const totalWithdrawn = u.id === "usr_dh_001" ? 60000 : u.totalWithdrawn;
-        const pendingBalance = u.id === "usr_dh_001" ? 0 : ov.pendingBalance;
+        const balance = typeof ov.balance === "number" ? ov.balance : u.balance;
+        const totalWithdrawn = u.totalWithdrawn;
+        const pendingBalance = typeof ov.pendingBalance === "number" ? ov.pendingBalance : u.pendingBalance;
         return {
           ...u,
           balance,

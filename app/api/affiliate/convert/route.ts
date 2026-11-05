@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { parseJsonBody, handleApiError } from "@/lib/api/response";
 import {
   buildShopeeAffiliateUrl,
   buildShopeeFoodAffiliateUrl,
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await parseJsonBody<Record<string, unknown>>(request)) || {};
     const rawUrl = body.url ? String(body.url).trim() : "";
     const auth = await createSupabaseServerClient();
     const session = auth ? await auth.auth.getUser() : null;
@@ -123,7 +124,6 @@ export async function POST(request: NextRequest) {
       hasCommission: false,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể chuyển đổi liên kết lúc này.");
   }
 }

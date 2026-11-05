@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseJsonBody, handleApiError } from "@/lib/api/response";
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildShopeeAffiliateUrl,
@@ -60,7 +61,7 @@ function extractShopeeBreadcrumbCategory(html: string): string | null {
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = (await parseJsonBody<Record<string, unknown>>(request)) || {};
     const rawInput = body.url ? String(body.url).trim() : "";
     let rawUrl = extractUrlFromText(rawInput);
     if (rawUrl && !rawUrl.startsWith("http://") && !rawUrl.startsWith("https://")) {
@@ -523,8 +524,7 @@ export async function POST(request: NextRequest) {
       trackedLink,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể kiểm tra hoàn tiền cho sản phẩm này. Vui lòng thử lại sau.");
   }
 }
 

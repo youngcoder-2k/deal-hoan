@@ -3,6 +3,7 @@ import { readFile, writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 import { hasSupabaseConfig, supabasePublishableKey, supabaseUrl } from "@/lib/supabase/config";
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
+import { checkAdminApiAuth } from "@/lib/auth/admin-server";
 import { createClient } from "@supabase/supabase-js";
 
 const CACHE_DIR = path.join(process.cwd(), "lib/deals/cache");
@@ -128,7 +129,12 @@ export async function GET(request: NextRequest) {
   const promotionId = searchParams.get("promotionId");
   const sessionIndex = searchParams.get("sessionIndex");
   const status = searchParams.get("status");
-  const forceRefresh = searchParams.get("refresh") === "true";
+  const wantsRefresh = searchParams.get("refresh") === "true";
+  let forceRefresh = false;
+  if (wantsRefresh) {
+    const adminAuth = await checkAdminApiAuth(request);
+    forceRefresh = adminAuth.isAuthorized;
+  }
 
   let data: CachePayload | null = null;
 

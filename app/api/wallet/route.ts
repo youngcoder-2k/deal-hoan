@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseJsonBody, handleApiError } from "@/lib/api/response";
 import {
   getSharedWallet,
   updateSharedWallet,
 } from "@/lib/deals/user-wallet-store";
-import { getSupabaseAdminClient } from "@/lib/auth/admin";
+import { getSupabaseAdminClient, isAdminUser } from "@/lib/auth/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +37,12 @@ export async function GET(request: NextRequest) {
           wallet: fallbackWallet,
           orders: [],
           history: [],
+          isAdmin: false,
         });
       }
       return NextResponse.json({
         wallet: fallbackWallet,
+        isAdmin: false,
       });
     }
 
@@ -63,10 +66,12 @@ export async function GET(request: NextRequest) {
           wallet: fallbackWallet,
           orders: [],
           history: [],
+          isAdmin: false,
         });
       }
       return NextResponse.json({
         wallet: fallbackWallet,
+        isAdmin: false,
       });
     }
 
@@ -161,6 +166,7 @@ export async function GET(request: NextRequest) {
         wallet: mergedWallet,
         orders,
         history,
+        isAdmin: isAdminUser(user),
       });
     }
 
@@ -181,6 +187,7 @@ export async function GET(request: NextRequest) {
           bank_account_no: metaAccountNo,
           bank_account_name: metaAccountName,
         },
+        isAdmin: isAdminUser(user),
       });
     }
 
@@ -195,7 +202,7 @@ export async function GET(request: NextRequest) {
         bank_account_name: metaAccountName,
       };
       await supabase.from("user_wallets").insert(initialWallet);
-      return NextResponse.json({ wallet: initialWallet });
+      return NextResponse.json({ wallet: initialWallet, isAdmin: isAdminUser(user) });
     }
 
     // Merge with user_metadata if user_wallets has empty bank fields
@@ -208,17 +215,16 @@ export async function GET(request: NextRequest) {
       bank_account_name: wallet.bank_account_name || metaAccountName,
     };
 
-    return NextResponse.json({ wallet: mergedWallet });
+    return NextResponse.json({ wallet: mergedWallet, isAdmin: isAdminUser(user) });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể tải dữ liệu ví.");
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
-    const body = await request.json();
+    const body = (await parseJsonBody<Record<string, unknown>>(request)) || {};
     const bank_name = String(body.bank_name || "").trim();
     const rawAccountNo = String(body.bank_account_no || "").trim();
     const bank_account_name = String(body.bank_account_name || "").trim().toUpperCase();
@@ -321,7 +327,6 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể cập nhật thông tin ngân hàng.");
   }
 }

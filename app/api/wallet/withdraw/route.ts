@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
+import { parseJsonBody, handleApiError } from "@/lib/api/response";
 import type { WithdrawalRecord } from "@/lib/deals/withdrawals-store";
 
 export const dynamic = "force-dynamic";
@@ -38,15 +39,14 @@ export async function GET() {
 
     return NextResponse.json({ history: dbHistory });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể tải lịch sử rút tiền.");
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient();
-    const body = await request.json();
+    const body = (await parseJsonBody<Record<string, unknown>>(request)) || {};
     const rawAmount = body.amount;
     const amount = Number(rawAmount);
 
@@ -277,7 +277,6 @@ export async function POST(request: NextRequest) {
       newBalance,
     });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return handleApiError(err, "Không thể xử lý yêu cầu rút tiền lúc này.");
   }
 }
