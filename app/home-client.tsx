@@ -2,7 +2,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FlameIcon } from "@phosphor-icons/react/dist/csr/Flame";
-import { ArrowRightIcon } from "@phosphor-icons/react/dist/csr/ArrowRight";
 import { MagnifyingGlassIcon } from "@phosphor-icons/react/dist/csr/MagnifyingGlass";
 import { ShoppingCartIcon } from "@phosphor-icons/react/dist/csr/ShoppingCart";
 import { ClipboardTextIcon } from "@phosphor-icons/react/dist/csr/ClipboardText";
@@ -235,7 +234,7 @@ export default function HomeClient({
   useEffect(() => setupHomeMotion(pageRef.current), []);
   const pasteActionRef = useRef<HTMLButtonElement>(null);
   const linkInputRef = useRef<HTMLInputElement>(null);
-  const [showManualInput, setShowManualInput] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(true);
   const calculationIdRef = useRef(0);
   const closingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -908,59 +907,43 @@ export default function HomeClient({
               <button ref={pasteActionRef} type="button" className={styles.glassPasteButton} onClick={() => void pasteCopiedLink()} disabled={busy || readingClipboard} aria-busy={busy || readingClipboard}>
                 <ClipboardTextIcon size={28} weight="bold" aria-hidden="true" />
                 <span aria-live="polite">{busy ? `Đang kiểm tra ${calcPercent}%` : readingClipboard ? "Đang dán…" : "Dán link vừa sao chép"}</span>
-                <ArrowRightIcon size={24} weight="bold" aria-hidden="true" />
               </button>
 
-              {/* Ô dán thủ công: Tự động mở khi trình duyệt (Samsung, Webview) chặn đọc clipboard tự động */}
-              {showManualInput && (
-                <div className={styles.manualPasteBox}>
-                  <div className={styles.manualPasteInputWrap}>
-                    <input
-                      ref={linkInputRef}
-                      type="url"
-                      inputMode="url"
-                      autoComplete="off"
-                      spellCheck={false}
-                      value={link}
-                      placeholder="Dán link sản phẩm vào đây..."
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setLink(next);
-                        const extracted = extractUrlFromText(next);
-                        if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted))) {
-                          executeCalculation(extracted);
-                        }
-                      }}
-                      onPaste={(e) => {
-                        const pasted = e.clipboardData.getData("text");
-                        const extracted = extractUrlFromText(pasted) || pasted.trim();
-                        if (extracted) {
-                          setLink(extracted);
-                          executeCalculation(extracted);
-                        }
-                      }}
-                    />
-                    {link && (
-                      <button type="button" className={styles.manualClearBtn} onClick={() => setLink("")} aria-label="Xóa">
-                        ✕
-                      </button>
-                    )}
-                  </div>
+              {/* Ô dán thủ công: Hiển thị mặc định */}
+              <div className={styles.manualPasteBox}>
+                <div className={styles.manualPasteInputWrap}>
+                  <input
+                    ref={linkInputRef}
+                    type="url"
+                    inputMode="url"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={link}
+                    placeholder="Dán link sản phẩm vào đây..."
+                    onChange={(e) => {
+                      const next = e.target.value;
+                      setLink(next);
+                      const extracted = extractUrlFromText(next);
+                      if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted))) {
+                        executeCalculation(extracted);
+                      }
+                    }}
+                    onPaste={(e) => {
+                      const pasted = e.clipboardData.getData("text");
+                      const extracted = extractUrlFromText(pasted) || pasted.trim();
+                      if (extracted) {
+                        setLink(extracted);
+                        executeCalculation(extracted);
+                      }
+                    }}
+                  />
+                  {link && (
+                    <button type="button" className={styles.manualClearBtn} onClick={() => setLink("")} aria-label="Xóa">
+                      ✕
+                    </button>
+                  )}
                 </div>
-              )}
-
-              {!showManualInput && (
-                <button
-                  type="button"
-                  className={styles.manualPasteToggle}
-                  onClick={() => {
-                    setShowManualInput(true);
-                    setTimeout(() => linkInputRef.current?.focus(), 150);
-                  }}
-                >
-                  Hoặc chạm để tự dán link thủ công
-                </button>
-              )}
+              </div>
             </form>
             <div className={styles.calculatorState}>
               {result && calculatedProduct ? (
