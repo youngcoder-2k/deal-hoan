@@ -946,9 +946,6 @@ export default function HomeClient({
                       </button>
                     )}
                   </div>
-                  <p className={styles.manualPasteHint}>
-                    💡 Mẹo: Chạm giữ 1 giây vào ô trên rồi chọn <b>Dán</b> (Paste) từ bàn phím.
-                  </p>
                 </div>
               )}
 
