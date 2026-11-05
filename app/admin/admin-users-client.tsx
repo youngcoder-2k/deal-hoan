@@ -1792,7 +1792,7 @@ export default function AdminUsersClient({
                 </span>
                 <input
                   type="text"
-                  placeholder="Tìm theo tên, email, ngân hàng, STK, mã lệnh…"
+                  placeholder="Tìm theo tên, email, STK, mã lệnh…"
                   aria-label="Tìm kiếm lệnh rút"
                   value={withdrawalSearch}
                   onChange={(e) => {
@@ -1831,7 +1831,7 @@ export default function AdminUsersClient({
                     <option value="all">Tất cả ({allWithdrawals.length})</option>
                     <option value="pending">Chờ duyệt ({pendingWithdrawalsCount})</option>
                     <option value="completed">Đã chi trả ({completedWithdrawals.length})</option>
-                    <option value="rejected">Bị từ chối ({rejectedWithdrawals.length})</option>
+                    <option value="rejected">Từ chối ({rejectedWithdrawals.length})</option>
                   </select>
                 </div>
 
@@ -1846,15 +1846,15 @@ export default function AdminUsersClient({
                     }}
                     className="admin-select"
                   >
-                    <option value="created_desc">Mới nhất trước</option>
-                    <option value="amount_desc">Số tiền cao nhất ↓</option>
-                    <option value="amount_asc">Số tiền thấp nhất ↑</option>
-                    <option value="created_asc">Cũ nhất trước</option>
+                    <option value="created_desc">Mới nhất</option>
+                    <option value="amount_desc">Số tiền cao nhất</option>
+                    <option value="amount_asc">Số tiền thấp nhất</option>
+                    <option value="created_asc">Cũ nhất</option>
                   </select>
                 </div>
 
                 <div className="filter-count-badge">
-                  Hiển thị: <b>{filteredWithdrawals.length}</b> / {allWithdrawals.length} lệnh
+                  <b>{filteredWithdrawals.length}</b> / {allWithdrawals.length} lệnh
                 </div>
               </div>
             </section>
@@ -1894,12 +1894,12 @@ export default function AdminUsersClient({
                     <table className="admin-data-table" aria-label="Danh sách duyệt lệnh rút tiền">
                       <thead>
                         <tr>
-                          <th scope="col">Thời gian &amp; Mã lệnh</th>
-                          <th scope="col">Người nhận</th>
-                          <th scope="col" className={design.numeric}>Số tiền rút</th>
-                          <th scope="col">Tài khoản ngân hàng</th>
+                          <th scope="col">Thời gian</th>
+                          <th scope="col">Thành viên</th>
+                          <th scope="col" className={design.numeric}>Số tiền</th>
+                          <th scope="col">Tài khoản nhận</th>
                           <th scope="col" className="text-center">Trạng thái</th>
-                          <th scope="col" className="text-right">Hành động duyệt</th>
+                          <th scope="col" className="text-right">Thao tác</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1916,15 +1916,9 @@ export default function AdminUsersClient({
                                 <div className="text-[11px] font-mono text-stone-400 mt-0.5">
                                   #{w.id.slice(0, 8)}
                                 </div>
-                                {w.note && (
-                                  <div className="text-[11px] text-stone-500 mt-1 italic max-w-xs truncate flex items-center gap-1" title={w.note}>
-                                    <ChatDots size={12} weight="bold" className="shrink-0 text-stone-400" />
-                                    <span>{w.note}</span>
-                                  </div>
-                                )}
                               </td>
 
-                              {/* Cột 2: Người nhận (chuẩn user profile cell của tab Người dùng) */}
+                              {/* Cột 2: Thành viên */}
                               <td className="cell-user">
                                 <div className="user-profile-cell">
                                   <div className="user-avatar-wrap">
@@ -1935,19 +1929,7 @@ export default function AdminUsersClient({
                                     )}
                                   </div>
                                   <div className="user-cell-texts">
-                                    <div className="user-name-line">
-                                      <span className="user-name-text">{w.userName || "Thành viên"}</span>
-                                      {w.userRefCode && (
-                                        <button
-                                          type="button"
-                                          className="user-ref-tag"
-                                          onClick={() => copyToClipboard(w.userRefCode, "Mã ref")}
-                                          title="Bấm để sao chép mã ref"
-                                        >
-                                          {w.userRefCode}
-                                        </button>
-                                      )}
-                                    </div>
+                                    <span className="user-name-text">{w.userName || "Thành viên"}</span>
                                     <span className="user-email-text">{w.userEmail}</span>
                                   </div>
                                 </div>
@@ -1955,41 +1937,37 @@ export default function AdminUsersClient({
 
                               {/* Cột 3: Số tiền rút */}
                               <td className={design.numeric}>
-                                <strong className="text-emerald-600 text-base font-extrabold">{formatVnd(w.amount)}</strong>
+                                <strong className="text-[#109452] text-sm font-bold">{formatVnd(w.amount)}</strong>
                               </td>
 
                               {/* Cột 4: Thông tin ngân hàng */}
                               <td className="cell-bank">
                                 <div className="bank-cell-box">
-                                  <div className="bank-header-row">
-                                    <Bank size={18} className="text-orange-600 flex-shrink-0" />
-                                    <span className="truncate">{w.bankName}</span>
+                                  <div className="flex items-center gap-1.5 text-xs">
+                                    <strong className="text-stone-900 font-semibold">{w.bankName}</strong>
+                                    <span className="text-stone-300">·</span>
+                                    <span className="text-[11px] font-medium text-stone-500 uppercase">{w.bankAccountName || w.userName}</span>
                                   </div>
-                                  <div className="bank-stk-row">
-                                    <span className="bank-stk-num">
-                                      {w.bankAccountNo}
-                                    </span>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="font-mono text-xs font-semibold text-stone-800 tracking-wide">{w.bankAccountNo}</span>
                                     <button
                                       type="button"
                                       onClick={() => handleCopySTK(w.bankAccountNo, w.bankName)}
-                                      className="btn-copy-stk flex items-center gap-1"
-                                      title="Sao chép số tài khoản để dán vào App ngân hàng"
+                                      className="btn-copy-stk"
+                                      title="Sao chép số tài khoản"
                                     >
                                       {copiedSTK === w.bankAccountNo ? (
                                         <>
-                                          <Check size={12} weight="bold" />
-                                          <span>Đã copy</span>
+                                          <Check size={11} weight="bold" className="text-emerald-600" />
+                                          <span className="text-emerald-700">Đã chép</span>
                                         </>
                                       ) : (
                                         <>
-                                          <Copy size={12} weight="bold" />
-                                          <span>Copy</span>
+                                          <Copy size={11} />
+                                          <span>Chép</span>
                                         </>
                                       )}
                                     </button>
-                                  </div>
-                                  <div className="bank-holder-name">
-                                    {w.bankAccountName || w.userName}
                                   </div>
                                 </div>
                               </td>
@@ -1997,21 +1975,21 @@ export default function AdminUsersClient({
                               {/* Cột 5: Trạng thái */}
                               <td className="text-center">
                                 {w.status === "pending" && (
-                                  <span className="w-badge w-pending inline-flex items-center gap-1">
+                                  <span className="w-badge w-pending">
                                     <Clock size={11} weight="bold" />
                                     <span>Chờ duyệt</span>
                                   </span>
                                 )}
                                 {w.status === "completed" && (
-                                  <span className="w-badge w-completed inline-flex items-center gap-1">
+                                  <span className="w-badge w-completed">
                                     <CheckCircle size={11} weight="fill" />
                                     <span>Đã chi trả</span>
                                   </span>
                                 )}
                                 {w.status === "rejected" && (
-                                  <span className="w-badge w-rejected inline-flex items-center gap-1">
+                                  <span className="w-badge w-rejected">
                                     <XCircle size={11} weight="fill" />
-                                    <span>Bị từ chối</span>
+                                    <span>Từ chối</span>
                                   </span>
                                 )}
                               </td>
@@ -2019,18 +1997,18 @@ export default function AdminUsersClient({
                               {/* Cột 6: Thao tác duyệt */}
                               <td className="cell-actions text-right">
                                 {w.status === "pending" ? (
-                                  <div className="flex items-center justify-end gap-2">
+                                  <div className="flex items-center justify-end gap-1.5">
                                     <button
                                       type="button"
                                       disabled={isApproving}
                                       onClick={() => handleApproveWithdrawalDirect(w, "completed")}
-                                      className="btn-approve-direct flex items-center gap-1"
-                                      title="Xác nhận đã chuyển tiền thành công qua ngân hàng"
+                                      className="btn-approve-direct"
+                                      title="Xác nhận đã chuyển tiền thành công"
                                     >
                                       {isApproving ? "Đang xử lý…" : (
                                         <>
                                           <Check size={13} weight="bold" />
-                                          <span>Duyệt chi</span>
+                                          <span>Duyệt</span>
                                         </>
                                       )}
                                     </button>
@@ -2038,17 +2016,15 @@ export default function AdminUsersClient({
                                       type="button"
                                       disabled={isApproving}
                                       onClick={() => handleApproveWithdrawalDirect(w, "rejected")}
-                                      className="btn-reject-direct flex items-center gap-1"
-                                      title="Từ chối lệnh rút tiền và hoàn tiền về ví người dùng"
+                                      className="btn-reject-direct"
+                                      title="Từ chối yêu cầu và hoàn tiền về ví"
                                     >
                                       <X size={13} weight="bold" />
-                                      <span>Hủy</span>
+                                      <span>Từ chối</span>
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-xs text-stone-400 font-medium italic">
-                                    {w.status === "completed" ? "Đã đối soát xong" : "Đã hoàn lại ví"}
-                                  </span>
+                                  <span className="text-stone-300 select-none font-medium text-sm">—</span>
                                 )}
                               </td>
                             </tr>
@@ -2061,7 +2037,9 @@ export default function AdminUsersClient({
                   {/* Pagination Bar for Withdrawals */}
                   <div className="admin-pagination-bar">
                     <div className="pagination-info">
-                      Hiển thị <b>{filteredWithdrawals.length === 0 ? 0 : (safeWithdrawalPage - 1) * withdrawalPageSize + 1}–{Math.min(safeWithdrawalPage * withdrawalPageSize, filteredWithdrawals.length)}</b> trong số <b>{filteredWithdrawals.length}</b> yêu cầu
+                      <span>
+                        Hiển thị <b>{filteredWithdrawals.length === 0 ? 0 : (safeWithdrawalPage - 1) * withdrawalPageSize + 1}–{Math.min(safeWithdrawalPage * withdrawalPageSize, filteredWithdrawals.length)}</b> / <b>{filteredWithdrawals.length}</b> lệnh
+                      </span>
                       <div className="pagination-size-wrap">
                         <label htmlFor="w-page-size">Số dòng:</label>
                         <select
