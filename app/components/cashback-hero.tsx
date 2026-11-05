@@ -167,7 +167,7 @@ export function CashbackReceipt({
   const isFood = product.platform?.toLowerCase().includes("food");
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : (isFood ? 6.0 : 0));
   const hasPrice = price > 0;
-  const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : (isFood ? "Hoàn 6%" : "Chưa xác định");
+  const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : (isFood ? `Hoàn ${cashbackRate}%` : "Chưa xác định");
   const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.com");
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
@@ -217,7 +217,7 @@ export function CashbackReceipt({
           <div className={styles.rewardRate}>
             <span className={styles.ratePill}>
               {isFood
-                ? "Hoàn 6% toàn bộ đơn hàng (Ví dụ: Đơn 100k hoàn 6.000đ)"
+                ? `Hoàn ${cashbackRate.toLocaleString("vi-VN")}% toàn bộ đơn hàng (Ví dụ: Đơn 100k hoàn ${Math.round(100000 * (cashbackRate / 100)).toLocaleString("vi-VN")}đ)`
                 : `Hoàn ${cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng`}
             </span>
           </div>
@@ -266,7 +266,7 @@ export function CashbackReceipt({
       )}
       {product.platform?.toLowerCase().includes("food") && (
         <p className={styles.foodAppNote}>
-          💡 Mở ứng dụng ShopeeFood để đặt món &amp; nhận hoàn 6% tự động vào tài khoản DealHoàn.
+          💡 Mở ứng dụng ShopeeFood để đặt món &amp; nhận hoàn {cashbackRate.toLocaleString("vi-VN")}% tự động vào tài khoản DealHoàn.
         </p>
       )}
       <div className={styles.receiptFooter}>
