@@ -1340,7 +1340,7 @@ export default function AdminUsersClient({
         {activeTab === "users" && (
           <>
             <div className={design.titleBar}>
-              <div><h1>Người dùng &amp; số dư</h1><span>{users.length} người dùng</span></div>
+              <div><h1>Người dùng &amp; số dư</h1></div>
               <div className="admin-actions-area"><button type="button" className="admin-btn-secondary" onClick={refreshData} disabled={loading}><ArrowClockwise size={18} className={loading ? "animate-spin" : ""} />{loading ? "Đang tải…" : "Làm mới"}</button><button type="button" className="admin-btn-primary" onClick={exportToCsv}><DownloadSimple size={18} />Xuất CSV</button></div>
             </div>
             {/* Banner thông báo khi chưa có cấu hình Supabase */}
@@ -1724,7 +1724,6 @@ export default function AdminUsersClient({
             <div className={design.titleBar}>
               <div>
                 <h1>Duyệt lệnh rút tiền</h1>
-                <span>{allWithdrawals.length} yêu cầu toàn hệ thống</span>
               </div>
               <div className="admin-actions-area">
                 <button
@@ -2133,7 +2132,6 @@ export default function AdminUsersClient({
             <div className={design.titleBar}>
               <div>
                 <h1>Cấu hình tỷ lệ hoàn tiền</h1>
-                <span>Điều chỉnh tỷ lệ hoàn tiền cho khách và lợi nhuận DealHoàn</span>
               </div>
               <div className="admin-actions-area">
                 <button
