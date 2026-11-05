@@ -2413,22 +2413,15 @@ export default function AdminUsersClient({
 
             {/* Modal Body */}
             <div className="admin-modal-body">
-              {/* Section 1: Thống kê ví của User (Đồng bộ thứ tự và tên gọi theo Modal ví của user: Chờ nền tảng duyệt -> Có thể rút -> Đã nhận) */}
+              {/* Section 1: Thống kê ví của User */}
               <div className="modal-section-grid">
                 <div className="modal-stat-box amber-box">
                   <span className="box-label">CHỜ NỀN TẢNG DUYỆT</span>
                   <span className="box-val amber-text">{formatVnd(selectedUser.pendingBalance)}</span>
-                  <span className="box-hint">Đang đối soát sàn</span>
                 </div>
                 <div className="modal-stat-box green-box">
                   <span className="box-label">CÓ THỂ RÚT</span>
                   <span className="box-val green-text">{formatVnd(selectedUser.balance)}</span>
-                  <span className="box-hint">Có thể rút ngay</span>
-                </div>
-                <div className="modal-stat-box blue-box">
-                  <span className="box-label">ĐÃ NHẬN</span>
-                  <span className="box-val blue-text">{formatVnd(selectedUser.totalWithdrawn)}</span>
-                  <span className="box-hint">Đã nhận về ngân hàng</span>
                 </div>
               </div>
 
