@@ -1683,16 +1683,9 @@ export default function AdminUsersClient({
             {/* KPI Cards for Withdrawals */}
             <section className="admin-kpi-grid withdrawals-kpi-grid" aria-label="Thống kê rút tiền">
               <div className="admin-kpi-card">
-                <span className="kpi-label">Chờ duyệt chi</span>
+                <span className="kpi-label">Lệnh chờ duyệt</span>
                 <strong className={`kpi-value ${pendingWithdrawalsCount > 0 ? "text-amber-600" : ""}`}>
                   {pendingWithdrawalsCount} <span className="text-sm font-normal text-stone-500">lệnh</span>
-                </strong>
-              </div>
-
-              <div className="admin-kpi-card">
-                <span className="kpi-label">Đã chi trả thành công</span>
-                <strong className="kpi-value text-green">
-                  {formatVnd(completedWithdrawalsSum)}
                 </strong>
               </div>
 
@@ -1704,9 +1697,16 @@ export default function AdminUsersClient({
               </div>
 
               <div className="admin-kpi-card">
-                <span className="kpi-label">Tổng tiền đã yêu cầu</span>
-                <strong className="kpi-value text-stone-800">
-                  {formatVnd(totalWithdrawalsSum)}
+                <span className="kpi-label">Lệnh đã chi trả</span>
+                <strong className="kpi-value">
+                  {completedWithdrawals.length} <span className="text-sm font-normal text-stone-500">lệnh</span>
+                </strong>
+              </div>
+
+              <div className="admin-kpi-card">
+                <span className="kpi-label">Số tiền đã chi trả</span>
+                <strong className="kpi-value text-green">
+                  {formatVnd(completedWithdrawalsSum)}
                 </strong>
               </div>
             </section>
