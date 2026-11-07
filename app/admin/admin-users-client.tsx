@@ -190,6 +190,14 @@ export default function AdminUsersClient({
   const [withdrawalSearch, setWithdrawalSearch] = useState("");
   const [copiedSTK, setCopiedSTK] = useState<string | null>(null);
   const [approvingWithdrawalId, setApprovingWithdrawalId] = useState<string | null>(null);
+  const [qrWithdrawal, setQrWithdrawal] = useState<{
+    id: string;
+    amount: number;
+    bankName: string;
+    bankAccountNo: string;
+    bankAccountName: string;
+    refCode?: string;
+  } | null>(null);
 
   const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
@@ -1912,6 +1920,29 @@ export default function AdminUsersClient({
                                         </>
                                       )}
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setQrWithdrawal({
+                                          id: w.id,
+                                          amount: w.amount,
+                                          bankName: w.bankName,
+                                          bankAccountNo: w.bankAccountNo,
+                                          bankAccountName: w.bankAccountName || w.userName,
+                                          refCode: matchedUser?.refCode || w.id.slice(0, 8),
+                                        })
+                                      }
+                                      className="btn-qr-mini"
+                                      title="Tạo mã VietQR kèm số tiền rút"
+                                    >
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                                        <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                                        <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                                        <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                                      </svg>
+                                      <span>Mã QR</span>
+                                    </button>
                                   </div>
                                 </div>
                               </td>
@@ -2660,6 +2691,31 @@ export default function AdminUsersClient({
                             </div>
                             <div className="w-item-date">{formatDate(w.created_at)}</div>
                             {w.note && <div className="w-item-note">Ghi chú: {w.note}</div>}
+                            {w.bank_account_no && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setQrWithdrawal({
+                                    id: w.id,
+                                    amount: w.amount,
+                                    bankName: w.bank_name,
+                                    bankAccountNo: w.bank_account_no,
+                                    bankAccountName: w.bank_account_name,
+                                    refCode: selectedUser?.refCode || w.id.slice(0, 8),
+                                  })
+                                }
+                                className="btn-qr-mini mt-1.5"
+                                title="Tạo mã VietQR kèm số tiền rút"
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                                  <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                                  <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                                  <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                                </svg>
+                                <span>Mã VietQR ({formatVnd(w.amount)})</span>
+                              </button>
+                            )}
                           </div>
                           <div className="w-item-right">
                             {w.status === "completed" && (
@@ -2719,6 +2775,91 @@ export default function AdminUsersClient({
                 className="admin-btn-secondary"
               >
                 Đóng cửa sổ
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal VietQR cho Lệnh Rút Tiền Kèm Số Tiền Muốn Rút */}
+      {qrWithdrawal && (
+        <div className="admin-modal-backdrop" onClick={() => setQrWithdrawal(null)}>
+          <div
+            className="admin-modal-dialog"
+            style={{ maxWidth: 420 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="admin-modal-header">
+              <div>
+                <h3 className="modal-user-name">Mã VietQR Rút Tiền</h3>
+                <p className="modal-user-email">
+                  Số tiền cần chuyển: <b className="text-emerald-700 text-sm">{formatVnd(qrWithdrawal.amount)}</b>
+                </p>
+              </div>
+              <button
+                type="button"
+                className="admin-modal-close"
+                onClick={() => setQrWithdrawal(null)}
+              >
+                <X size={18} weight="bold" />
+              </button>
+            </div>
+
+            <div className="admin-modal-body text-center p-4">
+              <div className="vietqr-box mx-auto">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`https://img.vietqr.io/image/${getVietQrBankCode(
+                    qrWithdrawal.bankName
+                  )}-${qrWithdrawal.bankAccountNo}-compact2.png?amount=${
+                    qrWithdrawal.amount
+                  }&addInfo=DealHoan%20rut%20tien%20${encodeURIComponent(qrWithdrawal.refCode || qrWithdrawal.id.slice(0, 8))}`}
+                  alt={`Mã VietQR ${qrWithdrawal.amount}`}
+                  className="vietqr-img"
+                  loading="lazy"
+                />
+              </div>
+
+              <div className="mt-3 text-xs text-stone-600 space-y-1.5 bg-stone-50 p-3 rounded-xl border border-stone-200 text-left">
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Ngân hàng:</span>
+                  <span className="font-semibold text-stone-800">{qrWithdrawal.bankName}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Số tài khoản:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="font-mono font-bold text-stone-900">{qrWithdrawal.bankAccountNo}</span>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(qrWithdrawal.bankAccountNo, "Số tài khoản")}
+                      className="text-orange-600 font-semibold text-[11px] hover:underline"
+                    >
+                      Sao chép
+                    </button>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Chủ tài khoản:</span>
+                  <span className="font-semibold text-stone-800 uppercase">{qrWithdrawal.bankAccountName}</span>
+                </div>
+                <div className="flex justify-between items-center border-t border-stone-200 pt-1.5 mt-1">
+                  <span className="text-stone-500">Số tiền:</span>
+                  <span className="font-black text-emerald-700 text-sm">{formatVnd(qrWithdrawal.amount)}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-stone-500">Nội dung:</span>
+                  <span className="font-mono text-stone-700">DealHoan rut tien {qrWithdrawal.refCode || qrWithdrawal.id.slice(0, 8)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="admin-modal-footer">
+              <button
+                type="button"
+                onClick={() => setQrWithdrawal(null)}
+                className="admin-btn-secondary"
+              >
+                Đóng
               </button>
             </div>
           </div>

@@ -6,6 +6,7 @@ import Image from "next/image";
 import { Wallet, Clock, Bank, ShoppingBag, Receipt, CreditCard, X, CaretDown, ArrowRight, Question, CheckCircle, Info, SignOut, Copy } from "@phosphor-icons/react";
 import s from "./account-wallet.module.css";
 import type { User } from "@supabase/supabase-js";
+import { getVietQrBankCode } from "@/lib/deals/vietqr";
 
 export interface WalletData {
   balance: number;
@@ -175,6 +176,8 @@ export default function AccountModal({
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawing, setWithdrawing] = useState(false);
   const [withdrawError, setWithdrawError] = useState("");
+  const [showVietQr, setShowVietQr] = useState(false);
+  const [activeQrItem, setActiveQrItem] = useState<WithdrawalItem | null>(null);
 
   const [editingBank, setEditingBank] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -779,6 +782,48 @@ export default function AccountModal({
                     <Info size={17} /><span>{withdrawError || amountValidation.error}</span>
                   </p>
                 )}
+                {isBankReady && Number(withdrawAmount) >= 10000 && (
+                  <div style={{ marginTop: 10, textAlign: "center" }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowVietQr(!showVietQr)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "5px 12px",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: "#15803d",
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: 8,
+                        cursor: "pointer",
+                      }}
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                        <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                        <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                        <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                      </svg>
+                      <span>{showVietQr ? "Ẩn mã VietQR" : "Tạo mã VietQR kèm số tiền rút"}</span>
+                    </button>
+                    {showVietQr && (
+                      <div style={{ marginTop: 10, padding: 12, background: "#ffffff", borderRadius: 12, border: "1px solid #e2e8f0", boxShadow: "0 2px 8px rgba(0,0,0,0.06)" }}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={`https://img.vietqr.io/image/${getVietQrBankCode(wallet.bank_name || bankName)}-${(wallet.bank_account_no || accountNo).replace(/\s+/g, "")}-compact2.png?amount=${Number(withdrawAmount)}&addInfo=DealHoan%20rut%20tien%20${refCode}`}
+                          alt="Mã VietQR"
+                          style={{ width: 200, height: "auto", margin: "0 auto", display: "block", borderRadius: 6 }}
+                        />
+                        <div style={{ fontSize: 11, color: "#15803d", fontWeight: 700, marginTop: 6 }}>
+                          Mã VietQR kèm số tiền: {formatVnd(Number(withdrawAmount))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <button type="submit" className={s.primary} disabled={busyWallet || withdrawing || !amountValidation.isValid}>{withdrawing ? "Đang gửi yêu cầu…" : "Rút tiền"}</button>
 
                 {history.length > 0 && (
@@ -798,6 +843,48 @@ export default function AccountModal({
                             <time>{formatDate(item.created_at)}</time>
                           </div>
                           {item.note && <p>{item.note}</p>}
+                          {item.bank_account_no && (
+                            <div style={{ marginTop: 6 }}>
+                              <button
+                                type="button"
+                                onClick={() => setActiveQrItem(activeQrItem?.id === item.id ? null : item)}
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 4,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: "#15803d",
+                                  background: "#f0fdf4",
+                                  border: "1px solid #bbf7d0",
+                                  padding: "3px 8px",
+                                  borderRadius: 4,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="3" y="3" width="7" height="7" rx="1.5"></rect>
+                                  <rect x="14" y="3" width="7" height="7" rx="1.5"></rect>
+                                  <rect x="14" y="14" width="7" height="7" rx="1.5"></rect>
+                                  <rect x="3" y="14" width="7" height="7" rx="1.5"></rect>
+                                </svg>
+                                <span>{activeQrItem?.id === item.id ? "Ẩn mã QR" : "Mã VietQR rút tiền"}</span>
+                              </button>
+                              {activeQrItem?.id === item.id && (
+                                <div style={{ marginTop: 8, textAlign: "center", padding: 8, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8 }}>
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={`https://img.vietqr.io/image/${getVietQrBankCode(item.bank_name)}-${item.bank_account_no.replace(/\s+/g, "")}-compact2.png?amount=${item.amount}&addInfo=DealHoan%20rut%20tien%20${refCode}`}
+                                    alt="Mã VietQR"
+                                    style={{ width: 180, height: "auto", margin: "0 auto", display: "block", borderRadius: 6 }}
+                                  />
+                                  <div style={{ fontSize: 11, color: "#15803d", fontWeight: 700, marginTop: 4 }}>
+                                    Số tiền: {formatVnd(item.amount)}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </article>
                       ))}
                     </div>

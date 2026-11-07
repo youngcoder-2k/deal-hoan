@@ -7559,6 +7559,26 @@ body.modal-open .scroll-to-top {
   border-color: #fdba74;
 }
 
+.btn-qr-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+  cursor: pointer;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.btn-qr-mini:hover {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
 .btn-approve-direct {
   display: inline-flex;
   align-items: center;
