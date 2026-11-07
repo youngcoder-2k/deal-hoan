@@ -2113,7 +2113,6 @@ export default function AdminUsersClient({
                   />
                   <span className="text-xl font-bold text-[#ee4c23]">%</span>
                 </div>
-                <span className="kpi-subtext">Khách nhận trên tổng hoa hồng Shopee</span>
               </div>
 
               {/* Cột 2: % Lợi nhuận DealHoàn giữ lại */}
@@ -2127,7 +2126,6 @@ export default function AdminUsersClient({
                     Tự động tính
                   </span>
                 </div>
-                <span className="kpi-subtext">Hệ thống giữ lại để vận hành nền tảng</span>
               </div>
             </section>
 
