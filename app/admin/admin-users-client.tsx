@@ -163,7 +163,7 @@ export default function AdminUsersClient({
   initialUsers: AdminUserItem[];
   initialStats: AdminKPIStats;
   isInitialRealData: boolean;
-  initialTab?: "users" | "withdrawals" | "settings" | "sync" | "import" | "finance";
+  initialTab?: "users" | "withdrawals" | "settings" | "sync" | "import";
 }) {
   const [users, setUsers] = useState<AdminUserItem[]>(() => applyLocalBalanceOverrides(initialUsers));
   const [stats, setStats] = useState<AdminKPIStats>(initialStats);
@@ -171,15 +171,14 @@ export default function AdminUsersClient({
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Tab điều hướng: "users" (Quản lý User), "withdrawals" (Duyệt rút tiền), "settings" (Cấu hình % Hoàn tiền), "sync" (Tự Động Đồng Bộ Shopee), "finance" (Số Dư & Doanh Thu Hệ Thống)
-  const [activeTab, setActiveTab] = useState<"users" | "withdrawals" | "settings" | "sync" | "import" | "finance">(() => {
+  // Tab điều hướng: "users" (Quản lý User), "withdrawals" (Duyệt rút tiền), "settings" (Cấu hình % Hoàn tiền), "sync" (Nạp đơn Shopee)
+  const [activeTab, setActiveTab] = useState<"users" | "withdrawals" | "settings" | "sync" | "import">(() => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
       const t = p.get("tab");
       if (t === "sync" || t === "import" || t === "shopee") return "sync";
       if (t === "settings") return "settings";
       if (t === "withdrawals" || t === "rut-tien") return "withdrawals";
-      if (t === "finance" || t === "so-du" || t === "tai-chinh") return "finance";
     }
     return initialTab === "import" ? "sync" : initialTab;
   });
@@ -319,47 +318,6 @@ export default function AdminUsersClient({
       systemNetReserve,
     };
   }, [filteredRecentSyncedOrders, stats]);
-
-  const exportFinancialReportToCsv = () => {
-    const rows = [
-      ["BÁO CÁO TÀI CHÍNH & SỐ DƯ HỆ THỐNG DEALHOÀN", ""],
-      ["Thời gian xuất:", new Date().toLocaleString("vi-VN")],
-      ["Tỷ lệ hoàn tiền cho khách:", `${(boosterSettings.userCashbackPercent ?? 88).toFixed(1)}%`],
-      ["Tỷ lệ DealHoàn nhận lại:", `${(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}%`],
-      ["", ""],
-      ["KHOẢN MỤC", "SỐ TIỀN (VNĐ)"],
-      ["1. Tổng hoa hồng sàn Shopee ghi nhận", financialStats.totalCommission],
-      ["   - Hoa hồng đã duyệt đối soát", financialStats.completedCommission],
-      ["   - Hoa hồng đang chờ đối soát (T+15)", financialStats.pendingCommission],
-      ["2. Tổng hoàn tiền cho khách", financialStats.totalCashback],
-      ["   - Tiền khả dụng trong ví khách", stats.totalBalance],
-      ["   - Tiền chờ hoàn ví khách", stats.totalPendingBalance],
-      ["3. DealHoàn nhận lại (Lợi nhuận nền tảng)", financialStats.dealHoanTotalProfit],
-      ["   - Lợi nhuận đã chốt thực thu", financialStats.dealHoanCompletedProfit],
-      ["   - Lợi nhuận dự kiến thu (chờ đối soát)", financialStats.dealHoanPendingProfit],
-      ["4. Dòng tiền chi trả và số dư quỹ", ""],
-      ["   - Tổng tiền đã chi trả rút qua ngân hàng", stats.totalWithdrawn],
-      ["   - Số dư quỹ tiền thực tế của hệ thống", financialStats.systemCashBalance],
-    ];
-
-    const csvContent =
-      "\uFEFF" +
-      rows
-        .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-        .join("\r\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `DealHoan_BaoCaoTaiChinh_${new Date().toISOString().slice(0, 10)}.csv`
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast("📥 Đã xuất báo cáo tài chính DealHoàn!");
-  };
 
   const [showCookieGuide, setShowCookieGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -1462,17 +1420,6 @@ export default function AdminUsersClient({
           <CloudArrowUp size={17} weight={activeTab === "sync" || activeTab === "import" ? "bold" : "regular"} />
           <span>Nạp đơn Shopee</span>
         </button>
-        <button
-          type="button"
-          className={`admin-nav-tab-btn ${activeTab === "finance" ? "active" : ""}`}
-          onClick={() => {
-            setActiveTab("finance");
-            loadShopeeSyncConfig();
-          }}
-        >
-          <Bank size={17} weight={activeTab === "finance" ? "bold" : "regular"} />
-          <span>Số dư hệ thống</span>
-        </button>
       </div>
 
       <main className="admin-main">
@@ -1502,46 +1449,31 @@ export default function AdminUsersClient({
             <strong className="kpi-value">{stats.totalUsers}</strong>
             <span className="kpi-subtext">Tài khoản thành viên</span>
           </div>
+
           <div className="admin-kpi-card">
-            <span className="kpi-label">Khách khả dụng</span>
+            <span className="kpi-label">Khách có thể rút</span>
             <strong className="kpi-value text-green">{formatVnd(stats.totalBalance)}</strong>
-            <span className="kpi-subtext">Có thể rút về ngân hàng</span>
+            <span className="kpi-subtext">Đang chờ hoàn: {formatVnd(stats.totalPendingBalance)}</span>
           </div>
+
           <div className="admin-kpi-card">
-            <span className="kpi-label">Khách chờ hoàn</span>
-            <strong className="kpi-value text-amber-600">{formatVnd(stats.totalPendingBalance)}</strong>
-            <span className="kpi-subtext">Chờ sàn đối soát T+15</span>
+            <span className="kpi-label text-emerald-800 font-bold">Số dư DealHoàn (Đã chốt)</span>
+            <strong className="kpi-value text-emerald-700">+{formatVnd(financialStats.dealHoanCompletedProfit)}</strong>
+            <span className="kpi-subtext text-emerald-600 font-medium">
+              Đang chờ nhận: +{formatVnd(financialStats.dealHoanPendingProfit)}
+            </span>
           </div>
-          <div
-            className="admin-kpi-card cursor-pointer hover:border-emerald-400 transition-all group"
-            onClick={() => setActiveTab("finance")}
-            title="Bấm để xem chi tiết doanh thu DealHoàn"
-          >
+
+          <div className="admin-kpi-card">
             <div className="flex items-center justify-between w-full">
-              <span className="kpi-label text-emerald-800 font-bold">DealHoàn nhận lại</span>
+              <span className="kpi-label font-bold text-stone-800">Tổng DealHoàn nhận lại</span>
               <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-200 px-1.5 py-0.5 rounded">
                 {(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}% Lợi nhuận
               </span>
             </div>
-            <strong className="kpi-value text-emerald-700">+{formatVnd(financialStats.dealHoanTotalProfit)}</strong>
-            <span className="kpi-subtext text-emerald-600 font-medium">
-              Đã chốt: +{formatVnd(financialStats.dealHoanCompletedProfit)} · Chờ: +{formatVnd(financialStats.dealHoanPendingProfit)}
-            </span>
-          </div>
-          <div
-            className="admin-kpi-card cursor-pointer hover:border-blue-400 transition-all group"
-            onClick={() => setActiveTab("finance")}
-            title="Bấm để xem chi tiết quỹ hệ thống"
-          >
-            <div className="flex items-center justify-between w-full">
-              <span className="kpi-label text-blue-900 font-bold">Số dư quỹ hệ thống</span>
-              <span className="text-[10px] font-bold text-blue-700 bg-blue-100/80 border border-blue-200 px-1.5 py-0.5 rounded">
-                Quỹ thực
-              </span>
-            </div>
-            <strong className="kpi-value text-blue-700">{formatVnd(financialStats.systemCashBalance)}</strong>
+            <strong className="kpi-value text-stone-900">+{formatVnd(financialStats.dealHoanTotalProfit)}</strong>
             <span className="kpi-subtext text-stone-500">
-              Hoa hồng sàn: {formatVnd(financialStats.totalCommission)}
+              Từ {formatVnd(financialStats.totalCommission)} hoa hồng Shopee
             </span>
           </div>
         </section>
@@ -2528,186 +2460,6 @@ export default function AdminUsersClient({
                   </table>
                 </div>
               )}
-            </div>
-          </section>
-        )}
-
-        {activeTab === "finance" && (
-          <section className="admin-finance-section flex flex-col gap-6">
-            {/* Header & Actions */}
-            <div className={design.titleBar}>
-              <div>
-                <h1>Số Dư &amp; Doanh Thu Hệ Thống DealHoàn</h1>
-              </div>
-              <div className="admin-actions-area">
-                <button
-                  type="button"
-                  className="admin-btn-secondary"
-                  onClick={refreshData}
-                  disabled={loading}
-                >
-                  <ArrowClockwise size={18} className={loading ? "animate-spin" : ""} />
-                  {loading ? "Đang tải…" : "Làm mới"}
-                </button>
-                <button
-                  type="button"
-                  className="admin-btn-primary"
-                  onClick={exportFinancialReportToCsv}
-                >
-                  <DownloadSimple size={18} />
-                  Xuất báo cáo
-                </button>
-              </div>
-            </div>
-
-            {/* KPI Thống kê Tài chính Hệ thống */}
-            <section className="admin-kpi-grid" aria-label="Thống kê số dư hệ thống">
-              <div className="admin-kpi-card">
-                <div className="flex items-center justify-between w-full">
-                  <span className="kpi-label">Số dư quỹ hệ thống</span>
-                  <span className="text-[10px] font-bold text-blue-700 bg-blue-100 border border-blue-200 px-2 py-0.5 rounded-md">
-                    Quỹ tiền mặt
-                  </span>
-                </div>
-                <strong className="kpi-value text-blue-700">{formatVnd(financialStats.systemCashBalance)}</strong>
-                <span className="kpi-subtext text-stone-500">
-                  Tiền sàn đã thanh toán sau khi trừ các lệnh rút
-                </span>
-              </div>
-
-              <div className="admin-kpi-card">
-                <div className="flex items-center justify-between w-full">
-                  <span className="kpi-label">DealHoàn nhận lại</span>
-                  <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md">
-                    {(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}% Lợi nhuận
-                  </span>
-                </div>
-                <strong className="kpi-value text-emerald-700">+{formatVnd(financialStats.dealHoanTotalProfit)}</strong>
-                <span className="kpi-subtext text-emerald-700 font-medium">
-                  Đã chốt: +{formatVnd(financialStats.dealHoanCompletedProfit)} · Chờ đối soát: +{formatVnd(financialStats.dealHoanPendingProfit)}
-                </span>
-              </div>
-
-              <div className="admin-kpi-card">
-                <div className="flex items-center justify-between w-full">
-                  <span className="kpi-label">Tổng hoa hồng Shopee</span>
-                  <span className="text-[10px] font-bold text-stone-700 bg-stone-100 border border-stone-200 px-2 py-0.5 rounded-md">
-                    Doanh thu sàn
-                  </span>
-                </div>
-                <strong className="kpi-value text-stone-900">{formatVnd(financialStats.totalCommission)}</strong>
-                <span className="kpi-subtext text-stone-500">
-                  Đã đối soát: {formatVnd(financialStats.completedCommission)} · Chờ T+15: {formatVnd(financialStats.pendingCommission)}
-                </span>
-              </div>
-
-              <div className="admin-kpi-card">
-                <div className="flex items-center justify-between w-full">
-                  <span className="kpi-label">Tổng hoàn tiền cho khách</span>
-                  <span className="text-[10px] font-bold text-orange-700 bg-orange-100 border border-orange-200 px-2 py-0.5 rounded-md">
-                    {(boosterSettings.userCashbackPercent ?? 88).toFixed(1)}% Hoàn tiền
-                  </span>
-                </div>
-                <strong className="kpi-value text-orange-600">{formatVnd(financialStats.totalCashback)}</strong>
-                <span className="kpi-subtext text-stone-500">
-                  Khả dụng: {formatVnd(stats.totalBalance)} · Chờ hoàn: {formatVnd(stats.totalPendingBalance)}
-                </span>
-              </div>
-            </section>
-
-            {/* Thanh hiển thị phân chia tỷ lệ dòng tiền */}
-            <div className="bg-white border border-[#dfe5ed] rounded-2xl p-6 shadow-sm">
-              <div className="flex justify-between items-center text-xs font-semibold text-[#657084] mb-3">
-                <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#ee4c23]"></span>
-                  <span className="text-stone-700 font-bold">Khách nhận ({formatVnd(financialStats.totalCashback)}):</span>
-                  <strong className="text-[#ee4c23] text-sm">{(boosterSettings.userCashbackPercent ?? 88.0).toFixed(1)}%</strong>
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#109452]"></span>
-                  <span className="text-stone-700 font-bold">DealHoàn nhận lại (+{formatVnd(financialStats.dealHoanTotalProfit)}):</span>
-                  <strong className="text-[#109452] text-sm">{(100 - (boosterSettings.userCashbackPercent ?? 88.0)).toFixed(1)}%</strong>
-                </span>
-              </div>
-              <div className="w-full h-3.5 bg-[#eef2f6] rounded-full overflow-hidden flex">
-                <div
-                  style={{ width: `${boosterSettings.userCashbackPercent ?? 88.0}%` }}
-                  className="h-full bg-[#ee4c23] transition-all duration-300"
-                ></div>
-                <div
-                  style={{ width: `${100 - (boosterSettings.userCashbackPercent ?? 88.0)}%` }}
-                  className="h-full bg-[#109452] transition-all duration-300"
-                ></div>
-              </div>
-            </div>
-
-            {/* BẢNG CÂN ĐỐI DÒNG TIỀN VÀ ĐỐI SOÁT CHI TIẾT */}
-            <div className="bg-white border border-[#dfe5ed] rounded-2xl p-6 shadow-sm">
-              <h3 className="text-base font-bold text-stone-900 mb-4 flex items-center gap-2">
-                <Bank size={20} weight="bold" className="text-blue-700" />
-                <span>Bảng Cân Đối Số Dư &amp; Đối Soát Doanh Thu DealHoàn</span>
-              </h3>
-
-              <div className="table-responsive">
-                <table className="admin-data-table" aria-label="Bảng cân đối tài chính hệ thống">
-                  <thead>
-                    <tr>
-                      <th>Khoản mục tài chính</th>
-                      <th className="text-right">Tỷ lệ</th>
-                      <th className="text-right">Đã chốt / Khả dụng</th>
-                      <th className="text-right">Chờ đối soát (T+15)</th>
-                      <th className="text-right">Tổng cộng</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr className="admin-table-row bg-stone-50/50">
-                      <td className="font-bold text-stone-900">
-                        1. Doanh thu hoa hồng sàn Shopee ghi nhận
-                      </td>
-                      <td className="text-right font-medium text-stone-600">100%</td>
-                      <td className="text-right font-bold text-stone-800">{formatVnd(financialStats.completedCommission)}</td>
-                      <td className="text-right font-medium text-amber-700">{formatVnd(financialStats.pendingCommission)}</td>
-                      <td className="text-right font-black text-stone-900">{formatVnd(financialStats.totalCommission)}</td>
-                    </tr>
-                    <tr className="admin-table-row">
-                      <td className="text-stone-800 pl-6">
-                        2. Hoàn tiền cho thành viên DealHoàn
-                      </td>
-                      <td className="text-right font-medium text-orange-600">{(boosterSettings.userCashbackPercent ?? 88).toFixed(1)}%</td>
-                      <td className="text-right font-bold text-emerald-700">-{formatVnd(financialStats.completedCashback)}</td>
-                      <td className="text-right font-medium text-amber-700">-{formatVnd(financialStats.pendingCashback)}</td>
-                      <td className="text-right font-bold text-orange-600">-{formatVnd(financialStats.totalCashback)}</td>
-                    </tr>
-                    <tr className="admin-table-row bg-emerald-50/60 border-t-2 border-emerald-200">
-                      <td className="font-black text-emerald-900">
-                        3. DealHoàn nhận lại (Doanh thu nền tảng)
-                      </td>
-                      <td className="text-right font-bold text-emerald-800">{(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}%</td>
-                      <td className="text-right font-black text-emerald-700">+{formatVnd(financialStats.dealHoanCompletedProfit)}</td>
-                      <td className="text-right font-bold text-emerald-600">+{formatVnd(financialStats.dealHoanPendingProfit)}</td>
-                      <td className="text-right font-black text-emerald-800 text-base">+{formatVnd(financialStats.dealHoanTotalProfit)}</td>
-                    </tr>
-                    <tr className="admin-table-row">
-                      <td className="text-stone-800 pl-6">
-                        4. Tiền đã chuyển khoản chi trả rút cho khách
-                      </td>
-                      <td className="text-right text-stone-400">—</td>
-                      <td className="text-right font-bold text-red-600">-{formatVnd(stats.totalWithdrawn)}</td>
-                      <td className="text-right text-stone-400">—</td>
-                      <td className="text-right font-bold text-red-600">-{formatVnd(stats.totalWithdrawn)}</td>
-                    </tr>
-                    <tr className="admin-table-row bg-blue-50/60 border-t-2 border-blue-200">
-                      <td className="font-black text-blue-900">
-                        5. Số dư quỹ tiền mặt thực tế của DealHoàn
-                      </td>
-                      <td className="text-right text-stone-400">—</td>
-                      <td className="text-right font-black text-blue-800 text-base">{formatVnd(financialStats.systemCashBalance)}</td>
-                      <td className="text-right font-medium text-stone-500">+{formatVnd(financialStats.dealHoanPendingProfit)} chờ sàn</td>
-                      <td className="text-right font-black text-blue-900 text-base">{formatVnd(financialStats.systemCashBalance)}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
           </section>
         )}

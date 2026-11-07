@@ -74,8 +74,6 @@ export default async function AdminPage(props: {
       ? "settings"
       : searchParams?.tab === "withdrawals" || searchParams?.tab === "rut-tien"
       ? "withdrawals"
-      : searchParams?.tab === "finance" || searchParams?.tab === "so-du" || searchParams?.tab === "tai-chinh"
-      ? "finance"
       : "users";
 
   return (
