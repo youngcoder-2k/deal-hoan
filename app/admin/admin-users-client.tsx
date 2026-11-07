@@ -2163,7 +2163,7 @@ export default function AdminUsersClient({
                   <CloudArrowUp size={22} weight="bold" />
                 </div>
                 <h3 className="text-lg font-bold text-stone-900 m-0">
-                  Nạp Đơn Hàng Shopee (File CSV)
+                  Nạp Đơn Hàng Shopee
                 </h3>
               </div>
 
@@ -2190,7 +2190,7 @@ export default function AdminUsersClient({
                   ) : (
                     <>
                       <FileCsv size={18} weight="bold" />
-                      <span>Chọn File CSV Báo Cáo Shopee Để Nạp</span>
+                      <span>Import file Shopee</span>
                     </>
                   )}
                 </button>
