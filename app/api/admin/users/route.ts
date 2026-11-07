@@ -34,9 +34,9 @@ export async function GET(request: NextRequest) {
     const balanceStatus = searchParams.get("balance_status") || "all";
     const sort = searchParams.get("sort") || "smart_desc";
 
-    // Lấy dữ liệu người dùng thật từ Supabase (auth.users + user_wallets + withdrawal_requests)
-    const { users: rawUsers, isRealData } = await fetchRealAdminUsers();
-    const stats = calculateKPIStats(rawUsers);
+    // Lấy dữ liệu người dùng thật từ Supabase (auth.users + user_wallets + withdrawal_requests + cashback_orders)
+    const { users: rawUsers, isRealData, orders } = await fetchRealAdminUsers();
+    const stats = calculateKPIStats(rawUsers, orders);
 
     // Áp dụng bộ lọc tìm kiếm
     let filtered = [...rawUsers];

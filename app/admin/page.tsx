@@ -63,9 +63,9 @@ export default async function AdminPage(props: {
     );
   }
 
-  // Lấy dữ liệu người dùng THẬT từ Supabase (auth.users, user_wallets, withdrawal_requests)
-  const { users: realUsers, isRealData } = await fetchRealAdminUsers();
-  const initialStats = calculateKPIStats(realUsers);
+  // Lấy dữ liệu người dùng THẬT từ Supabase (auth.users, user_wallets, withdrawal_requests, cashback_orders)
+  const { users: realUsers, isRealData, orders } = await fetchRealAdminUsers();
+  const initialStats = calculateKPIStats(realUsers, orders);
 
   const initialTab =
     searchParams?.tab === "sync" || searchParams?.tab === "import" || searchParams?.tab === "shopee"
@@ -74,6 +74,8 @@ export default async function AdminPage(props: {
       ? "settings"
       : searchParams?.tab === "withdrawals" || searchParams?.tab === "rut-tien"
       ? "withdrawals"
+      : searchParams?.tab === "finance" || searchParams?.tab === "so-du" || searchParams?.tab === "tai-chinh"
+      ? "finance"
       : "users";
 
   return (

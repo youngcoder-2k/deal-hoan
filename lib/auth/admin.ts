@@ -35,6 +35,16 @@ export interface AdminKPIStats {
   totalWithdrawn: number;
   bankLinkedUsers: number;
   bankLinkedRate: number;
+  // Số dư & Doanh thu Hệ thống DealHoàn:
+  totalCommission?: number;
+  totalCompletedCommission?: number;
+  totalPendingCommission?: number;
+  totalCashback?: number;
+  dealHoanTotalProfit?: number;
+  dealHoanCompletedProfit?: number;
+  dealHoanPendingProfit?: number;
+  systemCashBalance?: number;
+  systemNetReserve?: number;
 }
 
 // Danh sách email có quyền admin mặc định
