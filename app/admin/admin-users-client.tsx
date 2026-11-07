@@ -185,7 +185,7 @@ export default function AdminUsersClient({
   // State quản lý danh sách yêu cầu rút tiền toàn hệ thống
   const [allWithdrawals, setAllWithdrawals] = useState<AdminWithdrawalRecord[]>([]);
   const [loadingAllWithdrawals, setLoadingAllWithdrawals] = useState(false);
-  const [withdrawalFilter, setWithdrawalFilter] = useState<"all" | "pending" | "completed" | "rejected">("all");
+  const [withdrawalFilter, setWithdrawalFilter] = useState<"all" | "pending" | "completed" | "rejected">("pending");
   const [withdrawalSearch, setWithdrawalSearch] = useState("");
   const [copiedSTK, setCopiedSTK] = useState<string | null>(null);
   const [approvingWithdrawalId, setApprovingWithdrawalId] = useState<string | null>(null);
@@ -1490,12 +1490,10 @@ export default function AdminUsersClient({
               <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
                 <thead>
                   <tr>
-                    <th scope="col" className="w-[28%]">Người dùng</th>
-                    <th scope="col" className={`w-[14%] ${design.numeric}`}>Chờ hoàn</th>
-                    <th scope="col" className={`w-[14%] ${design.numeric}`}>Khả dụng</th>
-                    <th scope="col" className="w-[18%]">Ngân hàng</th>
-                    <th scope="col" className="w-[16%]">Lệnh rút gần nhất</th>
-                    <th scope="col" className="w-[10%] text-right"><span className={design.srOnly}>Thao tác</span></th>
+                    <th scope="col" className="w-[45%]">Người dùng</th>
+                    <th scope="col" className={`w-[20%] ${design.numeric}`}>Chờ hoàn</th>
+                    <th scope="col" className={`w-[20%] ${design.numeric}`}>Khả dụng</th>
+                    <th scope="col" className="w-[15%] text-right"><span className={design.srOnly}>Thao tác</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1542,72 +1540,7 @@ export default function AdminUsersClient({
                         )}
                       </td>
 
-                      {/* Cột 4: Ngân hàng */}
-                      <td className="cell-bank">
-                        {u.isBankConfigured ? (
-                          <div className={design.bankSummary}>
-                            <Bank size={20} className="text-stone-500 shrink-0" />
-                            <div>
-                              <strong>{u.bankName}</strong>
-                              <span>•••• {u.bankAccountNo.slice(-4)}</span>
-                            </div>
-                          </div>
-                        ) : (
-                          <span className={design.muted}>Chưa liên kết</span>
-                        )}
-                      </td>
-
-                      {/* Cột 4: Lệnh rút gần nhất */}
-                      <td className="cell-withdrawal">
-                        {u.latestWithdrawal ? (
-                          <div className="latest-w-wrap">
-                            <div className="w-status-row">
-                              {u.latestWithdrawal.status === "pending" && (
-                                <span className="w-badge w-pending flex items-center gap-1">
-                                  <Clock size={11} weight="bold" />
-                                  <span>Chờ duyệt</span>
-                                </span>
-                              )}
-                              {u.latestWithdrawal.status === "completed" && (
-                                <span className="w-badge w-completed flex items-center gap-1">
-                                  <CheckCircle size={11} weight="fill" />
-                                  <span>Đã chuyển</span>
-                                </span>
-                              )}
-                              {u.latestWithdrawal.status === "rejected" && (
-                                <span className="w-badge w-rejected flex items-center gap-1">
-                                  <XCircle size={11} weight="fill" />
-                                  <span>Từ chối</span>
-                                </span>
-                              )}
-                              <span className="w-amount">{formatVnd(u.latestWithdrawal.amount)}</span>
-                            </div>
-                            <div className="flex items-center justify-between gap-1 mt-1">
-                              <span className="w-time">{formatDateShort(u.latestWithdrawal.createdAt)}</span>
-                              {u.latestWithdrawal.status === "pending" && (
-                                <button
-                                  type="button"
-                                  className="btn-quick-approve-pill"
-                                  title="Mở tab duyệt lệnh rút tiền"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveTab("withdrawals");
-                                    setWithdrawalFilter("pending");
-                                    setWithdrawalSearch(u.email);
-                                    loadAllWithdrawals();
-                                  }}
-                                >
-                                  Duyệt ngay →
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="w-empty" aria-label="Chưa có lệnh rút">—</span>
-                        )}
-                      </td>
-
-                      {/* Cột 5: Thao tác */}
+                      {/* Cột 4: Thao tác */}
                       <td className="cell-actions text-right">
                         <div className="actions-cluster">
                           <button
@@ -1754,7 +1687,6 @@ export default function AdminUsersClient({
                 <strong className={`kpi-value ${pendingWithdrawalsCount > 0 ? "text-amber-600" : ""}`}>
                   {pendingWithdrawalsCount} <span className="text-sm font-normal text-stone-500">lệnh</span>
                 </strong>
-                <span className="kpi-subtext">Tổng: {formatVnd(pendingWithdrawalsSum)}</span>
               </div>
 
               <div className="admin-kpi-card">
@@ -1762,7 +1694,6 @@ export default function AdminUsersClient({
                 <strong className="kpi-value text-green">
                   {formatVnd(completedWithdrawalsSum)}
                 </strong>
-                <span className="kpi-subtext">{completedWithdrawals.length} lệnh đã hoàn tất</span>
               </div>
 
               <div className="admin-kpi-card">
@@ -1770,7 +1701,6 @@ export default function AdminUsersClient({
                 <strong className="kpi-value">
                   {rejectedWithdrawals.length} <span className="text-sm font-normal text-stone-500">lệnh</span>
                 </strong>
-                <span className="kpi-subtext">Đã hoàn lại số dư ví</span>
               </div>
 
               <div className="admin-kpi-card">
@@ -1778,7 +1708,6 @@ export default function AdminUsersClient({
                 <strong className="kpi-value text-stone-800">
                   {formatVnd(totalWithdrawalsSum)}
                 </strong>
-                <span className="kpi-subtext">{allWithdrawals.length} lệnh toàn thời gian</span>
               </div>
             </section>
 
@@ -1871,11 +1800,9 @@ export default function AdminUsersClient({
                 <div className="admin-empty-state">
                   <div className="empty-icon"><MagnifyingGlass size={36} weight="duotone" className="text-stone-400 mx-auto" /></div>
                   <h3>Không tìm thấy yêu cầu rút tiền nào</h3>
-                  <p>
-                    {withdrawalFilter !== "all" || withdrawalSearch
-                      ? "Thử điều chỉnh từ khóa tìm kiếm hoặc chọn lại trạng thái."
-                      : "Chưa có yêu cầu rút tiền nào trong hệ thống."}
-                  </p>
+                  {allWithdrawals.length === 0 && (
+                    <p>Chưa có yêu cầu rút tiền nào trong hệ thống.</p>
+                  )}
                   {(withdrawalFilter !== "all" || withdrawalSearch) && (
                     <button
                       type="button"
