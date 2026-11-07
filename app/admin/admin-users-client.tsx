@@ -1108,11 +1108,11 @@ export default function AdminUsersClient({
     }
   };
 
-  // Cập nhật trạng thái đơn hàng (Duyệt hoặc Hủy)
+  // Cập nhật trạng thái đơn hàng (Duyệt, Về Chờ duyệt hoặc Hủy)
   const handleUpdateOrderStatus = async (
     orderId: string,
     platform: string,
-    newStatus: "completed" | "rejected"
+    newStatus: "pending" | "completed" | "rejected"
   ) => {
     try {
       const res = await fetch("/api/admin/orders", {
@@ -1122,12 +1122,23 @@ export default function AdminUsersClient({
           orderId,
           platform,
           status: newStatus,
-          note: newStatus === "completed" ? "Admin đã duyệt hoàn tiền" : "Admin từ chối đơn hàng",
+          note:
+            newStatus === "completed"
+              ? "Admin đã duyệt hoàn tiền"
+              : newStatus === "pending"
+              ? "Admin chuyển về Chờ duyệt (đối soát T+15)"
+              : "Admin từ chối đơn hàng",
         }),
       });
       const data = await res.json();
       if (res.ok) {
-        showToast(newStatus === "completed" ? "✅ Đã duyệt hoàn tiền thành công!" : "❌ Đã từ chối đơn hàng!");
+        showToast(
+          newStatus === "completed"
+            ? "✅ Đã duyệt hoàn tiền thành công!"
+            : newStatus === "pending"
+            ? "⏱️ Đã chuyển về Chờ duyệt (đang đối soát T+15)!"
+            : "❌ Đã từ chối đơn hàng!"
+        );
         setUserOrders((prev) =>
           prev.map((o) => (o.order_id === orderId ? { ...o, status: newStatus } : o))
         );
@@ -2588,16 +2599,40 @@ export default function AdminUsersClient({
                           </div>
                           <div className="w-item-right">
                             {ord.status === "completed" && (
-                              <span className="w-badge w-completed inline-flex items-center gap-1">
-                                <CheckCircle size={11} weight="fill" />
-                                <span>Đã hoàn ví</span>
-                              </span>
+                              <div className="pending-actions-wrap items-end">
+                                <span className="w-badge w-completed inline-flex items-center gap-1">
+                                  <CheckCircle size={11} weight="fill" />
+                                  <span>Đã hoàn ví</span>
+                                </span>
+                                <div className="mt-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "pending")}
+                                    className="text-[11px] font-semibold text-stone-600 hover:text-orange-600 bg-stone-100 hover:bg-orange-50 border border-stone-200 hover:border-orange-200 px-2 py-1 rounded transition-colors"
+                                    title="Chuyển về Chờ duyệt (đang trong thời gian đối soát T+15)"
+                                  >
+                                    Về Chờ duyệt
+                                  </button>
+                                </div>
+                              </div>
                             )}
                             {ord.status === "rejected" && (
-                              <span className="w-badge w-rejected inline-flex items-center gap-1">
-                                <XCircle size={11} weight="fill" />
-                                <span>Bị hủy</span>
-                              </span>
+                              <div className="pending-actions-wrap items-end">
+                                <span className="w-badge w-rejected inline-flex items-center gap-1">
+                                  <XCircle size={11} weight="fill" />
+                                  <span>Bị hủy</span>
+                                </span>
+                                <div className="mt-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "pending")}
+                                    className="text-[11px] font-semibold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 border border-stone-200 px-2 py-1 rounded transition-colors"
+                                    title="Khôi phục đơn về Chờ duyệt"
+                                  >
+                                    Khôi phục
+                                  </button>
+                                </div>
+                              </div>
                             )}
                             {ord.status === "pending" && (
                               <div className="pending-actions-wrap">

@@ -28,7 +28,45 @@ export async function GET(request: NextRequest) {
         .eq("platform", "Shopee")
         .order("created_at", { ascending: false })
         .limit(50);
-      recentOrders = (data || []).filter((o: Record<string, unknown>) => {
+
+      // Tự động kiểm tra đối soát T+15 ngày:
+      // Các đơn Shopee nếu chưa qua đủ 15 ngày kể từ ngày đặt/hoàn thành mà bị duyệt trước đó
+      // sẽ được tự động hoàn về Chờ duyệt để bảo toàn vốn cho nền tảng.
+      const HOLD_MS = 15 * 24 * 60 * 60 * 1000;
+      const { recordCashbackOrder } = await import("@/lib/deals/cashback");
+      let reconciledAny = false;
+
+      for (const ord of (data || [])) {
+        if (ord.status === "completed") {
+          const ordDate = new Date(ord.ordered_at || ord.created_at || "").getTime();
+          const isUnder15Days = !isNaN(ordDate) && (Date.now() - ordDate < HOLD_MS);
+          if (isUnder15Days) {
+            await recordCashbackOrder({
+              orderId: ord.order_id,
+              subId: ord.sub_id,
+              userId: ord.user_id,
+              platform: "Shopee",
+              orderValue: Number(ord.order_value),
+              status: "pending",
+              note: "Chờ đối soát Shopee T+15 (tự động đưa về Chờ duyệt)",
+            });
+            reconciledAny = true;
+          }
+        }
+      }
+
+      let finalOrders = data || [];
+      if (reconciledAny) {
+        const { data: refreshed } = await supabaseAdmin
+          .from("cashback_orders")
+          .select("*")
+          .eq("platform", "Shopee")
+          .order("created_at", { ascending: false })
+          .limit(50);
+        if (refreshed) finalOrders = refreshed;
+      }
+
+      recentOrders = finalOrders.filter((o: Record<string, unknown>) => {
         const id = String(o.order_id || "");
         const name = String(o.product_name || "").toLowerCase();
         return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test");
@@ -118,6 +156,7 @@ export async function POST(request: NextRequest) {
             cashbackAmount: ord.cashbackAmount,
             status: ord.status,
             orderedAt: ord.orderedAt,
+            note: ord.note,
           });
           if (rec.success) {
             importedCount++;
