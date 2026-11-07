@@ -85,7 +85,7 @@ export async function PATCH(
       );
     }
 
-    const finalNote = note || (status === "completed" ? "Đã chuyển khoản Napas247" : "Từ chối yêu cầu rút");
+    const finalNote = note || (status === "completed" ? "" : "Từ chối yêu cầu rút");
 
     // 1. Thử gọi RPC nguyên tử process_withdrawal_decision (chống replay refund)
     try {

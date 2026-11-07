@@ -649,7 +649,7 @@ export default function AdminUsersClient({
     item: AdminWithdrawalRecord,
     action: "completed" | "rejected"
   ) => {
-    let note = "Đã chuyển khoản Napas247 thành công";
+    let note = "";
     if (action === "rejected") {
       const reason = prompt(
         `Nhập lý do từ chối lệnh rút ${formatVnd(item.amount)} của ${item.userName}:`,
@@ -1084,7 +1084,7 @@ export default function AdminUsersClient({
     if (!selectedUser) return;
     const promptNote =
       newStatus === "completed"
-        ? "Đã chuyển khoản Napas247 thành công"
+        ? ""
         : prompt("Nhập lý do từ chối lệnh rút tiền:") || "Sai thông tin tài khoản ngân hàng";
 
     try {
@@ -2690,7 +2690,9 @@ export default function AdminUsersClient({
                               {w.bank_name} · <b>{w.bank_account_no}</b> ({w.bank_account_name})
                             </div>
                             <div className="w-item-date">{formatDate(w.created_at)}</div>
-                            {w.note && <div className="w-item-note">Ghi chú: {w.note}</div>}
+                            {w.note && !/napas/i.test(w.note) && (
+                              <div className="w-item-note">Ghi chú: {w.note}</div>
+                            )}
                             {w.bank_account_no && (
                               <button
                                 type="button"

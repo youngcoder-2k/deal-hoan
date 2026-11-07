@@ -842,7 +842,7 @@ export default function AccountModal({
                             <span>{item.bank_name} · •••• {item.bank_account_no.slice(-4)}</span>
                             <time>{formatDate(item.created_at)}</time>
                           </div>
-                          {item.note && <p>{item.note}</p>}
+                          {item.note && !/napas/i.test(item.note) && <p>{item.note}</p>}
                           {item.bank_account_no && (
                             <div style={{ marginTop: 6 }}>
                               <button

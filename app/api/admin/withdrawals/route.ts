@@ -170,7 +170,7 @@ export async function PATCH(request: NextRequest) {
 
     const defaultNote =
       status === "completed"
-        ? "Đã chuyển khoản Napas247 thành công"
+        ? ""
         : "Thông tin tài khoản ngân hàng chưa chính xác";
     const finalNote = typeof note === "string" && note.trim() ? note.trim() : defaultNote;
 
