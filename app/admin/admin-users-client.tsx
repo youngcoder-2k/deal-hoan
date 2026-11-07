@@ -2599,68 +2599,22 @@ export default function AdminUsersClient({
                           </div>
                           <div className="w-item-right">
                             {ord.status === "completed" && (
-                              <div className="pending-actions-wrap items-end">
-                                <span className="w-badge w-completed inline-flex items-center gap-1">
-                                  <CheckCircle size={11} weight="fill" />
-                                  <span>Đã hoàn ví</span>
-                                </span>
-                                <div className="mt-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "pending")}
-                                    className="text-[11px] font-semibold text-stone-600 hover:text-orange-600 bg-stone-100 hover:bg-orange-50 border border-stone-200 hover:border-orange-200 px-2 py-1 rounded transition-colors"
-                                    title="Chuyển về Chờ duyệt (đang trong thời gian đối soát T+15)"
-                                  >
-                                    Về Chờ duyệt
-                                  </button>
-                                </div>
-                              </div>
+                              <span className="w-badge w-completed inline-flex items-center gap-1">
+                                <CheckCircle size={11} weight="fill" />
+                                <span>Đã hoàn ví</span>
+                              </span>
                             )}
                             {ord.status === "rejected" && (
-                              <div className="pending-actions-wrap items-end">
-                                <span className="w-badge w-rejected inline-flex items-center gap-1">
-                                  <XCircle size={11} weight="fill" />
-                                  <span>Bị hủy</span>
-                                </span>
-                                <div className="mt-1.5">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "pending")}
-                                    className="text-[11px] font-semibold text-stone-600 hover:text-stone-900 bg-stone-100 hover:bg-stone-200 border border-stone-200 px-2 py-1 rounded transition-colors"
-                                    title="Khôi phục đơn về Chờ duyệt"
-                                  >
-                                    Khôi phục
-                                  </button>
-                                </div>
-                              </div>
+                              <span className="w-badge w-rejected inline-flex items-center gap-1">
+                                <XCircle size={11} weight="fill" />
+                                <span>Bị hủy</span>
+                              </span>
                             )}
                             {ord.status === "pending" && (
-                              <div className="pending-actions-wrap">
-                                <span className="w-badge w-pending inline-flex items-center gap-1">
-                                  <Clock size={11} weight="bold" />
-                                  <span>Chờ duyệt</span>
-                                </span>
-                                <div className="flex gap-1 mt-2">
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "completed")}
-                                    className="btn-approve-mini flex items-center gap-1"
-                                    title="Duyệt đơn và cộng tiền vào ví khả dụng của user"
-                                  >
-                                    <Check size={12} weight="bold" />
-                                    <span>Duyệt</span>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "rejected")}
-                                    className="btn-reject-mini flex items-center gap-1"
-                                    title="Từ chối đơn hoàn tiền này"
-                                  >
-                                    <X size={12} weight="bold" />
-                                    <span>Hủy</span>
-                                  </button>
-                                </div>
-                              </div>
+                              <span className="w-badge w-pending inline-flex items-center gap-1">
+                                <Clock size={11} weight="bold" />
+                                <span>Chờ duyệt</span>
+                              </span>
                             )}
                           </div>
                         </div>
