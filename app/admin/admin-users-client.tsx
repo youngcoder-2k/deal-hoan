@@ -7,6 +7,7 @@ import {
   ArrowClockwise,
   DownloadSimple,
   CaretRight,
+  CaretDown,
   Bank,
   Users,
   HandCoins,
@@ -910,6 +911,8 @@ export default function AdminUsersClient({
   const [newPending, setNewPending] = useState<number>(0);
   const [adjustNote, setAdjustNote] = useState("");
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
+  const [showOrdersDropdown, setShowOrdersDropdown] = useState(false);
+  const [showWithdrawalsDropdown, setShowWithdrawalsDropdown] = useState(false);
 
   // Copied state indicator
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -965,6 +968,8 @@ export default function AdminUsersClient({
     setNewBalance(user.balance);
     setNewPending(user.pendingBalance);
     setAdjustBalanceMode(false);
+    setShowOrdersDropdown(false);
+    setShowWithdrawalsDropdown(false);
     setLoadingWithdrawals(true);
     setLoadingOrders(true);
 
@@ -2342,9 +2347,9 @@ export default function AdminUsersClient({
             <div className="admin-modal-body">
               {/* Section 1: Thống kê ví của User */}
               <div className="modal-section-grid">
-                <div className="modal-stat-box amber-box">
+                <div className="modal-stat-box gray-box">
                   <span className="box-label">CHỜ NỀN TẢNG DUYỆT</span>
-                  <span className="box-val amber-text">{formatVnd(selectedUser.pendingBalance)}</span>
+                  <span className="box-val gray-text">{formatVnd(selectedUser.pendingBalance)}</span>
                 </div>
                 <div className="modal-stat-box green-box">
                   <span className="box-label">CÓ THỂ RÚT</span>
@@ -2357,7 +2362,7 @@ export default function AdminUsersClient({
                 <div className="block-title-row">
                   <div className="flex items-center gap-2">
                     <Bank size={20} weight="bold" className="text-orange-600" />
-                    <h4 className="block-title">Tài Khoản Ngân Hàng Nhận Tiền</h4>
+                    <h4 className="block-title">Tài Khoản Ngân Hàng</h4>
                   </div>
                   {selectedUser.isBankConfigured && (
                     <button
@@ -2497,10 +2502,10 @@ export default function AdminUsersClient({
                       </div>
                     </div>
                     <div className="form-group mt-2">
-                      <label>Lý do điều chỉnh:</label>
+                      <label>Lý do:</label>
                       <input
                         type="text"
-                        placeholder="VD: Thưởng hoàn tiền chiến dịch, cộng thủ công đơn hàng..."
+                        placeholder="Lý do điều chỉnh"
                         value={adjustNote}
                         onChange={(e) => setAdjustNote(e.target.value)}
                         className="admin-input"
@@ -2520,7 +2525,7 @@ export default function AdminUsersClient({
                         onClick={handleSaveBalance}
                         className="admin-btn-primary"
                       >
-                        {isUpdatingUser ? "Đang lưu..." : "Xác nhận lưu thay đổi"}
+                        {isUpdatingUser ? "Đang lưu..." : "Lưu thay đổi"}
                       </button>
                     </div>
                   </div>
@@ -2529,170 +2534,196 @@ export default function AdminUsersClient({
 
               {/* Section 4: Đơn Hàng Hoàn Tiền */}
               <div className="modal-card-block">
-                <div className="block-title-row">
+                <div
+                  className={`block-title-row cursor-pointer select-none ${showOrdersDropdown ? "" : "mb-0"}`}
+                  onClick={() => setShowOrdersDropdown(!showOrdersDropdown)}
+                >
                   <div className="flex items-center gap-2">
                     <ShoppingBag size={20} weight="bold" className="text-orange-600" />
                     <h4 className="block-title">
                       Đơn Hàng Hoàn Tiền ({filteredUserOrders.length})
                     </h4>
                   </div>
+                  <button
+                    type="button"
+                    className="text-stone-400 hover:text-stone-700 transition-transform duration-200"
+                    style={{ transform: showOrdersDropdown ? "rotate(180deg)" : "rotate(0deg)" }}
+                    aria-label={showOrdersDropdown ? "Đóng dropdown" : "Mở dropdown"}
+                  >
+                    <CaretDown size={18} weight="bold" />
+                  </button>
                 </div>
 
-                {loadingOrders ? (
-                  <div className="p-4 text-center text-stone-500 text-sm">Đang tải danh sách đơn hàng...</div>
-                ) : filteredUserOrders.length === 0 ? (
-                  <div className="p-4 text-center text-stone-500 text-sm">
-                    Không có thông tin
-                  </div>
-                ) : (
-                  <div className="modal-withdrawals-list">
-                    {filteredUserOrders.map((ord) => (
-                      <div key={ord.id || ord.order_id} className="modal-w-item">
-                        <div className="w-item-left">
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-block px-1.5 py-0.5 text-[11px] font-bold rounded ${
-                              ord.platform?.toLowerCase().includes("tiktok")
-                                ? "bg-black text-white"
-                                : "bg-orange-500 text-white"
-                            }`}>
-                              {ord.platform}
-                            </span>
-                            <span className="text-xs font-mono font-medium text-stone-500">
-                              #{ord.order_id}
-                            </span>
-                          </div>
-                          <div className="text-sm font-semibold text-stone-800 mt-1">
-                            {ord.product_name || "Sản phẩm hoàn tiền"}
-                          </div>
-                          <div className="text-xs text-stone-500 mt-0.5 flex items-center gap-3">
-                            <span>Giá trị đơn: <b>{formatVnd(ord.order_value || 0)}</b></span>
-                            <span>Hoàn tiền: <b className="text-emerald-600">+{formatVnd(ord.cashback_amount)}</b></span>
-                          </div>
-                          <div className="w-item-date mt-1">{formatDate(ord.created_at || ord.ordered_at || "")}</div>
-                          {ord.note && <div className="w-item-note">{ord.note}</div>}
-                        </div>
-                        <div className="w-item-right">
-                          {ord.status === "completed" && (
-                            <span className="w-badge w-completed inline-flex items-center gap-1">
-                              <CheckCircle size={11} weight="fill" />
-                              <span>Đã hoàn ví</span>
-                            </span>
-                          )}
-                          {ord.status === "rejected" && (
-                            <span className="w-badge w-rejected inline-flex items-center gap-1">
-                              <XCircle size={11} weight="fill" />
-                              <span>Bị hủy</span>
-                            </span>
-                          )}
-                          {ord.status === "pending" && (
-                            <div className="pending-actions-wrap">
-                              <span className="w-badge w-pending inline-flex items-center gap-1">
-                                <Clock size={11} weight="bold" />
-                                <span>Chờ duyệt</span>
+                {showOrdersDropdown && (
+                  loadingOrders ? (
+                    <div className="p-4 text-center text-stone-500 text-sm">Đang tải danh sách đơn hàng...</div>
+                  ) : filteredUserOrders.length === 0 ? (
+                    <div className="p-4 text-center text-stone-500 text-sm">
+                      Không có thông tin
+                    </div>
+                  ) : (
+                    <div className="modal-withdrawals-list">
+                      {filteredUserOrders.map((ord) => (
+                        <div key={ord.id || ord.order_id} className="modal-w-item">
+                          <div className="w-item-left">
+                            <div className="flex items-center gap-2">
+                              <span className={`inline-block px-1.5 py-0.5 text-[11px] font-bold rounded ${
+                                ord.platform?.toLowerCase().includes("tiktok")
+                                  ? "bg-black text-white"
+                                  : "bg-orange-500 text-white"
+                              }`}>
+                                {ord.platform}
                               </span>
-                              <div className="flex gap-1 mt-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "completed")}
-                                  className="btn-approve-mini flex items-center gap-1"
-                                  title="Duyệt đơn và cộng tiền vào ví khả dụng của user"
-                                >
-                                  <Check size={12} weight="bold" />
-                                  <span>Duyệt</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "rejected")}
-                                  className="btn-reject-mini flex items-center gap-1"
-                                  title="Từ chối đơn hoàn tiền này"
-                                >
-                                  <X size={12} weight="bold" />
-                                  <span>Hủy</span>
-                                </button>
-                              </div>
+                              <span className="text-xs font-mono font-medium text-stone-500">
+                                #{ord.order_id}
+                              </span>
                             </div>
-                          )}
+                            <div className="text-sm font-semibold text-stone-800 mt-1">
+                              {ord.product_name || "Sản phẩm hoàn tiền"}
+                            </div>
+                            <div className="text-xs text-stone-500 mt-0.5 flex items-center gap-3">
+                              <span>Giá trị đơn: <b>{formatVnd(ord.order_value || 0)}</b></span>
+                              <span>Hoàn tiền: <b className="text-emerald-600">+{formatVnd(ord.cashback_amount)}</b></span>
+                            </div>
+                            <div className="w-item-date mt-1">{formatDate(ord.created_at || ord.ordered_at || "")}</div>
+                            {ord.note && <div className="w-item-note">{ord.note}</div>}
+                          </div>
+                          <div className="w-item-right">
+                            {ord.status === "completed" && (
+                              <span className="w-badge w-completed inline-flex items-center gap-1">
+                                <CheckCircle size={11} weight="fill" />
+                                <span>Đã hoàn ví</span>
+                              </span>
+                            )}
+                            {ord.status === "rejected" && (
+                              <span className="w-badge w-rejected inline-flex items-center gap-1">
+                                <XCircle size={11} weight="fill" />
+                                <span>Bị hủy</span>
+                              </span>
+                            )}
+                            {ord.status === "pending" && (
+                              <div className="pending-actions-wrap">
+                                <span className="w-badge w-pending inline-flex items-center gap-1">
+                                  <Clock size={11} weight="bold" />
+                                  <span>Chờ duyệt</span>
+                                </span>
+                                <div className="flex gap-1 mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "completed")}
+                                    className="btn-approve-mini flex items-center gap-1"
+                                    title="Duyệt đơn và cộng tiền vào ví khả dụng của user"
+                                  >
+                                    <Check size={12} weight="bold" />
+                                    <span>Duyệt</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform, "rejected")}
+                                    className="btn-reject-mini flex items-center gap-1"
+                                    title="Từ chối đơn hoàn tiền này"
+                                  >
+                                    <X size={12} weight="bold" />
+                                    <span>Hủy</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
 
               {/* Section 5: Lịch sử các lệnh rút tiền */}
               <div className="modal-card-block">
-                <div className="block-title-row">
+                <div
+                  className={`block-title-row cursor-pointer select-none ${showWithdrawalsDropdown ? "" : "mb-0"}`}
+                  onClick={() => setShowWithdrawalsDropdown(!showWithdrawalsDropdown)}
+                >
                   <div className="flex items-center gap-2">
                     <Receipt size={20} weight="bold" className="text-orange-600" />
                     <h4 className="block-title">
                       Lịch Sử Yêu Cầu Rút Tiền ({userWithdrawals.length})
                     </h4>
                   </div>
+                  <button
+                    type="button"
+                    className="text-stone-400 hover:text-stone-700 transition-transform duration-200"
+                    style={{ transform: showWithdrawalsDropdown ? "rotate(180deg)" : "rotate(0deg)" }}
+                    aria-label={showWithdrawalsDropdown ? "Đóng dropdown" : "Mở dropdown"}
+                  >
+                    <CaretDown size={18} weight="bold" />
+                  </button>
                 </div>
 
-                {loadingWithdrawals ? (
-                  <div className="p-4 text-center text-stone-500">Đang tải lịch sử rút tiền...</div>
-                ) : userWithdrawals.length === 0 ? (
-                  <div className="p-4 text-center text-stone-500 text-sm">
-                    Không có thông tin
-                  </div>
-                ) : (
-                  <div className="modal-withdrawals-list">
-                    {userWithdrawals.map((w) => (
-                      <div key={w.id} className="modal-w-item">
-                        <div className="w-item-left">
-                          <div className="w-item-amount">−{formatVnd(w.amount)}</div>
-                          <div className="w-item-bank">
-                            {w.bank_name} · <b>{w.bank_account_no}</b> ({w.bank_account_name})
-                          </div>
-                          <div className="w-item-date">{formatDate(w.created_at)}</div>
-                          {w.note && <div className="w-item-note">Ghi chú: {w.note}</div>}
-                        </div>
-                        <div className="w-item-right">
-                          {w.status === "completed" && (
-                            <span className="w-badge w-completed inline-flex items-center gap-1">
-                              <CheckCircle size={11} weight="fill" />
-                              <span>Đã chuyển</span>
-                            </span>
-                          )}
-                          {w.status === "rejected" && (
-                            <span className="w-badge w-rejected inline-flex items-center gap-1">
-                              <XCircle size={11} weight="fill" />
-                              <span>Bị từ chối</span>
-                            </span>
-                          )}
-                          {w.status === "pending" && (
-                            <div className="pending-actions-wrap">
-                              <span className="w-badge w-pending inline-flex items-center gap-1">
-                                <Clock size={11} weight="bold" />
-                                <span>Chờ xử lý</span>
-                              </span>
-                              <div className="flex gap-1 mt-2">
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateWithdrawalStatus(w.id, "completed")}
-                                  className="btn-approve-mini flex items-center gap-1"
-                                  title="Xác nhận đã chuyển tiền thành công"
-                                >
-                                  <Check size={12} weight="bold" />
-                                  <span>Duyệt</span>
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleUpdateWithdrawalStatus(w.id, "rejected")}
-                                  className="btn-reject-mini flex items-center gap-1"
-                                  title="Từ chối lệnh rút tiền này"
-                                >
-                                  <X size={12} weight="bold" />
-                                  <span>Từ chối</span>
-                                </button>
-                              </div>
+                {showWithdrawalsDropdown && (
+                  loadingWithdrawals ? (
+                    <div className="p-4 text-center text-stone-500">Đang tải lịch sử rút tiền...</div>
+                  ) : userWithdrawals.length === 0 ? (
+                    <div className="p-4 text-center text-stone-500 text-sm">
+                      Không có thông tin
+                    </div>
+                  ) : (
+                    <div className="modal-withdrawals-list">
+                      {userWithdrawals.map((w) => (
+                        <div key={w.id} className="modal-w-item">
+                          <div className="w-item-left">
+                            <div className="w-item-amount">−{formatVnd(w.amount)}</div>
+                            <div className="w-item-bank">
+                              {w.bank_name} · <b>{w.bank_account_no}</b> ({w.bank_account_name})
                             </div>
-                          )}
+                            <div className="w-item-date">{formatDate(w.created_at)}</div>
+                            {w.note && <div className="w-item-note">Ghi chú: {w.note}</div>}
+                          </div>
+                          <div className="w-item-right">
+                            {w.status === "completed" && (
+                              <span className="w-badge w-completed inline-flex items-center gap-1">
+                                <CheckCircle size={11} weight="fill" />
+                                <span>Đã chuyển</span>
+                              </span>
+                            )}
+                            {w.status === "rejected" && (
+                              <span className="w-badge w-rejected inline-flex items-center gap-1">
+                                <XCircle size={11} weight="fill" />
+                                <span>Bị từ chối</span>
+                              </span>
+                            )}
+                            {w.status === "pending" && (
+                              <div className="pending-actions-wrap">
+                                <span className="w-badge w-pending inline-flex items-center gap-1">
+                                  <Clock size={11} weight="bold" />
+                                  <span>Chờ xử lý</span>
+                                </span>
+                                <div className="flex gap-1 mt-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateWithdrawalStatus(w.id, "completed")}
+                                    className="btn-approve-mini flex items-center gap-1"
+                                    title="Xác nhận đã chuyển tiền thành công"
+                                  >
+                                    <Check size={12} weight="bold" />
+                                    <span>Duyệt</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleUpdateWithdrawalStatus(w.id, "rejected")}
+                                    className="btn-reject-mini flex items-center gap-1"
+                                    title="Từ chối lệnh rút tiền này"
+                                  >
+                                    <X size={12} weight="bold" />
+                                    <span>Từ chối</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
             </div>
