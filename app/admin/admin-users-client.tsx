@@ -2448,19 +2448,15 @@ export default function AdminUsersClient({
 
                     {/* VietQR Preview cho Admin quét app ngân hàng thanh toán tức thì */}
                     <div className="vietqr-box">
-                      <div className="vietqr-label">Quét mã VietQR chuyển khoản nhanh:</div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={`https://img.vietqr.io/image/${getVietQrBankCode(
                           selectedUser.bankName
-                        )}-${selectedUser.bankAccountNo}-compact2.png?amount=${
-                          selectedUser.balance > 0 ? selectedUser.balance : 50000
-                        }&addInfo=DealHoan%20${selectedUser.refCode}`}
+                        )}-${selectedUser.bankAccountNo}-compact2.png?addInfo=DealHoan%20${selectedUser.refCode}`}
                         alt="Mã VietQR"
                         className="vietqr-img"
                         loading="lazy"
                       />
-                      <span className="vietqr-hint">Hỗ trợ tất cả ứng dụng ngân hàng Napas247</span>
                     </div>
                   </div>
                 ) : (
