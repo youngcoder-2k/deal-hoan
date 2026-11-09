@@ -1459,7 +1459,6 @@ export default function AdminUsersClient({
           <div className="admin-kpi-card">
             <span className="kpi-label">Người dùng</span>
             <strong className="kpi-value">{stats.totalUsers}</strong>
-            <span className="kpi-subtext">Tài khoản thành viên</span>
           </div>
 
           <div className="admin-kpi-card">
@@ -1473,16 +1472,8 @@ export default function AdminUsersClient({
           </div>
 
           <div className="admin-kpi-card">
-            <div className="flex items-center justify-between w-full">
-              <span className="kpi-label font-bold text-stone-800">Tổng DealHoàn nhận lại</span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 border border-emerald-200 px-1.5 py-0.5 rounded">
-                {(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}% Lợi nhuận
-              </span>
-            </div>
+            <span className="kpi-label font-bold text-stone-800">DealHoàn nhận lại</span>
             <strong className="kpi-value text-stone-900">+{formatVnd(financialStats.dealHoanTotalProfit)}</strong>
-            <span className="kpi-subtext text-stone-500">
-              Từ {formatVnd(financialStats.totalCommission)} hoa hồng Shopee
-            </span>
           </div>
         </section>
 
