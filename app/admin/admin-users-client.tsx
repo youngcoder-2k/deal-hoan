@@ -2426,10 +2426,8 @@ export default function AdminUsersClient({
                         <th>Mã đơn Shopee</th>
                         <th>Thành viên</th>
                         <th className="text-right">Giá trị đơn</th>
-                        <th className="text-right">Hoa hồng Shopee (Gộp)</th>
-                        <th className="text-right">Sau thuế 11% (Thực nhận)</th>
-                        <th className="text-right">Tiền hoàn cho khách ({boosterSettings.userCashbackPercent ?? 88}%)</th>
-                        <th className="text-right">DealHoàn giữ lại ({(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}%)</th>
+                        <th className="text-right">Hoa hồng Shopee</th>
+                        <th className="text-right">Tiền hoàn</th>
                         <th className="text-center">Trạng thái</th>
                         <th className="text-right">Thời gian</th>
                       </tr>
@@ -2442,7 +2440,6 @@ export default function AdminUsersClient({
                         const netComm = Math.round(comm * 0.89);
                         const cashRaw = Number(ord.cashbackAmount) || 0;
                         const customerCashback = cashRaw > netComm ? Math.round(netComm * userPercent) : cashRaw;
-                        const dealHoanProfit = Math.max(0, netComm - customerCashback);
 
                         return (
                           <tr key={idx} className="admin-table-row">
@@ -2457,17 +2454,12 @@ export default function AdminUsersClient({
                               )}
                             </td>
                             <td className="text-right text-xs font-medium">{formatVnd(ord.orderValue)}</td>
-                            <td className="text-right text-xs font-semibold text-stone-700">
-                              {formatVnd(comm)}
+                            <td className="text-right text-xs">
+                              <div className="font-semibold text-stone-800">{formatVnd(comm)}</div>
+                              <div className="text-[11px] text-stone-500 font-medium">Sau thuế 11%: {formatVnd(netComm)}</div>
                             </td>
-                            <td className="text-right text-xs font-semibold text-stone-900 bg-stone-50">
-                              {formatVnd(netComm)}
-                            </td>
-                            <td className="text-right text-xs font-black text-orange-700 bg-orange-50/50">
+                            <td className="text-right text-xs font-black text-emerald-700 bg-emerald-50/50">
                               +{formatVnd(customerCashback)}
-                            </td>
-                            <td className="text-right text-xs font-bold text-emerald-700 bg-emerald-50/50">
-                              +{formatVnd(dealHoanProfit)}
                             </td>
                             <td className="text-center">
                               <span
