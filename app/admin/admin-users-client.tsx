@@ -2454,9 +2454,9 @@ export default function AdminUsersClient({
                               )}
                             </td>
                             <td className="text-right text-xs font-medium">{formatVnd(ord.orderValue)}</td>
-                            <td className="text-right text-xs">
-                              <div className="font-semibold text-stone-800">{formatVnd(comm)}</div>
-                              <div className="text-[11px] text-stone-500 font-medium">Sau thuế 11%: {formatVnd(netComm)}</div>
+                            <td className="text-right text-xs whitespace-nowrap">
+                              <span className="font-semibold text-stone-800">{formatVnd(comm)}</span>
+                              <span className="text-[11px] text-stone-500 font-medium ml-1.5">({formatVnd(netComm)})</span>
                             </td>
                             <td className="text-right text-xs font-black text-emerald-700 bg-emerald-50/50">
                               +{formatVnd(customerCashback)}
