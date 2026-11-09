@@ -1465,15 +1465,11 @@ export default function AdminUsersClient({
           <div className="admin-kpi-card">
             <span className="kpi-label">Khách có thể rút</span>
             <strong className="kpi-value text-green">{formatVnd(stats.totalBalance)}</strong>
-            <span className="kpi-subtext">Đang chờ hoàn: {formatVnd(stats.totalPendingBalance)}</span>
           </div>
 
           <div className="admin-kpi-card">
             <span className="kpi-label text-emerald-800 font-bold">Số dư DealHoàn (Đã chốt)</span>
             <strong className="kpi-value text-emerald-700">+{formatVnd(financialStats.dealHoanCompletedProfit)}</strong>
-            <span className="kpi-subtext text-emerald-600 font-medium">
-              Đang chờ nhận: +{formatVnd(financialStats.dealHoanPendingProfit)}
-            </span>
           </div>
 
           <div className="admin-kpi-card">
