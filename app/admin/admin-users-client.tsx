@@ -274,9 +274,8 @@ export default function AdminUsersClient({
       for (const ord of orders) {
         const comm = Number(ord.commissionAmount) || 0;
         const netComm = Math.round(comm * 0.89);
-        const cashRaw = Number(ord.cashbackAmount) || 0;
-        // Chuẩn hóa tiền hoàn khách nhận về mức sau thuế (nếu đơn cũ lưu trên gộp)
-        const cash = cashRaw > netComm ? Math.round(netComm * userPercent) : cashRaw;
+        // Tiền hoàn thực tế cho khách luôn tính chuẩn trên hoa hồng Net sau thuế (89%):
+        const cash = Math.round(netComm * userPercent);
 
         totalCommission += comm;
         totalNetCommission += netComm;
@@ -2438,8 +2437,8 @@ export default function AdminUsersClient({
                         const userPercent = (boosterSettings.userCashbackPercent ?? 88) / 100;
                         const comm = Number(ord.commissionAmount) || 0;
                         const netComm = Math.round(comm * 0.89);
-                        const cashRaw = Number(ord.cashbackAmount) || 0;
-                        const customerCashback = cashRaw > netComm ? Math.round(netComm * userPercent) : cashRaw;
+                        // Tiền hoàn thực tế chuẩn xác sau khi đã trừ 11% thuế & phí sàn
+                        const customerCashback = Math.round(netComm * userPercent);
 
                         return (
                           <tr key={idx} className="admin-table-row">
