@@ -30,33 +30,14 @@ export async function GET(request: NextRequest) {
         .limit(50);
 
       // Tự động kiểm tra đối soát T+15 ngày:
-      // Các đơn Shopee nếu chưa qua đủ 15 ngày kể từ ngày đặt/hoàn thành mà bị duyệt trước đó
-      // sẽ được tự động hoàn về Chờ duyệt để bảo toàn vốn cho nền tảng.
-      const HOLD_MS = 15 * 24 * 60 * 60 * 1000;
-      const { recordCashbackOrder } = await import("@/lib/deals/cashback");
-      let reconciledAny = false;
-
-      for (const ord of (data || [])) {
-        if (ord.status === "completed") {
-          const ordDate = new Date(ord.ordered_at || ord.created_at || "").getTime();
-          const isUnder15Days = !isNaN(ordDate) && (Date.now() - ordDate < HOLD_MS);
-          if (isUnder15Days) {
-            await recordCashbackOrder({
-              orderId: ord.order_id,
-              subId: ord.sub_id,
-              userId: ord.user_id,
-              platform: "Shopee",
-              orderValue: Number(ord.order_value),
-              status: "pending",
-              note: "Chờ đối soát Shopee T+15 (tự động đưa về Chờ duyệt)",
-            });
-            reconciledAny = true;
-          }
-        }
-      }
+      // 1. Tự động chuyển các đơn pending > 15 ngày sang completed (chuyển tiền sang số dư khả dụng cho khách rút).
+      // 2. Chuẩn hóa lại các đơn cũ theo mức hoàn net sau thuế 11%.
+      // 3. Bảo toàn vốn: đưa các đơn completed < 15 ngày về pending nếu bị duyệt sớm.
+      const { autoSettleHoldPeriodOrders } = await import("@/lib/deals/cashback");
+      const settlement = await autoSettleHoldPeriodOrders();
 
       let finalOrders = data || [];
-      if (reconciledAny) {
+      if (settlement.settledCount > 0 || settlement.revertedCount > 0 || settlement.reconciledCount > 0) {
         const { data: refreshed } = await supabaseAdmin
           .from("cashback_orders")
           .select("*")

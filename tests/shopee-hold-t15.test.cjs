@@ -60,3 +60,83 @@ ORD_CANCELLED,2026-10-01,dh61f113c93212470f80bb111222333444,Đồ chơi,100000,1
   assert.equal(report.validOrders[0].status, 'pending');
   assert.equal(report.validOrders[1].status, 'rejected');
 });
+
+test('autoSettleHoldPeriodOrders transitions orders > 15 days to completed and reconciles cashback', async () => {
+  const { autoSettleHoldPeriodOrders } = loadTs({
+    '@/lib/supabase/service': { getSupabaseServiceClient: () => mockDb },
+    '@/lib/deals/affiliate': { parseUserIdFromSubId: () => '61f113c9-3212-470f-80bb-111222333444' },
+    '@/lib/deals/cashback-booster': { getBoosterSettingsSync: () => ({ safetyMarginPercent: 12, userCashbackPercent: 88 }) },
+  })('lib/deals/cashback.ts');
+
+  const recorded = [];
+  const mockDb = {
+    from: (table) => {
+      if (table === 'cashback_orders') {
+        return {
+          select: () => ({
+            eq: (col1, val1) => ({
+              limit: async () => {
+                if (val1 === 'pending') {
+                  return {
+                    data: [
+                      // Order 1: Đã qua 20 ngày -> cần chuyển sang completed
+                      {
+                        order_id: 'ORD_OLD_15',
+                        sub_id: 'dh61f113c93212470f80bb111222333444',
+                        user_id: '61f113c9-3212-470f-80bb-111222333444',
+                        platform: 'Shopee',
+                        order_value: 100000,
+                        commission_amount: 10000,
+                        cashback_amount: 8800,
+                        status: 'pending',
+                        ordered_at: new Date(Date.now() - 20 * 86400 * 1000).toISOString(),
+                      },
+                      // Order 2: Mới đặt 3 ngày trước nhưng cashback_amount bị tính theo gross -> cần reconcile
+                      {
+                        order_id: 'ORD_RECENT_3',
+                        sub_id: 'dh61f113c93212470f80bb111222333444',
+                        user_id: '61f113c9-3212-470f-80bb-111222333444',
+                        platform: 'Shopee',
+                        order_value: 100000,
+                        commission_amount: 10000,
+                        cashback_amount: 8800, // Cần giảm về 7832 (10000 * 0.89 * 0.88)
+                        status: 'pending',
+                        ordered_at: new Date(Date.now() - 3 * 86400 * 1000).toISOString(),
+                      },
+                    ],
+                  };
+                }
+                return { data: [] };
+              },
+              eq: (col2, val2) => ({
+                order: () => ({
+                  limit: async () => ({ data: [] }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+      return {};
+    },
+    rpc: async (fn, { p_order }) => {
+      recorded.push(p_order);
+      return { data: { id: 'uuid', ...p_order }, error: null };
+    },
+  };
+
+  const result = await autoSettleHoldPeriodOrders({ db: mockDb });
+  assert.equal(result.settledCount, 1, 'Đơn > 15 ngày phải được tự động duyệt completed');
+  assert.equal(result.reconciledCount, 1, 'Đơn < 15 ngày có cashback gộp phải được chuẩn hóa sau thuế');
+
+  // Verify recorded order 1 is completed
+  const settled = recorded.find((r) => r.order_id === 'ORD_OLD_15');
+  assert.ok(settled);
+  assert.equal(settled.status, 'completed');
+
+  // Verify recorded order 2 is pending but cashback_amount capped at after-tax net
+  const reconciled = recorded.find((r) => r.order_id === 'ORD_RECENT_3');
+  assert.ok(reconciled);
+  assert.equal(reconciled.status, 'pending');
+  assert.equal(reconciled.cashback_amount, 7832); // 10000 * 0.89 * 0.88 = 7832
+});

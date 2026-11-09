@@ -112,3 +112,126 @@ export async function getUserCashbackOrders(userId: string): Promise<CashbackOrd
   if (error) throw new Error("Cashback orders could not be loaded");
   return data || [];
 }
+
+/**
+ * Tự động đối soát và chuyển trạng thái đơn hàng Shopee T+15:
+ * 1. Tự động chuyển các đơn 'pending' đã qua ít nhất 15 ngày sang 'completed':
+ *    - Giải phóng tiền từ "Chờ hoàn" sang "Số dư khả dụng" trong ví người dùng để khách có thể rút tiền.
+ *    - Chuẩn hóa khoản hoàn tiền dựa trên hoa hồng net sau thuế 11%.
+ * 2. Chuẩn hóa số dư các đơn pending cũ nếu trước đó lỡ tính theo hoa hồng gộp (chưa trừ 11% thuế).
+ * 3. Bảo toàn quỹ nền tảng: Nếu đơn Shopee nào ở 'completed' nhưng chưa đủ 15 ngày (và không phải do admin duyệt tay)
+ *    thì đưa về 'pending' để ngăn ngừa rủi ro khách rút tiền trước khi Shopee thanh toán cho DealHoàn.
+ */
+export async function autoSettleHoldPeriodOrders(options: {
+  holdDays?: number;
+  db?: ReturnType<typeof getSupabaseServiceClient>;
+  now?: number;
+} = {}): Promise<{
+  settledCount: number;
+  revertedCount: number;
+  reconciledCount: number;
+}> {
+  const db = options.db || getSupabaseServiceClient();
+  if (!db) return { settledCount: 0, revertedCount: 0, reconciledCount: 0 };
+
+  const holdDays = options.holdDays ?? 15;
+  const HOLD_MS = holdDays * 24 * 60 * 60 * 1000;
+  const now = options.now ?? Date.now();
+  let settledCount = 0;
+  let revertedCount = 0;
+  let reconciledCount = 0;
+
+  try {
+    // 1. Quét các đơn pending
+    const { data: pendingOrders } = await db
+      .from("cashback_orders")
+      .select("*")
+      .eq("status", "pending")
+      .limit(100);
+
+    if (Array.isArray(pendingOrders)) {
+      for (const ord of pendingOrders) {
+        const note = String(ord.note || "").toLowerCase();
+        // Không tự duyệt nếu đơn đã có ghi chú bị hủy/từ chối từ Shopee
+        if (note.includes("hủy") || note.includes("huỷ") || note.includes("từ chối") || note.includes("reject")) {
+          continue;
+        }
+
+        const ordDate = new Date(ord.ordered_at || ord.created_at || "").getTime();
+        const hasPassed15Days = !isNaN(ordDate) && (now - ordDate >= HOLD_MS);
+
+        if (hasPassed15Days) {
+          // Đã đủ 15 ngày -> Tự động chuyển sang 'completed' (chuyển tiền vào số dư khả dụng cho khách)
+          const res = await recordCashbackOrder({
+            orderId: ord.order_id,
+            subId: ord.sub_id,
+            userId: ord.user_id,
+            platform: ord.platform,
+            orderValue: Number(ord.order_value),
+            commissionAmount: Number(ord.commission_amount),
+            status: "completed",
+            note: "Tự động duyệt sau 15 ngày đối soát Shopee T+15",
+          });
+          if (res.success) settledCount++;
+        } else {
+          // Chưa đủ 15 ngày: Chuẩn hóa lại cashbackAmount nếu đơn cũ trước đó bị tính theo gross
+          const comm = Number(ord.commission_amount) || 0;
+          const currentCashback = Number(ord.cashback_amount) || 0;
+          if (comm > 0) {
+            const netComm = Math.round(comm * 0.89);
+            const safeMaxCashback = Math.round(netComm * 0.88);
+            if (currentCashback > safeMaxCashback) {
+              const res = await recordCashbackOrder({
+                orderId: ord.order_id,
+                subId: ord.sub_id,
+                userId: ord.user_id,
+                platform: ord.platform,
+                orderValue: Number(ord.order_value),
+                commissionAmount: comm,
+                cashbackAmount: safeMaxCashback,
+                status: "pending",
+                note: ord.note || "Chuẩn hóa tiền hoàn sau thuế 11%",
+              });
+              if (res.success) reconciledCount++;
+            }
+          }
+        }
+      }
+    }
+
+    // 2. Bảo toàn quỹ: Nếu đơn Shopee completed nhưng chưa đủ 15 ngày và không phải admin duyệt tay
+    const { data: prematureOrders } = await db
+      .from("cashback_orders")
+      .select("*")
+      .eq("status", "completed")
+      .eq("platform", "Shopee")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (Array.isArray(prematureOrders)) {
+      for (const ord of prematureOrders) {
+        const ordDate = new Date(ord.ordered_at || ord.created_at || "").getTime();
+        const isUnder15Days = !isNaN(ordDate) && (now - ordDate < HOLD_MS);
+        const note = String(ord.note || "").toLowerCase();
+        if (isUnder15Days && !note.includes("admin") && !note.includes("thủ công")) {
+          const res = await recordCashbackOrder({
+            orderId: ord.order_id,
+            subId: ord.sub_id,
+            userId: ord.user_id,
+            platform: ord.platform,
+            orderValue: Number(ord.order_value),
+            commissionAmount: Number(ord.commission_amount),
+            cashbackAmount: Number(ord.cashback_amount),
+            status: "pending",
+            note: "Chờ đối soát Shopee T+15 (tự động bảo toàn quỹ)",
+          });
+          if (res.success) revertedCount++;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[autoSettleHoldPeriodOrders] error:", err);
+  }
+
+  return { settledCount, revertedCount, reconciledCount };
+}

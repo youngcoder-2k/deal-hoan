@@ -2,7 +2,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const loadTs = require('./helpers/load-ts.cjs');
 
-test('Shopee commission alignment: Huy Thanh gold (56054818987) calculates exact 80.021đ gross and 70.418đ net', () => {
+test('Shopee commission alignment: Huy Thanh gold (56054818987) calculates exact 80.021đ gross and 62.673đ net after 11% tax', () => {
   const { getShopeeCategoryRate } = loadTs({})('lib/deals/providers/hoanngay.ts');
   const { boostCashbackRate } = loadTs({})('lib/deals/cashback-booster.ts');
 
@@ -24,11 +24,13 @@ test('Shopee commission alignment: Huy Thanh gold (56054818987) calculates exact
     { safetyMarginPercent: 12, boostFactor: 1.0, maxBonusRate: 1.0, minBonusRate: 0.3, autoScaleWithUsers: false }
   );
 
-  assert.equal(boosted.cashbackAmount, 70418, 'User cashback must be exactly 70.418đ (88% of 80.021đ)');
-  assert.equal(boosted.finalRate, 7.1, 'Cashback rate must be 7.1%');
+  // Sau khi trừ 11% thuế & phí sàn: hoa hồng net = 80.021 * 0.89 = 71.219đ
+  // Khách nhận 88% của 71.219đ = 62.673đ
+  assert.equal(boosted.cashbackAmount, 62673, 'User cashback must be exactly 62.673đ (88% of 71.219đ net)');
+  assert.equal(boosted.finalRate, 6.3, 'Cashback rate must be 6.3%');
 });
 
-test('Shopee commission alignment: Wood Decor mirror (26643750654) calculates exact 41.698đ gross and 36.694đ net', () => {
+test('Shopee commission alignment: Wood Decor mirror (26643750654) calculates exact 41.698đ gross and 32.658đ net after 11% tax', () => {
   const { getShopeeCategoryRate } = loadTs({})('lib/deals/providers/hoanngay.ts');
   const { boostCashbackRate } = loadTs({})('lib/deals/cashback-booster.ts');
 
@@ -50,8 +52,10 @@ test('Shopee commission alignment: Wood Decor mirror (26643750654) calculates ex
     { safetyMarginPercent: 12, boostFactor: 1.0, maxBonusRate: 1.0, minBonusRate: 0.3, autoScaleWithUsers: false }
   );
 
-  assert.equal(boosted.cashbackAmount, 36694, 'User cashback must be exactly 36.694đ (88% of 41.698đ)');
-  assert.equal(boosted.finalRate, 5.2, 'Cashback rate must be 5.2%');
+  // Sau khi trừ 11% thuế & phí sàn: hoa hồng net = 41.698 * 0.89 = 37.111đ
+  // Khách nhận 88% của 37.111đ = 32.658đ
+  assert.equal(boosted.cashbackAmount, 32658, 'User cashback must be exactly 32.658đ (88% of 37.111đ net)');
+  assert.equal(boosted.finalRate, 4.7, 'Cashback rate must be 4.7%');
 });
 
 test('Wallet settlement alignment: imported CSV orders match paste-link calculation exactly', () => {
@@ -64,9 +68,9 @@ ORD002,dh87654321432143214321432109876cba,26643750654,41.698,completed`;
   const report = parseShopeeConversionReport(csv, { safetyMarginPercent: 12 });
   assert.equal(report.validOrders.length, 2);
   assert.equal(report.validOrders[0].commissionAmount, 80021);
-  assert.equal(report.validOrders[0].cashbackAmount, 70418, 'Wallet credit for Huy Thanh must match 70.418đ');
+  assert.equal(report.validOrders[0].cashbackAmount, 62673, 'Wallet credit for Huy Thanh must match 62.673đ (after tax)');
   assert.equal(report.validOrders[1].commissionAmount, 41698);
-  assert.equal(report.validOrders[1].cashbackAmount, 36694, 'Wallet credit for Mirror must match 36.694đ');
+  assert.equal(report.validOrders[1].cashbackAmount, 32658, 'Wallet credit for Mirror must match 32.658đ (after tax)');
 });
 
 test('Single config parameter: userCashbackPercent supports 1 decimal place (e.g. 86.8%) and auto-calculates profit', () => {
@@ -78,8 +82,9 @@ test('Single config parameter: userCashbackPercent supports 1 decimal place (e.g
   assert.equal(normalized.userCashbackPercent, 86.8, 'User percent must be 86.8%');
   assert.equal(normalized.safetyMarginPercent, 13.2, 'DealHoàn profit must be 13.2%');
 
-  // 2. boostCashbackRate with 86.8%
+  // 2. boostCashbackRate with 86.8% (sau trừ thuế 11%)
   const huyThanhGross = 80021;
+  const netComm = Math.round(huyThanhGross * 0.89); // 71219đ
   const price = 989040;
   const boosted = boostCashbackRate(
     Number(((huyThanhGross / price) * 100).toFixed(2)),
@@ -88,16 +93,16 @@ test('Single config parameter: userCashbackPercent supports 1 decimal place (e.g
     { userCashbackPercent: 86.8 }
   );
 
-  const expectedUserCashback = Math.round(huyThanhGross * 0.868); // 69.458đ
-  assert.equal(boosted.cashbackAmount, expectedUserCashback, 'User cashback must be exactly 69.458đ (86.8% of 80.021đ)');
-  const dealHoanProfit = huyThanhGross - boosted.cashbackAmount;
-  assert.equal(dealHoanProfit, 10563, 'DealHoàn profit must be 10.563đ');
+  const expectedUserCashback = Math.round(netComm * 0.868); // 61.818đ
+  assert.equal(boosted.cashbackAmount, expectedUserCashback, 'User cashback must be exactly 61.818đ (86.8% of 71.219đ net)');
+  const dealHoanProfit = netComm - boosted.cashbackAmount;
+  assert.equal(dealHoanProfit, 9401, 'DealHoàn net profit must be 9.401đ');
 
   // 3. parseShopeeConversionReport with userCashbackPercent: 86.8
   const csv = `Order ID,Sub ID,Mã Sản Phẩm,Hoa Hồng,Trạng Thái
 ORD001,dh12345678123412341234123456789abc,56054818987,80.021,completed`;
   const report = parseShopeeConversionReport(csv, { userCashbackPercent: 86.8 });
-  assert.equal(report.validOrders[0].cashbackAmount, 69458, 'CSV import must honor userCashbackPercent 86.8%');
+  assert.equal(report.validOrders[0].cashbackAmount, 61818, 'CSV import must honor userCashbackPercent 86.8% on net');
 });
 
 test('Shopee real CSV export format: distinguishes Trạng thái hoa hồng from Hoa hồng sản phẩm', () => {
@@ -112,7 +117,7 @@ test('Shopee real CSV export format: distinguishes Trạng thái hoa hồng from
   assert.equal(res.validOrders[0].orderId, '2611039UXRQA3Q');
   assert.equal(res.validOrders[0].orderValue, 490566);
   assert.equal(res.validOrders[0].commissionAmount, 41698, 'Must correctly capture 41.698đ commission instead of 0đ from Trạng thái hoa hồng');
-  assert.equal(res.validOrders[0].cashbackAmount, 36694, '88% of 41.698đ must be 36.694đ');
+  assert.equal(res.validOrders[0].cashbackAmount, 32658, '88% of 37.111đ net must be 32.658đ');
 });
 
 test('Shopee CSV money parser: handles 4-decimal-places and comma decimal representations', () => {
