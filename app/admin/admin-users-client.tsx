@@ -2378,7 +2378,7 @@ export default function AdminUsersClient({
                 </div>
               </div>
               <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/30 shadow-xs">
-                <span className="text-xs font-semibold text-orange-700">Tiền hoàn cho khách ({(boosterSettings.userCashbackPercent ?? 88).toFixed(1)}%)</span>
+                <span className="text-xs font-semibold text-orange-700">Tiền hoàn</span>
                 <div className="text-xl font-black text-orange-600 mt-1">{formatVnd(financialStats.totalCustomerCashback)}</div>
                 <div className="text-[11px] text-stone-500 mt-0.5">
                   Khả dụng: {formatVnd(financialStats.completedCustomerCashback)} · Chờ hoàn: {formatVnd(financialStats.pendingCustomerCashback)}
