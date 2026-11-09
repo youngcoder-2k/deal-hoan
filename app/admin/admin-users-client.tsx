@@ -1470,11 +1470,6 @@ export default function AdminUsersClient({
             <span className="kpi-label text-emerald-800 font-bold">Số dư DealHoàn (Đã chốt)</span>
             <strong className="kpi-value text-emerald-700">+{formatVnd(financialStats.dealHoanCompletedProfit)}</strong>
           </div>
-
-          <div className="admin-kpi-card">
-            <span className="kpi-label font-bold text-stone-800">DealHoàn nhận lại</span>
-            <strong className="kpi-value text-stone-900">+{formatVnd(financialStats.dealHoanTotalProfit)}</strong>
-          </div>
         </section>
 
         {/* Filter Toolbar */}
