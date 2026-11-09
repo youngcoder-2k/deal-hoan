@@ -2424,7 +2424,6 @@ export default function AdminUsersClient({
                       <tr>
                         <th>Mã đơn Shopee</th>
                         <th>Thành viên</th>
-                        <th className="text-right">Giá trị đơn</th>
                         <th className="text-right">Hoa hồng Shopee</th>
                         <th className="text-right">Tiền hoàn</th>
                         <th className="text-center">Trạng thái</th>
@@ -2452,7 +2451,6 @@ export default function AdminUsersClient({
                                 <span className="text-xs font-mono font-bold text-orange-700">{ord.subId}</span>
                               )}
                             </td>
-                            <td className="text-right text-xs font-medium">{formatVnd(ord.orderValue)}</td>
                             <td className="text-right text-xs whitespace-nowrap">
                               <span className="font-semibold text-stone-800">{formatVnd(comm)}</span>
                               <span className="text-[11px] text-stone-500 font-medium ml-1.5">({formatVnd(netComm)})</span>
