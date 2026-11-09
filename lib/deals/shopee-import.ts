@@ -8,6 +8,7 @@ export interface ParsedShopeeOrder {
   productName: string;
   orderValue: number;
   commissionAmount: number;
+  netCommission?: number;
   cashbackAmount: number;
   status: "pending" | "completed" | "rejected";
   orderedAt: string;
@@ -23,6 +24,7 @@ export interface ParseReportResult {
   validOrders: ParsedShopeeOrder[];
   unmatchedOrders: ParsedShopeeOrder[];
   totalCommission: number;
+  totalNetCommission: number;
   totalCashback: number;
   headersDetected: Record<string, string>;
   warnings: string[];
@@ -154,6 +156,7 @@ export function parseShopeeConversionReport(
       validOrders: [],
       unmatchedOrders: [],
       totalCommission: 0,
+      totalNetCommission: 0,
       totalCashback: 0,
       headersDetected: {},
       warnings: ["File rỗng hoặc không có dữ liệu hàng."],
@@ -331,6 +334,7 @@ export function parseShopeeConversionReport(
   const validOrders: ParsedShopeeOrder[] = [];
   const unmatchedOrders: ParsedShopeeOrder[] = [];
   let totalCommission = 0;
+  let totalNetCommission = 0;
   let totalCashback = 0;
 
   for (let r = headerRowIndex + 1; r < rows.length; r++) {
@@ -361,8 +365,12 @@ export function parseShopeeConversionReport(
     // Ưu tiên lấy hoa hồng lớn nhất từ các cột hợp lệ (tránh 0đ từ cột trạng thái hoặc thiếu cột)
     const commissionAmount = Math.max(totalComm, prodComm + orderComm, anyComm);
 
-    // Calculate safe cashback amount with margin guardrail
-    const cashbackAmount = Math.round(commissionAmount * safeMultiplier);
+    // Bóc tách thuế & phí: Shopee tự động khấu trừ 10% thuế TNCN + 1% phí dịch vụ sàn (tổng 11%)
+    // Hoa hồng Net thực tế Shopee chuyển khoản về STK là 89% hoa hồng gộp:
+    const netCommission = Math.round(commissionAmount * 0.89);
+
+    // Tính tiền hoàn thực tế cho khách dựa trên hoa hồng Net thực nhận (sau khi đã trừ 11% thuế & phí)
+    const cashbackAmount = Math.round(netCommission * safeMultiplier);
 
     // Chu kỳ đối soát Shopee T+15 ngày:
     // Đơn hàng chỉ được cộng vào số dư khả dụng (completed) khi:
@@ -451,6 +459,7 @@ export function parseShopeeConversionReport(
       productName: rawProductName || "Sản phẩm Shopee",
       orderValue,
       commissionAmount,
+      netCommission,
       cashbackAmount,
       status,
       orderedAt: rawOrderedAt || new Date().toISOString(),
@@ -464,6 +473,7 @@ export function parseShopeeConversionReport(
     if (parsedUserId) {
       validOrders.push(parsedOrder);
       totalCommission += commissionAmount;
+      totalNetCommission += netCommission;
       totalCashback += cashbackAmount;
     } else {
       unmatchedOrders.push(parsedOrder);
@@ -480,6 +490,7 @@ export function parseShopeeConversionReport(
     validOrders,
     unmatchedOrders,
     totalCommission,
+    totalNetCommission,
     totalCashback,
     headersDetected: detectedHeadersSummary,
     warnings,

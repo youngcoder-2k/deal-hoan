@@ -197,9 +197,11 @@ export function boostCashbackRate(
 
   // 1. Nếu có số tiền hoa hồng thực tế từ sàn (rawCashbackAmount):
   // rawCashbackAmount (từ Shopee/Longhouse) là tổng hoa hồng Shopee trả về cho DealHoàn.
-  // Người dùng nhận chính xác tỷ lệ % DealHoàn chia (mặc định 88% khi giữ 12% phí vận hành/an toàn).
+  // Shopee khấu trừ 10% TNCN + 1% phí dịch vụ sàn (còn 89% thực nhận).
+  // Người dùng nhận chính xác tỷ lệ % DealHoàn chia trên số thực nhận (mặc định 88%).
   if (typeof rawCashbackAmount === "number" && rawCashbackAmount > 0) {
-    const netCashback = Math.round(rawCashbackAmount * baseUserShare);
+    const netCommission = Math.round(rawCashbackAmount * 0.89);
+    const netCashback = Math.round(netCommission * baseUserShare);
     const finalRate = productPrice > 0
       ? Number(((netCashback / productPrice) * 100).toFixed(1))
       : Number((baseRate * baseUserShare).toFixed(1));
@@ -217,7 +219,9 @@ export function boostCashbackRate(
   // Shopee/Lazada bóc tách thuế VAT (8%) trước khi nhân tỷ lệ:
   const preTaxPrice = productPrice > 0 ? productPrice / 1.08 : 0;
   const grossCommission = preTaxPrice > 0 ? preTaxPrice * (baseRate / 100) : 0;
-  let netCashback = Math.round(grossCommission * baseUserShare);
+  // Bóc tách 11% thuế TNCN + phí dịch vụ sàn
+  const netCommission = grossCommission * 0.89;
+  let netCashback = Math.round(netCommission * baseUserShare);
 
   if (typeof cap === "number" && cap > 0) {
     const netCap = Math.round(cap * baseUserShare);

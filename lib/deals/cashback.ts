@@ -87,7 +87,9 @@ export async function recordCashbackOrder(params: RecordCashbackOrderParams): Pr
   const margin = getBoosterSettingsSync().safetyMarginPercent;
   if (!Number.isFinite(margin) || margin < 0 || margin > 100) return { success: false, error: "Cấu hình tỷ lệ hoàn tiền không hợp lệ." };
   if (params.cashbackAmount !== undefined && params.commissionAmount === undefined) return { success: false, error: "Cần hoa hồng đối soát để cập nhật khoản hoàn." };
-  const limit = params.commissionAmount === undefined ? undefined : Math.round(params.commissionAmount * (100 - margin) / 100);
+  // Bóc tách thuế & phí: 10% TNCN + 1% phí dịch vụ sàn (hoa hồng thực nhận là 89%)
+  const netCommission = params.commissionAmount === undefined ? undefined : Math.round(params.commissionAmount * 0.89);
+  const limit = netCommission === undefined ? undefined : Math.round(netCommission * (100 - margin) / 100);
   const cashback = limit === undefined ? undefined : Math.min(params.cashbackAmount ?? limit, limit);
   const { data, error } = await db.rpc("record_cashback_order", { p_order: {
     user_id: userId, order_id: orderId, platform, status,

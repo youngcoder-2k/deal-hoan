@@ -261,63 +261,76 @@ export default function AdminUsersClient({
   // Tính toán số dư tổng của hệ thống DealHoàn và khoản DealHoàn nhận lại sau đối soát
   const financialStats = useMemo(() => {
     const orders = filteredRecentSyncedOrders;
+    const userPercent = (boosterSettings.userCashbackPercent ?? 88) / 100;
     let totalCommission = 0;
     let completedCommission = 0;
     let pendingCommission = 0;
-    let totalCashback = 0;
-    let completedCashback = 0;
-    let pendingCashback = 0;
+    let totalNetCommission = 0;
+    let totalCustomerCashback = 0;
+    let completedCustomerCashback = 0;
+    let pendingCustomerCashback = 0;
 
     if (orders.length > 0) {
       for (const ord of orders) {
         const comm = Number(ord.commissionAmount) || 0;
-        const cash = Number(ord.cashbackAmount) || 0;
+        const netComm = Math.round(comm * 0.89);
+        const cashRaw = Number(ord.cashbackAmount) || 0;
+        // Chuẩn hóa tiền hoàn khách nhận về mức sau thuế (nếu đơn cũ lưu trên gộp)
+        const cash = cashRaw > netComm ? Math.round(netComm * userPercent) : cashRaw;
+
         totalCommission += comm;
-        totalCashback += cash;
+        totalNetCommission += netComm;
+        totalCustomerCashback += cash;
         if (ord.status === "completed") {
           completedCommission += comm;
-          completedCashback += cash;
+          completedCustomerCashback += cash;
         } else if (ord.status === "pending") {
           pendingCommission += comm;
-          pendingCashback += cash;
+          pendingCustomerCashback += cash;
         }
       }
     } else {
       totalCommission = stats.totalCommission || 173000;
+      totalNetCommission = Math.round(totalCommission * 0.89);
       completedCommission = stats.totalCompletedCommission || 100433;
       pendingCommission = stats.totalPendingCommission || 72567;
-      totalCashback = stats.totalCashback || (stats.totalBalance + stats.totalPendingBalance);
-      completedCashback = stats.totalBalance;
-      pendingCashback = stats.totalPendingBalance;
+      totalCustomerCashback = Math.round(totalNetCommission * userPercent);
+      completedCustomerCashback = Math.round((stats.totalBalance || 0) * 0.89);
+      pendingCustomerCashback = Math.round((stats.totalPendingBalance || 0) * 0.89);
     }
 
-    const dealHoanTotalProfit = totalCommission - totalCashback;
-    const dealHoanCompletedProfit = completedCommission - completedCashback;
-    const dealHoanPendingProfit = pendingCommission - pendingCashback;
+    const realDealHoanProfit = Math.max(0, totalNetCommission - totalCustomerCashback);
+    const dealHoanCompletedProfit = Math.max(0, Math.round(completedCommission * 0.89) - completedCustomerCashback);
+    const dealHoanPendingProfit = Math.max(0, Math.round(pendingCommission * 0.89) - pendingCustomerCashback);
 
     // Tổng tiền khách đã rút thành công qua ngân hàng
     const totalWithdrawn = stats.totalWithdrawn || 0;
 
     // Số dư quỹ tiền thực tế của hệ thống DealHoàn:
     // Tiền sàn Shopee thanh toán - Tiền DealHoàn đã chi trả rút
-    const systemCashBalance = completedCommission - totalWithdrawn;
-    const systemNetReserve = systemCashBalance - stats.totalBalance;
+    const systemCashBalance = Math.round(completedCommission * 0.89) - totalWithdrawn;
+    const systemNetReserve = systemCashBalance - (stats.totalBalance || 0);
 
     return {
       totalCommission,
       completedCommission,
       pendingCommission,
-      totalCashback,
-      completedCashback,
-      pendingCashback,
-      dealHoanTotalProfit,
+      totalNetCommission,
+      totalCustomerCashback,
+      completedCustomerCashback,
+      pendingCustomerCashback,
+      totalCashback: totalCustomerCashback,
+      completedCashback: completedCustomerCashback,
+      pendingCashback: pendingCustomerCashback,
+      realDealHoanProfit,
+      dealHoanTotalProfit: realDealHoanProfit,
       dealHoanCompletedProfit,
       dealHoanPendingProfit,
       totalWithdrawn,
       systemCashBalance,
       systemNetReserve,
     };
-  }, [filteredRecentSyncedOrders, stats]);
+  }, [filteredRecentSyncedOrders, stats, boosterSettings.userCashbackPercent]);
 
   const [showCookieGuide, setShowCookieGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -2348,19 +2361,27 @@ export default function AdminUsersClient({
             </div>
 
             {/* Thống kê nhanh hoa hồng và DealHoàn nhận lại từ các đơn đã ghi nhận */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {/* Thống kê nhanh hoa hồng và DealHoàn nhận lại từ các đơn đã ghi nhận */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="p-4 rounded-xl border border-stone-200 bg-white shadow-xs">
-                <span className="text-xs font-semibold text-stone-500">Tổng hoa hồng Shopee</span>
+                <span className="text-xs font-semibold text-stone-500">Tổng hoa hồng Shopee (Gộp)</span>
                 <div className="text-xl font-black text-stone-900 mt-1">{formatVnd(financialStats.totalCommission)}</div>
                 <div className="text-[11px] text-stone-500 mt-0.5">
                   Đã duyệt: {formatVnd(financialStats.completedCommission)} · Chờ duyệt: {formatVnd(financialStats.pendingCommission)}
                 </div>
               </div>
-              <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/30 shadow-xs">
-                <span className="text-xs font-semibold text-orange-700">Hoàn tiền khách nhận ({(boosterSettings.userCashbackPercent ?? 88).toFixed(1)}%)</span>
-                <div className="text-xl font-black text-orange-600 mt-1">{formatVnd(financialStats.totalCashback)}</div>
+              <div className="p-4 rounded-xl border border-stone-200 bg-stone-50 shadow-xs">
+                <span className="text-xs font-semibold text-stone-600">Shopee thực chuyển (Sau thuế 11%)</span>
+                <div className="text-xl font-black text-stone-800 mt-1">{formatVnd(financialStats.totalNetCommission)}</div>
                 <div className="text-[11px] text-stone-500 mt-0.5">
-                  Khả dụng: {formatVnd(financialStats.completedCashback)} · Chờ hoàn: {formatVnd(financialStats.pendingCashback)}
+                  Đã trừ 10% TNCN + 1% phí sàn
+                </div>
+              </div>
+              <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/30 shadow-xs">
+                <span className="text-xs font-semibold text-orange-700">Tiền hoàn cho khách ({(boosterSettings.userCashbackPercent ?? 88).toFixed(1)}%)</span>
+                <div className="text-xl font-black text-orange-600 mt-1">{formatVnd(financialStats.totalCustomerCashback)}</div>
+                <div className="text-[11px] text-stone-500 mt-0.5">
+                  Khả dụng: {formatVnd(financialStats.completedCustomerCashback)} · Chờ hoàn: {formatVnd(financialStats.pendingCustomerCashback)}
                 </div>
               </div>
               <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 shadow-xs">
@@ -2368,9 +2389,9 @@ export default function AdminUsersClient({
                   <span className="text-xs font-bold text-emerald-800">DealHoàn nhận lại ({(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}%)</span>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Lợi nhuận</span>
                 </div>
-                <div className="text-xl font-black text-emerald-700 mt-1">+{formatVnd(financialStats.dealHoanTotalProfit)}</div>
+                <div className="text-xl font-black text-emerald-700 mt-1">+{formatVnd(financialStats.realDealHoanProfit)}</div>
                 <div className="text-[11px] text-emerald-700 font-medium mt-0.5">
-                  Đã chốt: +{formatVnd(financialStats.dealHoanCompletedProfit)} · Chờ đối soát: +{formatVnd(financialStats.dealHoanPendingProfit)}
+                  Lợi nhuận ròng thực tế bỏ túi sau thuế
                 </div>
               </div>
             </div>
@@ -2405,8 +2426,10 @@ export default function AdminUsersClient({
                         <th>Mã đơn Shopee</th>
                         <th>Thành viên</th>
                         <th className="text-right">Giá trị đơn</th>
-                        <th className="text-right">Hoa hồng Shopee</th>
-                        <th className="text-right">Tiền hoàn ({boosterSettings.userCashbackPercent ?? 88}%)</th>
+                        <th className="text-right">Hoa hồng Shopee (Gộp)</th>
+                        <th className="text-right">Sau thuế 11% (Thực nhận)</th>
+                        <th className="text-right">Tiền hoàn cho khách ({boosterSettings.userCashbackPercent ?? 88}%)</th>
+                        <th className="text-right">DealHoàn giữ lại ({(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}%)</th>
                         <th className="text-center">Trạng thái</th>
                         <th className="text-right">Thời gian</th>
                       </tr>
@@ -2414,6 +2437,13 @@ export default function AdminUsersClient({
                     <tbody>
                       {filteredRecentSyncedOrders.map((ord, idx) => {
                         const matchedUser = users.find((u) => ord.userId && u.id.startsWith(ord.userId));
+                        const userPercent = (boosterSettings.userCashbackPercent ?? 88) / 100;
+                        const comm = Number(ord.commissionAmount) || 0;
+                        const netComm = Math.round(comm * 0.89);
+                        const cashRaw = Number(ord.cashbackAmount) || 0;
+                        const customerCashback = cashRaw > netComm ? Math.round(netComm * userPercent) : cashRaw;
+                        const dealHoanProfit = Math.max(0, netComm - customerCashback);
+
                         return (
                           <tr key={idx} className="admin-table-row">
                             <td className="font-mono text-xs font-bold text-stone-900">{ord.orderId}</td>
@@ -2427,11 +2457,17 @@ export default function AdminUsersClient({
                               )}
                             </td>
                             <td className="text-right text-xs font-medium">{formatVnd(ord.orderValue)}</td>
-                            <td className="text-right text-xs font-semibold text-stone-800">
-                              {formatVnd(ord.commissionAmount)}
+                            <td className="text-right text-xs font-semibold text-stone-700">
+                              {formatVnd(comm)}
                             </td>
-                            <td className="text-right text-xs font-black text-emerald-700 bg-emerald-50/50">
-                              +{formatVnd(ord.cashbackAmount)}
+                            <td className="text-right text-xs font-semibold text-stone-900 bg-stone-50">
+                              {formatVnd(netComm)}
+                            </td>
+                            <td className="text-right text-xs font-black text-orange-700 bg-orange-50/50">
+                              +{formatVnd(customerCashback)}
+                            </td>
+                            <td className="text-right text-xs font-bold text-emerald-700 bg-emerald-50/50">
+                              +{formatVnd(dealHoanProfit)}
                             </td>
                             <td className="text-center">
                               <span
