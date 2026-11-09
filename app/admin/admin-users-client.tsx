@@ -2363,35 +2363,23 @@ export default function AdminUsersClient({
             {/* Thống kê nhanh hoa hồng và DealHoàn nhận lại từ các đơn đã ghi nhận */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="p-4 rounded-xl border border-stone-200 bg-white shadow-xs">
-                <span className="text-xs font-semibold text-stone-500">Tổng hoa hồng Shopee (Gộp)</span>
+                <span className="text-xs font-semibold text-stone-500">Tổng hoa hồng Shopee</span>
                 <div className="text-xl font-black text-stone-900 mt-1">{formatVnd(financialStats.totalCommission)}</div>
-                <div className="text-[11px] text-stone-500 mt-0.5">
-                  Đã duyệt: {formatVnd(financialStats.completedCommission)} · Chờ duyệt: {formatVnd(financialStats.pendingCommission)}
-                </div>
               </div>
               <div className="p-4 rounded-xl border border-stone-200 bg-stone-50 shadow-xs">
-                <span className="text-xs font-semibold text-stone-600">Shopee thực chuyển (Sau thuế 11%)</span>
+                <span className="text-xs font-semibold text-stone-600">Shopee thực chuyển</span>
                 <div className="text-xl font-black text-stone-800 mt-1">{formatVnd(financialStats.totalNetCommission)}</div>
-                <div className="text-[11px] text-stone-500 mt-0.5">
-                  Đã trừ 10% TNCN + 1% phí sàn
-                </div>
               </div>
               <div className="p-4 rounded-xl border border-orange-200 bg-orange-50/30 shadow-xs">
                 <span className="text-xs font-semibold text-orange-700">Tiền hoàn</span>
                 <div className="text-xl font-black text-orange-600 mt-1">{formatVnd(financialStats.totalCustomerCashback)}</div>
-                <div className="text-[11px] text-stone-500 mt-0.5">
-                  Khả dụng: {formatVnd(financialStats.completedCustomerCashback)} · Chờ hoàn: {formatVnd(financialStats.pendingCustomerCashback)}
-                </div>
               </div>
               <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/50 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-emerald-800">DealHoàn nhận lại ({(100 - (boosterSettings.userCashbackPercent ?? 88)).toFixed(1)}%)</span>
+                  <span className="text-xs font-bold text-emerald-800">DealHoàn nhận lại</span>
                   <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded">Lợi nhuận</span>
                 </div>
                 <div className="text-xl font-black text-emerald-700 mt-1">+{formatVnd(financialStats.realDealHoanProfit)}</div>
-                <div className="text-[11px] text-emerald-700 font-medium mt-0.5">
-                  Lợi nhuận ròng thực tế bỏ túi sau thuế
-                </div>
               </div>
             </div>
 
