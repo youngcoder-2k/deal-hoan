@@ -22,35 +22,27 @@ export async function GET(request: NextRequest) {
     const supabaseAdmin = getSupabaseAdminClient();
     let recentOrders: Record<string, unknown>[] = [];
     if (supabaseAdmin) {
+      const { autoSettleHoldPeriodOrders } = await import("@/lib/deals/cashback");
+      await autoSettleHoldPeriodOrders();
+
       const { data } = await supabaseAdmin
         .from("cashback_orders")
         .select("*")
         .eq("platform", "Shopee")
-        .order("created_at", { ascending: false })
-        .limit(50);
+        .order("ordered_at", { ascending: false })
+        .limit(200);
 
-      // Tự động kiểm tra đối soát T+15 ngày:
-      // 1. Tự động chuyển các đơn pending > 15 ngày sang completed (chuyển tiền sang số dư khả dụng cho khách rút).
-      // 2. Chuẩn hóa lại các đơn cũ theo mức hoàn net sau thuế 11%.
-      // 3. Bảo toàn vốn: đưa các đơn completed < 15 ngày về pending nếu bị duyệt sớm.
-      const { autoSettleHoldPeriodOrders } = await import("@/lib/deals/cashback");
-      const settlement = await autoSettleHoldPeriodOrders();
-
-      let finalOrders = data || [];
-      if (settlement.settledCount > 0 || settlement.revertedCount > 0 || settlement.reconciledCount > 0) {
-        const { data: refreshed } = await supabaseAdmin
-          .from("cashback_orders")
-          .select("*")
-          .eq("platform", "Shopee")
-          .order("created_at", { ascending: false })
-          .limit(50);
-        if (refreshed) finalOrders = refreshed;
-      }
-
-      recentOrders = finalOrders.filter((o: Record<string, unknown>) => {
-        const id = String(o.order_id || "");
+      const seenOrderIds = new Set<string>();
+      recentOrders = (data || []).filter((o: Record<string, unknown>) => {
+        const id = String(o.order_id || "").trim();
         const name = String(o.product_name || "").toLowerCase();
-        return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test");
+        if (!id || id.startsWith("SP_") || id.startsWith("TT_") || name.includes("test")) {
+          return false;
+        }
+        const normId = id.toUpperCase();
+        if (seenOrderIds.has(normId)) return false;
+        seenOrderIds.add(normId);
+        return true;
       });
     }
 

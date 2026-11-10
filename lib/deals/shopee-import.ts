@@ -115,26 +115,52 @@ export function parseCsvRows(text: string): string[][] {
 
 /**
  * Parses dates from Shopee CSV formats (DD-MM-YYYY, YYYY-MM-DD, ISO, etc.)
+ * Shopee Vietnam CSV timestamps do not include timezone suffixes and are in Vietnam time (+07:00).
+ * Normalize naive timestamps to +07:00 so Vercel UTC servers and PostgreSQL store the exact VN time.
  */
 export function parseShopeeDate(val: unknown): Date | null {
   if (!val) return null;
   const str = String(val).trim();
   if (!str) return null;
 
+  const hasExplicitTz = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(str);
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+
   // DD-MM-YYYY or DD/MM/YYYY with optional time
-  const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:\s+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?/);
+  const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})(?:[T\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/);
   if (dmyMatch) {
     const day = parseInt(dmyMatch[1], 10);
-    const month = parseInt(dmyMatch[2], 10) - 1;
+    const month = parseInt(dmyMatch[2], 10);
     const year = parseInt(dmyMatch[3], 10);
     const hour = dmyMatch[4] ? parseInt(dmyMatch[4], 10) : 0;
     const minute = dmyMatch[5] ? parseInt(dmyMatch[5], 10) : 0;
     const second = dmyMatch[6] ? parseInt(dmyMatch[6], 10) : 0;
-    const d = new Date(year, month, day, hour, minute, second);
-    if (!isNaN(d.getTime())) return d;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const iso = `${year}-${pad2(month)}-${pad2(day)}T${pad2(hour)}:${pad2(minute)}:${pad2(second)}+07:00`;
+      const d = new Date(iso);
+      if (!isNaN(d.getTime())) return d;
+    }
   }
 
-  // Standard Date parse (supports YYYY-MM-DD, ISO strings)
+  // YYYY-MM-DD or YYYY/MM/DD without timezone
+  const ymdMatch = !hasExplicitTz
+    ? str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})(?:[T\s]+(\d{1,2}):(\d{1,2})(?::(\d{1,2}))?)?$/)
+    : null;
+  if (ymdMatch) {
+    const year = parseInt(ymdMatch[1], 10);
+    const month = parseInt(ymdMatch[2], 10);
+    const day = parseInt(ymdMatch[3], 10);
+    const hour = ymdMatch[4] ? parseInt(ymdMatch[4], 10) : 0;
+    const minute = ymdMatch[5] ? parseInt(ymdMatch[5], 10) : 0;
+    const second = ymdMatch[6] ? parseInt(ymdMatch[6], 10) : 0;
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      const iso = `${year}-${pad2(month)}-${pad2(day)}T${pad2(hour)}:${pad2(minute)}:${pad2(second)}+07:00`;
+      const d = new Date(iso);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+
+  // Standard Date parse (supports ISO strings with explicit timezone)
   const d = new Date(str);
   if (!isNaN(d.getTime())) return d;
   return null;
@@ -210,6 +236,16 @@ export function parseShopeeConversionReport(
       if (!("subId" in headerMap)) headerMap.subId = idx;
     }
 
+    // Product code / Item ID (giúp phân biệt các sản phẩm khác nhau trong cùng một đơn hàng)
+    if (
+      h.includes("mã sản phẩm") ||
+      h.includes("id sản phẩm") ||
+      h.includes("item id") ||
+      h.includes("product id")
+    ) {
+      if (!("productCode" in headerMap)) headerMap.productCode = idx;
+    }
+
     // Product name
     if (
       h.includes("tên sản phẩm") ||
@@ -247,6 +283,12 @@ export function parseShopeeConversionReport(
 
     if (!isExcludedComm) {
       if (
+        h.includes("tổng hoa hồng đơn") ||
+        h.includes("total order commission") ||
+        h.includes("order total commission")
+      ) {
+        headerMap.orderTotalCommission = idx;
+      } else if (
         h.includes("tổng hoa hồng") ||
         h.includes("total commission") ||
         h.includes("hoa hồng thực nhận") ||
@@ -314,28 +356,57 @@ export function parseShopeeConversionReport(
       if (!("completedAt" in headerMap)) headerMap.completedAt = idx;
     }
 
-    // Order time
+    // Order time (ưu tiên cột thời gian đặt hàng, tránh lấy nhầm Thời gian Click hoặc Thời gian hoàn thành)
     if (
-      h.includes("thời gian") ||
+      h.includes("thời gian đặt hàng") ||
       h.includes("ngày đặt") ||
       h.includes("order time") ||
-      h.includes("purchase time") ||
-      h.includes("created")
+      h.includes("purchase time")
+    ) {
+      headerMap.orderedAt = idx;
+    } else if (
+      (h.includes("thời gian") || h.includes("created")) &&
+      !h.includes("hoàn thành") &&
+      !h.includes("complete") &&
+      !h.includes("click")
     ) {
       if (!("orderedAt" in headerMap)) headerMap.orderedAt = idx;
+    } else if (h.includes("thời gian") && !("fallbackTime" in headerMap)) {
+      headerMap.fallbackTime = idx;
     }
   });
+
+  if (!("orderedAt" in headerMap) && "fallbackTime" in headerMap) {
+    headerMap.orderedAt = headerMap.fallbackTime;
+  }
 
   const userPercent = typeof options?.userCashbackPercent === "number" && !isNaN(options.userCashbackPercent)
     ? options.userCashbackPercent
     : (100 - (options?.safetyMarginPercent ?? DEFAULT_BOOSTER_SETTINGS.safetyMarginPercent));
   const safeMultiplier = Math.max(0.5, Math.min(0.98, userPercent / 100));
 
-  const validOrders: ParsedShopeeOrder[] = [];
-  const unmatchedOrders: ParsedShopeeOrder[] = [];
-  let totalCommission = 0;
-  let totalNetCommission = 0;
-  let totalCashback = 0;
+  interface RawOrderRow {
+    orderId: string;
+    subId: string;
+    userId: string | null;
+    productCode: string;
+    productName: string;
+    orderValue: number;
+    orderTotalComm: number;
+    itemComm: number;
+    rawStatus: string;
+    rawCommissionStatus: string;
+    rawCompletedAt: string;
+    rawOrderedAt: string;
+    completedDate: Date | null;
+    orderedDate: Date | null;
+    isCommPending: boolean;
+    isCommRejected: boolean;
+    isOrderCompleted: boolean;
+    isCommPaid: boolean;
+  }
+
+  const orderGroups = new Map<string, RawOrderRow[]>();
 
   for (let r = headerRowIndex + 1; r < rows.length; r++) {
     const row = rows[r];
@@ -343,6 +414,7 @@ export function parseShopeeConversionReport(
 
     const rawOrderId = headerMap.orderId !== undefined ? row[headerMap.orderId] : row[0];
     const rawSubId = headerMap.subId !== undefined ? row[headerMap.subId] : "";
+    const rawProductCode = headerMap.productCode !== undefined ? String(row[headerMap.productCode] || "").trim() : "";
     const rawProductName = headerMap.productName !== undefined ? row[headerMap.productName] : "Sản phẩm Shopee";
     const rawOrderValue = headerMap.orderValue !== undefined ? row[headerMap.orderValue] : 0;
     const rawStatus = headerMap.status !== undefined ? row[headerMap.status] : "pending";
@@ -354,44 +426,19 @@ export function parseShopeeConversionReport(
     if (!orderId || orderId.length < 3) continue;
 
     const subId = String(rawSubId || "").trim();
+    const parsedUserId = parseUserIdFromSubId(subId);
     const orderValue = parseShopeeMoney(rawOrderValue);
 
-    // Ưu tiên: tổng hoa hồng > (hoa hồng sản phẩm + hoa hồng đơn hàng) > hoa hồng chung
+    const orderTotalComm = headerMap.orderTotalCommission !== undefined ? parseShopeeMoney(row[headerMap.orderTotalCommission]) : 0;
     const totalComm = headerMap.totalCommission !== undefined ? parseShopeeMoney(row[headerMap.totalCommission]) : 0;
     const prodComm = headerMap.productCommission !== undefined ? parseShopeeMoney(row[headerMap.productCommission]) : 0;
     const orderComm = headerMap.orderCommission !== undefined ? parseShopeeMoney(row[headerMap.orderCommission]) : 0;
     const anyComm = headerMap.commission !== undefined ? parseShopeeMoney(row[headerMap.commission]) : 0;
 
-    // Ưu tiên lấy hoa hồng lớn nhất từ các cột hợp lệ (tránh 0đ từ cột trạng thái hoặc thiếu cột)
-    const commissionAmount = Math.max(totalComm, prodComm + orderComm, anyComm);
+    const itemComm = Math.max(totalComm, prodComm + orderComm, anyComm);
 
-    // Bóc tách thuế & phí: Shopee tự động khấu trừ 10% thuế TNCN + 1% phí dịch vụ sàn (tổng 11%)
-    // Hoa hồng Net thực tế Shopee chuyển khoản về STK là 89% hoa hồng gộp:
-    const netCommission = Math.round(commissionAmount * 0.89);
-
-    // Tính tiền hoàn thực tế cho khách dựa trên hoa hồng Net thực nhận (sau khi đã trừ 11% thuế & phí)
-    const cashbackAmount = Math.round(netCommission * safeMultiplier);
-
-    // Chu kỳ đối soát Shopee T+15 ngày:
-    // Đơn hàng chỉ được cộng vào số dư khả dụng (completed) khi:
-    // 1. Không bị từ chối/hủy.
-    // 2. Và ĐÃ QUA ÍT NHẤT 15 NGÀY kể từ Thời gian hoa hồng hoàn thành (hoặc ngày đặt hàng).
-    // Nếu chưa đủ 15 ngày, đơn bắt buộc ở trạng thái "pending" (Chờ duyệt / Chờ hoàn) để bảo toàn vốn.
-    const HOLD_DAYS = 15;
-    const HOLD_MS = HOLD_DAYS * 24 * 60 * 60 * 1000;
-
-    const completedDate = parseShopeeDate(rawCompletedAt);
-    const orderedDate = parseShopeeDate(rawOrderedAt);
-    const refDate = completedDate || orderedDate;
-
-    const hasPassedHold = refDate ? (Date.now() - refDate.getTime()) >= HOLD_MS : false;
-
-    // Normalize status
     const lowerStatus = rawStatus.toLowerCase();
     const lowerCommStatus = rawCommissionStatus.toLowerCase();
-    let status: "pending" | "completed" | "rejected" = "pending";
-    let isHoldPeriod = false;
-    let orderNote: string | undefined = undefined;
 
     const isCommPending =
       lowerCommStatus.includes("chờ") ||
@@ -424,48 +471,148 @@ export function parseShopeeConversionReport(
       lowerCommStatus.includes("đã thanh toán") ||
       lowerCommStatus.includes("paid");
 
-    if (isCommRejected) {
+    const itemRow: RawOrderRow = {
+      orderId,
+      subId,
+      userId: parsedUserId,
+      productCode: rawProductCode,
+      productName: String(rawProductName || "Sản phẩm Shopee").trim() || "Sản phẩm Shopee",
+      orderValue,
+      orderTotalComm,
+      itemComm,
+      rawStatus,
+      rawCommissionStatus,
+      rawCompletedAt,
+      rawOrderedAt,
+      completedDate: parseShopeeDate(rawCompletedAt),
+      orderedDate: parseShopeeDate(rawOrderedAt),
+      isCommPending,
+      isCommRejected,
+      isOrderCompleted,
+      isCommPaid,
+    };
+
+    const existingGroup = orderGroups.get(orderId);
+    if (existingGroup) {
+      existingGroup.push(itemRow);
+    } else {
+      orderGroups.set(orderId, [itemRow]);
+    }
+  }
+
+  const validOrders: ParsedShopeeOrder[] = [];
+  const unmatchedOrders: ParsedShopeeOrder[] = [];
+  let totalCommission = 0;
+  let totalNetCommission = 0;
+  let totalCashback = 0;
+
+  const HOLD_DAYS = 15;
+  const HOLD_MS = HOLD_DAYS * 24 * 60 * 60 * 1000;
+
+  // Gộp các dòng thuộc cùng 1 Mã đơn hàng (Shopee CSV xuất 1 dòng cho mỗi sản phẩm trong đơn)
+  for (const [orderId, rawItems] of orderGroups.entries()) {
+    // Khử các dòng trùng lặp y hệt (tránh cộng đúp nếu admin paste/nối file trùng dòng)
+    const seenRowSignatures = new Set<string>();
+    const uniqueItems: RawOrderRow[] = [];
+    for (const item of rawItems) {
+      const sig = `${item.productCode}|${item.productName}|${item.orderValue}|${item.itemComm}|${item.orderTotalComm}`;
+      if (!seenRowSignatures.has(sig)) {
+        seenRowSignatures.add(sig);
+        uniqueItems.push(item);
+      }
+    }
+
+    const bestUserItem = uniqueItems.find((i) => i.userId) || uniqueItems.find((i) => i.subId) || uniqueItems[0];
+    const subId = bestUserItem.subId;
+    const parsedUserId = bestUserItem.userId;
+
+    const maxOrderTotalComm = Math.max(0, ...uniqueItems.map((i) => i.orderTotalComm));
+    const sumItemComm = uniqueItems.reduce((sum, i) => sum + i.itemComm, 0);
+    // Nếu có cột "Tổng hoa hồng đơn hàng" thì ưu tiên lấy MAX trên nhóm để tránh lặp hoặc 0đ ở dòng phụ ghi đè;
+    // ngược lại cộng dồn hoa hồng từng sản phẩm khác nhau trong cùng đơn hàng.
+    const commissionAmount = maxOrderTotalComm > 0 ? maxOrderTotalComm : sumItemComm;
+
+    // Tính tổng giá trị đơn hàng hợp lý (nếu đơn lặp orderTotalComm & orderValue y hệt thì không nhân N lần)
+    const allSamePositiveValue =
+      uniqueItems.length > 1 &&
+      maxOrderTotalComm > 0 &&
+      uniqueItems.every((i) => i.orderValue > 0 && i.orderValue === uniqueItems[0].orderValue);
+    const orderValue = allSamePositiveValue
+      ? uniqueItems[0].orderValue
+      : uniqueItems.reduce((sum, i) => sum + i.orderValue, 0);
+
+    // Chọn tên sản phẩm đại diện (ưu tiên dòng có hoa hồng cao nhất)
+    const primaryItem = [...uniqueItems].sort((a, b) => (b.itemComm || b.orderTotalComm) - (a.itemComm || a.orderTotalComm))[0];
+    const distinctNames = Array.from(new Set(uniqueItems.map((i) => i.productName).filter(Boolean)));
+    const productName =
+      distinctNames.length > 1
+        ? `${primaryItem.productName} (+${distinctNames.length - 1} sp)`
+        : primaryItem.productName;
+
+    // Chuẩn hóa thời gian đặt & hoàn thành theo múi giờ Việt Nam (+07:00) -> ISO UTC
+    const orderedDates = uniqueItems.map((i) => i.orderedDate).filter((d): d is Date => d !== null);
+    const completedDates = uniqueItems.map((i) => i.completedDate).filter((d): d is Date => d !== null);
+    const orderedDate = orderedDates.length > 0 ? new Date(Math.min(...orderedDates.map((d) => d.getTime()))) : null;
+    const completedDate = completedDates.length > 0 ? new Date(Math.max(...completedDates.map((d) => d.getTime()))) : null;
+    const refDate = completedDate || orderedDate;
+    const hasPassedHold = refDate ? (Date.now() - refDate.getTime()) >= HOLD_MS : false;
+
+    // Xác định trạng thái đơn tổng hợp: ưu tiên dựa trên các item phát sinh hoa hồng > 0
+    const commissionedItems = uniqueItems.filter((i) => i.itemComm > 0 || i.orderTotalComm > 0);
+    const statusItems = commissionedItems.length > 0 ? commissionedItems : uniqueItems;
+
+    const allRejected = statusItems.every((i) => i.isCommRejected);
+    const anyPaid = statusItems.some((i) => !i.isCommRejected && i.isCommPaid);
+    const anyCommPending = statusItems.some((i) => !i.isCommRejected && i.isCommPending);
+    const anyOrderCompleted = statusItems.some((i) => !i.isCommRejected && i.isOrderCompleted);
+
+    let status: "pending" | "completed" | "rejected" = "pending";
+    let isHoldPeriod = false;
+    let orderNote: string | undefined = undefined;
+
+    if (allRejected) {
       status = "rejected";
       orderNote = "Shopee đã hủy hoặc từ chối hoa hồng đơn hàng này";
-    } else if (isCommPending) {
+    } else if (anyCommPending) {
       status = "pending";
       orderNote = "Shopee đang đối soát hoa hồng (Chờ đối soát)";
-    } else if (isCommPaid) {
+    } else if (anyPaid) {
       status = "completed";
-    } else if (isOrderCompleted) {
+    } else if (anyOrderCompleted) {
       if (hasPassedHold) {
         status = "completed";
       } else {
-        // Đang trong thời gian giữ tiền đối soát 15 ngày
         status = "pending";
         isHoldPeriod = true;
         const availableDate = refDate ? new Date(refDate.getTime() + HOLD_MS) : new Date(Date.now() + HOLD_MS);
-        const dayStr = String(availableDate.getDate()).padStart(2, "0");
-        const monthStr = String(availableDate.getMonth() + 1).padStart(2, "0");
-        const yearStr = availableDate.getFullYear();
+        const vnAvail = new Date(availableDate.getTime() + 7 * 60 * 60 * 1000);
+        const dayStr = String(vnAvail.getUTCDate()).padStart(2, "0");
+        const monthStr = String(vnAvail.getUTCMonth() + 1).padStart(2, "0");
+        const yearStr = vnAvail.getUTCFullYear();
         orderNote = `Chờ đối soát T+15 (dự kiến khả dụng: ${dayStr}/${monthStr}/${yearStr})`;
       }
     } else {
       status = "pending";
     }
 
-    // Try parsing user id from subId
-    const parsedUserId = parseUserIdFromSubId(subId);
+    // Bóc tách thuế & phí: 10% TNCN + 1% phí sàn -> hoa hồng thực nhận = 89%
+    const netCommission = Math.round(commissionAmount * 0.89);
+    const cashbackAmount = Math.round(netCommission * safeMultiplier);
 
     const parsedOrder: ParsedShopeeOrder = {
       orderId,
       subId,
       userId: parsedUserId,
-      productName: rawProductName || "Sản phẩm Shopee",
+      productName,
       orderValue,
       commissionAmount,
       netCommission,
       cashbackAmount,
       status,
-      orderedAt: rawOrderedAt || new Date().toISOString(),
-      completedAt: rawCompletedAt || undefined,
-      rawStatus,
-      rawCommissionStatus: rawCommissionStatus || undefined,
+      orderedAt: orderedDate ? orderedDate.toISOString() : new Date().toISOString(),
+      completedAt: completedDate ? completedDate.toISOString() : undefined,
+      rawStatus: primaryItem.rawStatus,
+      rawCommissionStatus: primaryItem.rawCommissionStatus || undefined,
       isHoldPeriod,
       note: orderNote,
     };

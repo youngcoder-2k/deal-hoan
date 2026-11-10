@@ -47,7 +47,9 @@ function formatVnd(amount: number) {
 function formatDate(iso: string) {
   try {
     const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
     return d.toLocaleString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
       hour: "2-digit",
       minute: "2-digit",
       day: "2-digit",
@@ -62,7 +64,9 @@ function formatDate(iso: string) {
 function formatDateShort(iso: string) {
   try {
     const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
     return d.toLocaleDateString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -249,12 +253,22 @@ export default function AdminUsersClient({
     orderedAt?: string;
   }>>([]);
 
-  // Lọc sạch các đơn test / fake (SP_..., TT_..., đơn test)
+  // Lọc sạch các đơn test / fake (SP_..., TT_..., đơn test) và khử trùng lặp theo Mã đơn Shopee
   const filteredRecentSyncedOrders = useMemo(() => {
-    return recentSyncedOrders.filter((ord) => {
-      const id = String(ord.orderId || "");
+    const dedupMap = new Map<string, (typeof recentSyncedOrders)[number]>();
+    for (const ord of recentSyncedOrders) {
+      const id = String(ord.orderId || "").trim();
       const name = String(ord.productName || "").toLowerCase();
-      return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test");
+      if (!id || id.startsWith("SP_") || id.startsWith("TT_") || name.includes("test")) continue;
+      const key = id.toUpperCase();
+      if (!dedupMap.has(key)) {
+        dedupMap.set(key, ord);
+      }
+    }
+    return Array.from(dedupMap.values()).sort((a, b) => {
+      const ta = a.orderedAt ? new Date(a.orderedAt).getTime() : 0;
+      const tb = b.orderedAt ? new Date(b.orderedAt).getTime() : 0;
+      return (isNaN(tb) ? 0 : tb) - (isNaN(ta) ? 0 : ta);
     });
   }, [recentSyncedOrders]);
 
@@ -356,9 +370,20 @@ export default function AdminUsersClient({
         setToastMsg("🎉 " + data.message);
         setTimeout(() => setToastMsg(null), 4000);
         if (Array.isArray(data.syncedOrders) && data.syncedOrders.length > 0) {
-          setRecentSyncedOrders((prev) => [...data.syncedOrders, ...prev]);
+          setRecentSyncedOrders((prev) => {
+            const merged = new Map<string, (typeof prev)[number]>();
+            for (const o of data.syncedOrders) {
+              const key = String(o.orderId || "").trim().toUpperCase();
+              if (key) merged.set(key, o);
+            }
+            for (const o of prev) {
+              const key = String(o.orderId || "").trim().toUpperCase();
+              if (key && !merged.has(key)) merged.set(key, o);
+            }
+            return Array.from(merged.values());
+          });
         }
-        await reloadUsers();
+        await Promise.all([reloadUsers(), loadShopeeSyncConfig()]);
       } else {
         setCsvUploadResult({ success: false, message: data.error || "Không thể nạp file CSV." });
       }
@@ -2410,7 +2435,7 @@ export default function AdminUsersClient({
                         const customerCashback = Math.round(netComm * userPercent);
 
                         return (
-                          <tr key={idx} className="admin-table-row">
+                          <tr key={ord.orderId || idx} className="admin-table-row">
                             <td className="font-mono text-xs font-bold text-stone-900">{ord.orderId}</td>
                             <td>
                               {matchedUser ? (
