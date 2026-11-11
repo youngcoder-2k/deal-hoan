@@ -110,16 +110,18 @@ export async function POST(request: NextRequest) {
         userCashbackPercent: boosterSettings.userCashbackPercent,
       });
 
+      const FULL_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       let importedCount = 0;
       const syncedOrders: Array<Record<string, unknown>> = [];
       const failedOrders: Array<{ orderId: string; subId: string; productName: string; commissionAmount: number; error: string }> = [];
 
       for (const ord of report.validOrders) {
         if (ord.orderId && ord.subId) {
+          const explicitUuid = ord.userId && FULL_UUID_RE.test(ord.userId) ? ord.userId : undefined;
           const rec = await recordCashbackOrder({
             orderId: ord.orderId,
             subId: ord.subId,
-            userId: ord.userId || undefined,
+            userId: explicitUuid,
             platform: "Shopee",
             productName: ord.productName,
             orderValue: ord.orderValue,
@@ -134,7 +136,7 @@ export async function POST(request: NextRequest) {
             syncedOrders.push({
               orderId: ord.orderId,
               subId: ord.subId,
-              userId: ord.userId || "",
+              userId: rec.order?.user_id || ord.userId || "",
               productName: ord.productName,
               orderValue: ord.orderValue,
               commissionAmount: ord.commissionAmount,
