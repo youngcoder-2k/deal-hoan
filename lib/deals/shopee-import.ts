@@ -285,6 +285,7 @@ export function parseShopeeConversionReport(
     // Product name
     if (
       h.includes("tên sản phẩm") ||
+      h.includes("tên item") ||
       h.includes("product name") ||
       h.includes("item name") ||
       h.includes("tên hàng") ||
