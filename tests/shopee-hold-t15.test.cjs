@@ -191,3 +191,16 @@ ORD_NOMATCH,Existing User,2026-11-10 21:00:00,Sản phẩm Latest 2026,200000,20
   assert.equal(isSyntheticTestOrder({ order_id: 'SP_123', product_name: 'Demo' }), true);
   assert.equal(isSyntheticTestOrder({ order_id: 'ORD_1', product_name: 'Đơn hàng thử nghiệm DealHoàn' }), true);
 });
+
+test('Shopee CSV Import: handles UTF-8 BOM, multiline quoted product names, and ID đơn hàng header', () => {
+  const { parseShopeeConversionReport } = loadTs({})('lib/deals/shopee-import.ts');
+
+  const csvMultiline = `\uFEFFID đơn hàng,Thời gian đặt hàng,Tên sản phẩm,Giá trị đơn hàng,Hoa hồng sản phẩm,Trạng thái đơn hàng,Sub_id1
+261110QUYNHCHAU,2026-11-10 19:30:00,"Áo len cổ lọ
+Màu kem - Size M",250000,25000,Hoàn thành,dh668a48523510472f8fb2cfe6e8f5a58b`;
+
+  const res = parseShopeeConversionReport(csvMultiline, { userCashbackPercent: 88.0 });
+  assert.equal(res.validOrders.length, 1, 'Tên sản phẩm xuống dòng trong ngoặc kép không được làm gãy dòng CSV');
+  assert.equal(res.validOrders[0].orderId, '261110QUYNHCHAU');
+  assert.equal(res.validOrders[0].commissionAmount, 25000);
+});

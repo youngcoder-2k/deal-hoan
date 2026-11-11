@@ -86,48 +86,55 @@ export function parseShopeeMoney(raw: unknown): number {
 }
 
 /**
- * Parses raw CSV / TSV text into string matrix handling quoted tokens with commas
+ * Parses raw CSV / TSV text into string matrix handling quoted tokens with commas and newlines
  */
 export function parseCsvRows(text: string): string[][] {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-  if (lines.length === 0) return [];
+  const normalized = text.replace(/^\uFEFF/, "");
+  const nonEmptyLines = normalized.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (nonEmptyLines.length === 0) return [];
 
-  // Detect delimiter from first non-empty line
-  const firstLine = lines[0];
+  // Detect delimiter from first header-like line
+  const sampleLine = nonEmptyLines.slice(0, 5).find((l) => l.includes("\t") || l.includes(";") || l.includes(",")) || nonEmptyLines[0];
   let delimiter = ",";
-  if (firstLine.includes("\t")) {
+  if (sampleLine.includes("\t")) {
     delimiter = "\t";
-  } else if (firstLine.includes(";") && !firstLine.includes(",")) {
+  } else if (sampleLine.includes(";") && !sampleLine.includes(",")) {
     delimiter = ";";
   }
 
   const rows: string[][] = [];
+  let row: string[] = [];
+  let currentToken = "";
+  let inQuotes = false;
 
-  for (const line of lines) {
-    const row: string[] = [];
-    let inQuotes = false;
-    let currentToken = "";
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          currentToken += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        row.push(currentToken.trim());
-        currentToken = "";
+  for (let i = 0; i < normalized.length; i++) {
+    const char = normalized[i];
+    if (char === '"') {
+      if (inQuotes && normalized[i + 1] === '"') {
+        currentToken += '"';
+        i++;
       } else {
-        currentToken += char;
+        inQuotes = !inQuotes;
       }
+    } else if (char === delimiter && !inQuotes) {
+      row.push(currentToken.trim());
+      currentToken = "";
+    } else if ((char === "\r" || char === "\n") && !inQuotes) {
+      if (char === "\r" && normalized[i + 1] === "\n") i++;
+      row.push(currentToken.trim());
+      if (row.some((cell) => cell.length > 0)) {
+        rows.push(row);
+      }
+      row = [];
+      currentToken = "";
+    } else {
+      currentToken += char;
     }
-    row.push(currentToken.trim());
-    if (row.some((cell) => cell.length > 0)) {
-      rows.push(row);
-    }
+  }
+
+  row.push(currentToken.trim());
+  if (row.some((cell) => cell.length > 0)) {
+    rows.push(row);
   }
 
   return rows;
@@ -236,6 +243,7 @@ export function parseShopeeConversionReport(
     if (
       h.includes("order id") ||
       h.includes("mã đơn") ||
+      h.includes("id đơn hàng") ||
       h.includes("order_sn") ||
       h.includes("order sn") ||
       h.includes("ordersn") ||
