@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkAdminApiAuth } from "@/lib/auth/admin-server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { recordCashbackOrder } from "@/lib/deals/cashback";
+import { isSyntheticTestOrder } from "@/lib/deals/shopee-import";
 
 export const dynamic = "force-dynamic";
 
@@ -41,16 +42,37 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ orders: [], error: error.message });
     }
 
-    const realOrders = (orders || []).filter((o: Record<string, unknown>) => {
-      const id = String(o.order_id || "");
-      const name = String(o.product_name || "").toLowerCase();
-      return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test");
-    });
+    const realOrders = (orders || []).filter((o: Record<string, unknown>) => !isSyntheticTestOrder(o));
+
+    // Khi xem chi tiết user, gộp thêm các yêu cầu tra cứu đơn hàng bị thiếu từ khách (nếu chưa có trong cashback_orders)
+    let combinedOrders = realOrders;
+    if (userId) {
+      const { data: claims } = await supabaseAdmin
+        .from("cashback_order_claims")
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+
+      if (Array.isArray(claims) && claims.length > 0) {
+        const existingKeys = new Set(realOrders.map((o: Record<string, unknown>) => `${o.platform}:${o.order_id}`));
+        const unmatchedClaims = claims
+          .filter((c: Record<string, unknown>) => !existingKeys.has(`${c.platform}:${c.order_id}`) && !isSyntheticTestOrder(c))
+          .map((c: Record<string, unknown>) => ({
+            ...c,
+            status: "pending",
+            commission_amount: 0,
+            cashback_amount: 0,
+            ordered_at: c.created_at,
+            note: "Khách tự gửi tra cứu đơn (chưa có đối soát từ Shopee)",
+          }));
+        combinedOrders = [...realOrders, ...unmatchedClaims];
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      orders: realOrders,
-      total: realOrders.length,
+      orders: combinedOrders,
+      total: combinedOrders.length,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";

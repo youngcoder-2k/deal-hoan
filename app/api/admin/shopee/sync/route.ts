@@ -32,15 +32,12 @@ export async function GET(request: NextRequest) {
         .order("ordered_at", { ascending: false })
         .limit(200);
 
+      const { isSyntheticTestOrder } = await import("@/lib/deals/shopee-import");
       const seenOrderIds = new Set<string>();
       recentOrders = (data || []).filter((o: Record<string, unknown>) => {
-        const id = String(o.order_id || "").trim();
-        const name = String(o.product_name || "").toLowerCase();
-        if (!id || id.startsWith("SP_") || id.startsWith("TT_") || name.includes("test")) {
-          return false;
-        }
-        const normId = id.toUpperCase();
-        if (seenOrderIds.has(normId)) return false;
+        if (isSyntheticTestOrder(o)) return false;
+        const normId = String(o.order_id || "").trim().toUpperCase();
+        if (!normId || seenOrderIds.has(normId)) return false;
         seenOrderIds.add(normId);
         return true;
       });
@@ -115,6 +112,7 @@ export async function POST(request: NextRequest) {
 
       let importedCount = 0;
       const syncedOrders: Array<Record<string, unknown>> = [];
+      const failedOrders: Array<{ orderId: string; subId: string; productName: string; commissionAmount: number; error: string }> = [];
 
       for (const ord of report.validOrders) {
         if (ord.orderId && ord.subId) {
@@ -144,21 +142,46 @@ export async function POST(request: NextRequest) {
               status: ord.status,
               orderedAt: ord.orderedAt,
             });
+          } else {
+            failedOrders.push({
+              orderId: ord.orderId,
+              subId: ord.subId,
+              productName: ord.productName,
+              commissionAmount: ord.commissionAmount,
+              error: rec.error || "Không thể ghi nhận vào cơ sở dữ liệu",
+            });
           }
         }
       }
 
+      const unmatchedOrders = report.unmatchedOrders.map((u) => ({
+        orderId: u.orderId,
+        subId: u.subId || "(trống)",
+        productName: u.productName,
+        commissionAmount: u.commissionAmount,
+        orderedAt: u.orderedAt,
+        status: u.status,
+      }));
+
+      const extraNotices: string[] = [];
+      if (unmatchedOrders.length > 0) extraNotices.push(`${unmatchedOrders.length} đơn chưa khớp Sub_ID`);
+      if (failedOrders.length > 0) extraNotices.push(`${failedOrders.length} đơn lưu lỗi`);
+      const suffix = extraNotices.length > 0 ? ` (${extraNotices.join(", ")})` : "";
+
       await saveOrderSyncConfig({
         lastSyncAt: new Date().toISOString(),
-        lastSyncResult: `Nạp CSV: ${importedCount}/${report.validOrders.length} đơn`,
+        lastSyncResult: `Nạp CSV: ${importedCount}/${report.totalRows} đơn${suffix}`,
         lastOrdersCount: importedCount,
       });
 
       return NextResponse.json({
         success: true,
-        message: `Đã nạp thành công ${importedCount}/${report.validOrders.length} đơn hàng từ file CSV Shopee!`,
+        message: `Đã nạp ${importedCount}/${report.totalRows} đơn hàng từ file CSV Shopee!${suffix}`,
         importedCount,
+        totalRows: report.totalRows,
         syncedOrders,
+        unmatchedOrders,
+        failedOrders,
         warnings: report.warnings,
       });
     }

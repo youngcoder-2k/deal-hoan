@@ -171,3 +171,23 @@ ORD_SUM,2026-11-07 10:00,Món 2,202,50000,5000,Hoàn thành,dh668a48523510472f8f
   assert.equal(res3.validOrders.length, 1);
   assert.equal(res3.validOrders[0].commissionAmount, 15000, 'Cộng tổng các món khác nhau (10k + 5k) và khử dòng lặp y hệt');
 });
+
+test('Shopee CSV Import: avoids picking User Type column and falls back across Sub_id1..5; keeps real products with "test"', () => {
+  const { parseShopeeConversionReport, isSyntheticTestOrder } = loadTs({})('lib/deals/shopee-import.ts');
+
+  const csvWithUserTypeAndSub2 = `Mã đơn hàng,User Type,Thời gian đặt hàng,Tên sản phẩm,Giá trị đơn hàng,Hoa hồng sản phẩm,Trạng thái đơn hàng,Sub_id1,Sub_id2
+ORD_SUB2,New User,2026-11-10 20:15:00,Nước hoa mẫu test 2ml chính hãng,99000,15000,Hoàn thành,dealhoan,dh668a48523510472f8fb2cfe6e8f5a58b
+ORD_NOMATCH,Existing User,2026-11-10 21:00:00,Sản phẩm Latest 2026,200000,20000,Hoàn thành,,`;
+
+  const res = parseShopeeConversionReport(csvWithUserTypeAndSub2, { userCashbackPercent: 88.0 });
+  assert.equal(res.validOrders.length, 1, 'Phải lấy được user từ Sub_id2 khi Sub_id1 là dealhoan và không bị cột User Type chiếm chỗ');
+  assert.equal(res.validOrders[0].orderId, 'ORD_SUB2');
+  assert.equal(res.validOrders[0].userId, '668a4852-3510-472f-8fb2-cfe6e8f5a58b');
+  assert.equal(res.unmatchedOrders.length, 1, 'Đơn không có Sub_ID phải vào unmatchedOrders để báo admin');
+  assert.equal(res.unmatchedOrders[0].orderId, 'ORD_NOMATCH');
+
+  assert.equal(isSyntheticTestOrder({ order_id: 'ORD_SUB2', product_name: 'Nước hoa mẫu test 2ml chính hãng' }), false);
+  assert.equal(isSyntheticTestOrder({ order_id: 'ORD_NOMATCH', product_name: 'Sản phẩm Latest 2026' }), false);
+  assert.equal(isSyntheticTestOrder({ order_id: 'SP_123', product_name: 'Demo' }), true);
+  assert.equal(isSyntheticTestOrder({ order_id: 'ORD_1', product_name: 'Đơn hàng thử nghiệm DealHoàn' }), true);
+});

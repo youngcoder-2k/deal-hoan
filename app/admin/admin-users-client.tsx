@@ -39,6 +39,7 @@ import {
   type CashbackBoosterSettings,
   DEFAULT_BOOSTER_SETTINGS,
 } from "@/lib/deals/cashback-booster-types";
+import { isSyntheticTestOrder } from "@/lib/deals/shopee-import";
 
 function formatVnd(amount: number) {
   return (amount || 0).toLocaleString("vi-VN") + "đ";
@@ -253,15 +254,13 @@ export default function AdminUsersClient({
     orderedAt?: string;
   }>>([]);
 
-  // Lọc sạch các đơn test / fake (SP_..., TT_..., đơn test) và khử trùng lặp theo Mã đơn Shopee
+  // Lọc sạch các đơn demo/test giả lập và khử trùng lặp theo Mã đơn Shopee
   const filteredRecentSyncedOrders = useMemo(() => {
     const dedupMap = new Map<string, (typeof recentSyncedOrders)[number]>();
     for (const ord of recentSyncedOrders) {
-      const id = String(ord.orderId || "").trim();
-      const name = String(ord.productName || "").toLowerCase();
-      if (!id || id.startsWith("SP_") || id.startsWith("TT_") || name.includes("test")) continue;
-      const key = id.toUpperCase();
-      if (!dedupMap.has(key)) {
+      if (isSyntheticTestOrder(ord)) continue;
+      const key = String(ord.orderId || "").trim().toUpperCase();
+      if (key && !dedupMap.has(key)) {
         dedupMap.set(key, ord);
       }
     }
@@ -348,7 +347,24 @@ export default function AdminUsersClient({
   const [showCookieGuide, setShowCookieGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
-  const [csvUploadResult, setCsvUploadResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [csvUploadResult, setCsvUploadResult] = useState<{
+    success: boolean;
+    message: string;
+    unmatchedOrders?: Array<{
+      orderId: string;
+      subId: string;
+      productName: string;
+      commissionAmount: number;
+      orderedAt?: string;
+    }>;
+    failedOrders?: Array<{
+      orderId: string;
+      subId: string;
+      productName: string;
+      commissionAmount: number;
+      error: string;
+    }>;
+  } | null>(null);
   const csvFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCsvUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,7 +382,12 @@ export default function AdminUsersClient({
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setCsvUploadResult({ success: true, message: data.message });
+        setCsvUploadResult({
+          success: true,
+          message: data.message,
+          unmatchedOrders: Array.isArray(data.unmatchedOrders) ? data.unmatchedOrders : [],
+          failedOrders: Array.isArray(data.failedOrders) ? data.failedOrders : [],
+        });
         setToastMsg("🎉 " + data.message);
         setTimeout(() => setToastMsg(null), 4000);
         if (Array.isArray(data.syncedOrders) && data.syncedOrders.length > 0) {
@@ -1001,14 +1022,9 @@ export default function AdminUsersClient({
   }>>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
 
-  // Lọc sạch các đơn test / fake trong modal chi tiết thành viên
+  // Lọc sạch các đơn demo/test giả lập trong modal chi tiết thành viên
   const filteredUserOrders = useMemo(() => {
-    return userOrders.filter((ord) => {
-      const id = String(ord.order_id || "");
-      const name = String(ord.product_name || "").toLowerCase();
-      const note = String(ord.note || "").toLowerCase();
-      return !id.startsWith("SP_") && !id.startsWith("TT_") && !name.includes("test") && !note.includes("test");
-    });
+    return userOrders.filter((ord) => !isSyntheticTestOrder(ord));
   }, [userOrders]);
 
   // Modal điều chỉnh số dư
@@ -2349,19 +2365,42 @@ export default function AdminUsersClient({
               </div>
 
               {csvUploadResult && (
-                <div
-                  className={`w-full p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
-                    csvUploadResult.success
-                      ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
-                      : "bg-red-50 text-red-900 border border-red-300"
-                  }`}
-                >
-                  {csvUploadResult.success ? (
-                    <CheckCircle size={18} weight="fill" className="text-emerald-600 shrink-0" />
-                  ) : (
-                    <WarningCircle size={18} weight="fill" className="text-red-600 shrink-0" />
+                <div className="w-full flex flex-col gap-2">
+                  <div
+                    className={`w-full p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
+                      csvUploadResult.success
+                        ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
+                        : "bg-red-50 text-red-900 border border-red-300"
+                    }`}
+                  >
+                    {csvUploadResult.success ? (
+                      <CheckCircle size={18} weight="fill" className="text-emerald-600 shrink-0" />
+                    ) : (
+                      <WarningCircle size={18} weight="fill" className="text-red-600 shrink-0" />
+                    )}
+                    <span>{csvUploadResult.message}</span>
+                  </div>
+
+                  {((csvUploadResult.unmatchedOrders?.length || 0) > 0 || (csvUploadResult.failedOrders?.length || 0) > 0) && (
+                    <div className="w-full p-3.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 text-xs flex flex-col gap-1.5">
+                      <div className="font-bold flex items-center gap-1.5 text-amber-900">
+                        <WarningCircle size={16} weight="fill" className="text-amber-600 shrink-0" />
+                        <span>Các đơn trong CSV chưa được gán tự động vào ví khách hàng:</span>
+                      </div>
+                      <ul className="m-0 pl-5 flex flex-col gap-1">
+                        {csvUploadResult.unmatchedOrders?.map((u) => (
+                          <li key={`unmatched-${u.orderId}`}>
+                            <b className="font-mono">{u.orderId}</b> · Sub_ID: <code className="bg-amber-100 px-1 rounded">{u.subId}</code> · {u.productName} · HH gộp: <b>{formatVnd(u.commissionAmount)}</b> ({u.orderedAt ? formatDate(u.orderedAt) : "—"})
+                          </li>
+                        ))}
+                        {csvUploadResult.failedOrders?.map((f) => (
+                          <li key={`failed-${f.orderId}`}>
+                            <b className="font-mono">{f.orderId}</b> · Sub_ID: <code className="bg-amber-100 px-1 rounded">{f.subId}</code> · Lỗi lưu: {f.error}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   )}
-                  <span>{csvUploadResult.message}</span>
                 </div>
               )}
             </div>

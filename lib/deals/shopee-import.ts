@@ -31,6 +31,26 @@ export interface ParseReportResult {
 }
 
 /**
+ * Identifies synthetic demo/test orders so real Shopee products containing
+ * substrings like "test" (e.g. "mẫu test", "que test") are never accidentally hidden.
+ */
+export function isSyntheticTestOrder(order: {
+  orderId?: unknown;
+  order_id?: unknown;
+  productName?: unknown;
+  product_name?: unknown;
+  note?: unknown;
+}): boolean {
+  const id = String(order.orderId ?? order.order_id ?? "").trim();
+  const name = String(order.productName ?? order.product_name ?? "").trim().toLowerCase();
+  const note = String(order.note ?? "").trim().toLowerCase();
+  if (!id || id.startsWith("SP_") || id.startsWith("TT_") || id.startsWith("TEST_")) return true;
+  if (name === "đơn hàng thử nghiệm dealhoàn" || name === "sản phẩm test") return true;
+  if (note === "đơn test do admin tạo") return true;
+  return false;
+}
+
+/**
  * Parses numeric currency strings from Shopee CSV (e.g. "250.000", "250,000", "250000 ₫", "25.50")
  */
 export function parseShopeeMoney(raw: unknown): number {
@@ -208,6 +228,8 @@ export function parseShopeeConversionReport(
 
   const headers = rows[headerRowIndex].map((h) => h.toLowerCase().trim());
   const headerMap: Record<string, number> = {};
+  const subIdColumns: number[] = [];
+  const fallbackUserColumns: number[] = [];
 
   headers.forEach((h, idx) => {
     // Order ID
@@ -222,18 +244,24 @@ export function parseShopeeConversionReport(
       if (!("orderId" in headerMap)) headerMap.orderId = idx;
     }
 
-    // Sub ID
+    // Sub ID (thu thập tất cả cột Sub_id1..5 / id phụ; tránh lấy nhầm cột User Type / New User)
     if (
       h.includes("sub_id") ||
       h.includes("sub id") ||
-      h.includes("sub1") ||
-      h.includes("sub 1") ||
-      h.includes("id phụ") ||
-      h.includes("sub id 1") ||
       h.includes("sub-id") ||
-      h.includes("user")
+      h.includes("subid") ||
+      /\bsub\s*[1-5]\b/.test(h) ||
+      h.includes("id phụ")
     ) {
+      subIdColumns.push(idx);
       if (!("subId" in headerMap)) headerMap.subId = idx;
+    } else if (
+      h === "user" ||
+      h.includes("user id") ||
+      h.includes("user_id") ||
+      h === "userid"
+    ) {
+      fallbackUserColumns.push(idx);
     }
 
     // Product code / Item ID (giúp phân biệt các sản phẩm khác nhau trong cùng một đơn hàng)
@@ -379,6 +407,10 @@ export function parseShopeeConversionReport(
   if (!("orderedAt" in headerMap) && "fallbackTime" in headerMap) {
     headerMap.orderedAt = headerMap.fallbackTime;
   }
+  const allSubIdCandidates = [...subIdColumns, ...fallbackUserColumns];
+  if (!("subId" in headerMap) && allSubIdCandidates.length > 0) {
+    headerMap.subId = allSubIdCandidates[0];
+  }
 
   const userPercent = typeof options?.userCashbackPercent === "number" && !isNaN(options.userCashbackPercent)
     ? options.userCashbackPercent
@@ -425,8 +457,19 @@ export function parseShopeeConversionReport(
     const orderId = String(rawOrderId || "").trim();
     if (!orderId || orderId.length < 3) continue;
 
-    const subId = String(rawSubId || "").trim();
-    const parsedUserId = parseUserIdFromSubId(subId);
+    let subId = String(rawSubId || "").trim();
+    let parsedUserId = parseUserIdFromSubId(subId);
+    if (!parsedUserId && allSubIdCandidates.length > 1) {
+      for (const colIdx of allSubIdCandidates) {
+        const candidate = String(row[colIdx] || "").trim();
+        const candidateUserId = parseUserIdFromSubId(candidate);
+        if (candidateUserId) {
+          subId = candidate;
+          parsedUserId = candidateUserId;
+          break;
+        }
+      }
+    }
     const orderValue = parseShopeeMoney(rawOrderValue);
 
     const orderTotalComm = headerMap.orderTotalCommission !== undefined ? parseShopeeMoney(row[headerMap.orderTotalCommission]) : 0;
