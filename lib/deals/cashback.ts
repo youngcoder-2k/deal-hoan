@@ -1,6 +1,7 @@
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { parseUserIdFromSubId } from "@/lib/deals/affiliate";
 import { getBoosterSettingsSync } from "@/lib/deals/cashback-booster";
+import { isAdminSettledNote } from "@/lib/deals/shopee-payout";
 
 export interface CashbackOrderRecord {
   id: string;
@@ -212,8 +213,7 @@ export async function autoSettleHoldPeriodOrders(options: {
       for (const ord of prematureOrders) {
         const ordDate = new Date(ord.ordered_at || ord.created_at || "").getTime();
         const isUnder15Days = !isNaN(ordDate) && (now - ordDate < HOLD_MS);
-        const note = String(ord.note || "").toLowerCase();
-        if (isUnder15Days && !note.includes("admin") && !note.includes("thủ công")) {
+        if (isUnder15Days && !isAdminSettledNote(ord.note)) {
           const res = await recordCashbackOrder({
             orderId: ord.order_id,
             subId: ord.sub_id,

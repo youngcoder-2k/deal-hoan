@@ -40,6 +40,12 @@ import {
   DEFAULT_BOOSTER_SETTINGS,
 } from "@/lib/deals/cashback-booster-types";
 import { isSyntheticTestOrder } from "@/lib/deals/shopee-import";
+import {
+  extractShopeeCompletedDateKey,
+  extractShopeeCompletedLabel,
+  reconcilePayoutOrders,
+  toVnDateKey,
+} from "@/lib/deals/shopee-payout";
 
 function formatVnd(amount: number) {
   return (amount || 0).toLocaleString("vi-VN") + "đ";
@@ -252,7 +258,17 @@ export default function AdminUsersClient({
     cashbackAmount: number;
     status: "pending" | "completed" | "rejected";
     orderedAt?: string;
+    confirmedAt?: string;
+    completedAt?: string;
+    note?: string;
   }>>([]);
+  const [payoutFromDate, setPayoutFromDate] = useState("");
+  const [payoutToDate, setPayoutToDate] = useState("");
+  const [payoutDateField, setPayoutDateField] = useState<"completedAt" | "orderedAt">("completedAt");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | "pending" | "completed" | "rejected">("all");
+  const [selectedOrderIds, setSelectedOrderIds] = useState<string[]>([]);
+  const [isSettlingOrders, setIsSettlingOrders] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
 
   // Lọc sạch các đơn demo/test giả lập và khử trùng lặp theo Mã đơn Shopee
   const filteredRecentSyncedOrders = useMemo(() => {
@@ -343,6 +359,51 @@ export default function AdminUsersClient({
       systemNetReserve,
     };
   }, [filteredRecentSyncedOrders, stats, boosterSettings.userCashbackPercent]);
+
+  // Danh sách đơn đã lọc theo trạng thái & khoảng ngày đối soát
+  const displayedSyncedOrders = useMemo(() => {
+    return filteredRecentSyncedOrders.filter((ord) => {
+      if (orderStatusFilter !== "all" && ord.status !== orderStatusFilter) return false;
+      if (payoutFromDate || payoutToDate) {
+        const key =
+          payoutDateField === "completedAt"
+            ? extractShopeeCompletedDateKey(ord)
+            : toVnDateKey(ord.orderedAt);
+        if (!key) return false;
+        if (payoutFromDate && key < payoutFromDate) return false;
+        if (payoutToDate && key > payoutToDate) return false;
+      }
+      return true;
+    });
+  }, [filteredRecentSyncedOrders, orderStatusFilter, payoutFromDate, payoutToDate, payoutDateField]);
+
+  // Tổng hợp tiền khả dụng theo từng user cho đợt giải ngân đang chọn (ưu tiên checkbox tay nếu có, ngược lại theo bộ lọc ngày)
+  const payoutReconciliation = useMemo(() => {
+    const selectedSet = new Set(selectedOrderIds.map((id) => id.trim().toUpperCase()));
+    if (selectedSet.size > 0) {
+      const manualPool = filteredRecentSyncedOrders.filter((ord) =>
+        selectedSet.has(String(ord.orderId || "").trim().toUpperCase())
+      );
+      return reconcilePayoutOrders(manualPool, {
+        userCashbackPercent: boosterSettings.userCashbackPercent,
+        onlyPending: true,
+      });
+    }
+    return reconcilePayoutOrders(filteredRecentSyncedOrders, {
+      userCashbackPercent: boosterSettings.userCashbackPercent,
+      fromDate: payoutFromDate,
+      toDate: payoutToDate,
+      dateField: payoutDateField,
+      onlyPending: true,
+    });
+  }, [
+    filteredRecentSyncedOrders,
+    selectedOrderIds,
+    boosterSettings.userCashbackPercent,
+    payoutFromDate,
+    payoutToDate,
+    payoutDateField,
+  ]);
 
   const [showCookieGuide, setShowCookieGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -457,6 +518,9 @@ export default function AdminUsersClient({
               cashbackAmount: o.cashback_amount || o.cashbackAmount,
               status: o.status,
               orderedAt: o.ordered_at || o.created_at,
+              confirmedAt: o.confirmed_at || o.confirmedAt || undefined,
+              completedAt: o.completed_at || o.completedAt || undefined,
+              note: o.note || undefined,
             }))
           );
         }
@@ -1230,47 +1294,112 @@ export default function AdminUsersClient({
     }
   };
 
-  // Cập nhật trạng thái đơn hàng (Duyệt, Về Chờ duyệt hoặc Hủy)
+  // Hàm dùng chung gọi PATCH /api/admin/orders cho 1 đơn hoặc hàng loạt
+  const patchOrderStatuses = async (params: {
+    orderIds: string[];
+    platform: string;
+    status: "pending" | "completed" | "rejected";
+    note: string;
+    successMessage: string;
+  }) => {
+    const cleanIds = Array.from(new Set(params.orderIds.map((id) => id.trim()).filter(Boolean)));
+    if (cleanIds.length === 0) return;
+
+    const res = await fetch("/api/admin/orders", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+      body: JSON.stringify({
+        orderIds: cleanIds,
+        platform: params.platform,
+        status: params.status,
+        note: params.note,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      const updatedMap = new Map<string, { status: string; note?: string }>();
+      for (const u of data.orders || (data.order ? [data.order] : [])) {
+        updatedMap.set(String(u.order_id || "").trim().toUpperCase(), {
+          status: u.status,
+          note: u.note,
+        });
+      }
+
+      setUserOrders((prev) =>
+        prev.map((o) => {
+          const hit = updatedMap.get(String(o.order_id || "").trim().toUpperCase());
+          return hit ? { ...o, status: params.status, note: hit.note ?? params.note } : o;
+        })
+      );
+      setRecentSyncedOrders((prev) =>
+        prev.map((o) => {
+          const hit = updatedMap.get(String(o.orderId || "").trim().toUpperCase());
+          return hit ? { ...o, status: params.status, note: hit.note ?? params.note } : o;
+        })
+      );
+      setSelectedOrderIds((prev) =>
+        prev.filter((id) => !updatedMap.has(String(id).trim().toUpperCase()))
+      );
+      showToast(params.successMessage);
+      await Promise.all([reloadUsers(), loadShopeeSyncConfig()]);
+    } else {
+      showToast("⚠️ " + (data.error || "Không thể cập nhật đơn"));
+    }
+  };
+
+  // Cập nhật trạng thái từng đơn hàng (Duyệt, Về Chờ duyệt hoặc Hủy)
   const handleUpdateOrderStatus = async (
     orderId: string,
     platform: string,
     newStatus: "pending" | "completed" | "rejected"
   ) => {
+    setUpdatingOrderId(orderId);
     try {
-      const res = await fetch("/api/admin/orders", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          orderId,
-          platform,
-          status: newStatus,
-          note:
-            newStatus === "completed"
-              ? "Admin đã duyệt hoàn tiền"
-              : newStatus === "pending"
-              ? "Admin chuyển về Chờ duyệt (đối soát T+15)"
-              : "Admin từ chối đơn hàng",
-        }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showToast(
-          newStatus === "completed"
-            ? "✅ Đã duyệt hoàn tiền thành công!"
-            : newStatus === "pending"
-            ? "⏱️ Đã chuyển về Chờ duyệt (đang đối soát T+15)!"
-            : "❌ Đã từ chối đơn hàng!"
-        );
-        setUserOrders((prev) =>
-          prev.map((o) => (o.order_id === orderId ? { ...o, status: newStatus } : o))
-        );
-        refreshData();
-      } else {
-        showToast("⚠️ " + (data.error || "Không thể cập nhật đơn"));
-      }
+      const note =
+        newStatus === "completed"
+          ? "Admin duyệt giải ngân Shopee"
+          : newStatus === "pending"
+          ? "Admin chuyển về Chờ duyệt (đối soát T+15)"
+          : "Admin từ chối đơn hàng";
+      const successMessage =
+        newStatus === "completed"
+          ? `✅ Đã duyệt khả dụng đơn ${orderId}!`
+          : newStatus === "pending"
+          ? `⏱️ Đã chuyển đơn ${orderId} về Chờ duyệt (T+15)!`
+          : `❌ Đã từ chối đơn ${orderId}!`;
+      await patchOrderStatuses({ orderIds: [orderId], platform, status: newStatus, note, successMessage });
     } catch {
       showToast("⚠️ Lỗi kết nối khi cập nhật đơn");
+    } finally {
+      setUpdatingOrderId(null);
     }
+  };
+
+  // Duyệt hàng loạt các đơn đã đối soát Shopee chuyển khoản -> cộng tiền khả dụng cho user
+  const handleBatchSettleOrders = async () => {
+    const targetIds = payoutReconciliation.orders.map((o) => o.orderId).filter(Boolean);
+    if (targetIds.length === 0) return;
+
+    setIsSettlingOrders(true);
+    try {
+      await patchOrderStatuses({
+        orderIds: targetIds,
+        platform: "Shopee",
+        status: "completed",
+        note: "Admin duyệt giải ngân Shopee",
+        successMessage: `✅ Đã duyệt khả dụng ${targetIds.length} đơn (+${formatVnd(payoutReconciliation.totalUserCashback)})!`,
+      });
+    } catch {
+      showToast("⚠️ Lỗi kết nối khi duyệt giải ngân hàng loạt");
+    } finally {
+      setIsSettlingOrders(false);
+    }
+  };
+
+  const toggleOrderSelection = (orderId: string) => {
+    setSelectedOrderIds((prev) =>
+      prev.includes(orderId) ? prev.filter((id) => id !== orderId) : [...prev, orderId]
+    );
   };
 
   // Xuất file CSV danh sách người dùng & ngân hàng
@@ -2429,12 +2558,169 @@ export default function AdminUsersClient({
               </div>
             </div>
 
-            {/* 2. BẢNG ĐƠN HÀNG SHOPEE ĐÃ GHI NHẬN (TRUNG TÂM) */}
+            {/* 2. ĐỐI SOÁT GIẢI NGÂN SHOPEE (CHỜ DUYỆT -> KHẢ DỤNG) */}
+            <div className="bg-white rounded-2xl border border-emerald-200 p-6 shadow-sm flex flex-col gap-4">
+              <div className="flex items-start justify-between flex-wrap gap-3">
+                <div>
+                  <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
+                    <HandCoins size={20} weight="bold" className="text-emerald-600" />
+                    <span>Đối Soát Giải Ngân Shopee (Chờ duyệt → Khả dụng)</span>
+                  </h4>
+                  <p className="text-xs text-stone-500 mt-1 mb-0">
+                    Lọc theo ngày hoa hồng hoàn thành trên phiếu thanh toán Shopee hoặc tích chọn từng đơn ở bảng dưới để xem chính xác mỗi thành viên được cộng bao nhiêu tiền khả dụng.
+                  </p>
+                </div>
+                {selectedOrderIds.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedOrderIds([])}
+                    className="text-xs font-semibold text-stone-600 bg-stone-100 hover:bg-stone-200 px-3 py-1.5 rounded-lg"
+                  >
+                    Bỏ chọn ({selectedOrderIds.length} đơn)
+                  </button>
+                )}
+              </div>
+
+              {/* Bộ lọc ngày đối soát & trạng thái */}
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-2.5 items-end bg-stone-50 p-3.5 rounded-xl border border-stone-200">
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-600 mb-1">Kiểu lọc ngày</label>
+                  <select
+                    value={payoutDateField}
+                    onChange={(e) => setPayoutDateField(e.target.value as "completedAt" | "orderedAt")}
+                    className="w-full h-9 px-2.5 text-xs bg-white border border-stone-300 rounded-lg font-semibold text-stone-800"
+                  >
+                    <option value="completedAt">Ngày hoàn thành Shopee</option>
+                    <option value="orderedAt">Ngày đặt hàng</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-600 mb-1">Từ ngày</label>
+                  <input
+                    type="date"
+                    value={payoutFromDate}
+                    onChange={(e) => setPayoutFromDate(e.target.value)}
+                    className="w-full h-9 px-2.5 text-xs bg-white border border-stone-300 rounded-lg text-stone-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-600 mb-1">Đến ngày</label>
+                  <input
+                    type="date"
+                    value={payoutToDate}
+                    onChange={(e) => setPayoutToDate(e.target.value)}
+                    className="w-full h-9 px-2.5 text-xs bg-white border border-stone-300 rounded-lg text-stone-800"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-stone-600 mb-1">Trạng thái bảng dưới</label>
+                  <select
+                    value={orderStatusFilter}
+                    onChange={(e) => setOrderStatusFilter(e.target.value as "all" | "pending" | "completed" | "rejected")}
+                    className="w-full h-9 px-2.5 text-xs bg-white border border-stone-300 rounded-lg font-semibold text-stone-800"
+                  >
+                    <option value="all">Tất cả đơn</option>
+                    <option value="pending">Chỉ đơn Chờ duyệt</option>
+                    <option value="completed">Đã duyệt khả dụng</option>
+                    <option value="rejected">Đã hủy</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPayoutFromDate("");
+                      setPayoutToDate("");
+                      setOrderStatusFilter("all");
+                      setSelectedOrderIds([]);
+                    }}
+                    className="w-full h-9 px-3 text-xs font-semibold text-stone-700 bg-white hover:bg-stone-100 border border-stone-300 rounded-lg transition-colors"
+                  >
+                    Đặt lại
+                  </button>
+                </div>
+              </div>
+
+              {/* Tổng hợp phân bổ tiền khả dụng theo từng user */}
+              {payoutReconciliation.orders.length === 0 ? (
+                <div className="p-4 rounded-xl bg-stone-50 border border-dashed border-stone-200 text-xs text-stone-500">
+                  Không có đơn <b>Chờ duyệt</b> nào khớp bộ lọc hiện tại. Mẹo: Nạp lại file CSV Shopee mới nhất để tự động gắn <i>Ngày hoàn thành Shopee</i> cho các đơn cũ, hoặc tích chọn trực tiếp đơn ở bảng bên dưới.
+                </div>
+              ) : (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
+                    <div className="flex flex-wrap items-center gap-4 text-xs">
+                      <span>
+                        Đang chọn: <b className="text-stone-900">{payoutReconciliation.orders.length} đơn chờ duyệt</b>
+                      </span>
+                      <span>
+                        Sau thuế 11% (~thực nhận MB): <b className="text-stone-900">{formatVnd(payoutReconciliation.totalNetCommission)}</b>
+                      </span>
+                      <span>
+                        Cộng khả dụng cho user: <b className="text-emerald-700">{formatVnd(payoutReconciliation.totalUserCashback)}</b>
+                      </span>
+                      <span>
+                        Lãi DealHoàn: <b className="text-orange-600">+{formatVnd(payoutReconciliation.totalDealHoanProfit)}</b>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isSettlingOrders}
+                      onClick={handleBatchSettleOrders}
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                    >
+                      <CheckCircle size={15} weight="fill" />
+                      <span>
+                        {isSettlingOrders
+                          ? "Đang duyệt khả dụng..."
+                          : `Duyệt khả dụng ${payoutReconciliation.orders.length} đơn (+${formatVnd(payoutReconciliation.totalUserCashback)})`}
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="table-responsive">
+                    <table className="admin-data-table" aria-label="Phân bổ giải ngân theo thành viên">
+                      <thead>
+                        <tr>
+                          <th>Thành viên</th>
+                          <th className="text-center">Số đơn</th>
+                          <th>Mã đơn</th>
+                          <th className="text-right">Sau thuế (~89%)</th>
+                          <th className="text-right">Khả dụng cộng ví</th>
+                          <th className="text-right">Lãi DealHoàn</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payoutReconciliation.users.map((row) => {
+                          const matchedUser = users.find((u) => row.userId && u.id.startsWith(row.userId));
+                          return (
+                            <tr key={row.userId} className="admin-table-row">
+                              <td className="text-xs font-bold text-stone-900">
+                                {matchedUser ? matchedUser.fullName || matchedUser.email : row.userId}
+                              </td>
+                              <td className="text-center text-xs font-semibold text-stone-700">{row.orderCount}</td>
+                              <td className="font-mono text-[11px] text-stone-600">{row.orderIds.join(", ")}</td>
+                              <td className="text-right text-xs font-semibold text-stone-700">{formatVnd(row.netCommission)}</td>
+                              <td className="text-right text-xs font-black text-emerald-700 bg-emerald-50/50">
+                                +{formatVnd(row.cashbackAmount)}
+                              </td>
+                              <td className="text-right text-xs font-bold text-orange-600">+{formatVnd(row.dealHoanProfit)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 3. BẢNG ĐƠN HÀNG SHOPEE ĐÃ GHI NHẬN (TRUNG TÂM) */}
             <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex flex-col gap-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <h4 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
                   <Receipt size={20} weight="bold" className="text-orange-600" />
-                  <span>Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({filteredRecentSyncedOrders.length})</span>
+                  <span>Danh Sách Đơn Hàng Shopee Đã Ghi Nhận ({displayedSyncedOrders.length}/{filteredRecentSyncedOrders.length})</span>
                 </h4>
                 <button
                   type="button"
@@ -2446,35 +2732,72 @@ export default function AdminUsersClient({
                 </button>
               </div>
 
-              {filteredRecentSyncedOrders.length === 0 ? (
+              {displayedSyncedOrders.length === 0 ? (
                 <div className="p-8 text-center bg-stone-50 rounded-xl border border-dashed border-stone-200 text-stone-500 text-sm">
                   <ShoppingCart size={40} weight="duotone" className="mx-auto mb-2 text-stone-400" />
-                  <p className="font-bold text-stone-800">Chưa có đơn hàng nào được ghi nhận</p>
+                  <p className="font-bold text-stone-800">Không có đơn hàng nào khớp bộ lọc</p>
                 </div>
               ) : (
                 <div className="table-responsive">
                   <table className="admin-data-table" aria-label="Danh sách đơn hàng Shopee">
                     <thead>
                       <tr>
+                        <th className="w-8 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label="Chọn tất cả đơn chờ duyệt đang hiển thị"
+                            checked={
+                              displayedSyncedOrders.some((o) => o.status === "pending") &&
+                              displayedSyncedOrders
+                                .filter((o) => o.status === "pending")
+                                .every((o) => selectedOrderIds.includes(o.orderId))
+                            }
+                            onChange={(e) => {
+                              const pendingIds = displayedSyncedOrders
+                                .filter((o) => o.status === "pending")
+                                .map((o) => o.orderId);
+                              if (e.target.checked) {
+                                setSelectedOrderIds((prev) => Array.from(new Set([...prev, ...pendingIds])));
+                              } else {
+                                const removeSet = new Set(pendingIds);
+                                setSelectedOrderIds((prev) => prev.filter((id) => !removeSet.has(id)));
+                              }
+                            }}
+                          />
+                        </th>
                         <th>Mã đơn Shopee</th>
                         <th>Thành viên</th>
                         <th className="text-right">Hoa hồng Shopee</th>
                         <th className="text-right">Tiền hoàn</th>
+                        <th className="text-center">HT Shopee</th>
                         <th className="text-center">Trạng thái</th>
-                        <th className="text-right">Thời gian</th>
+                        <th className="text-right">Thời gian đặt</th>
+                        <th className="text-right">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredRecentSyncedOrders.map((ord, idx) => {
+                      {displayedSyncedOrders.map((ord, idx) => {
                         const matchedUser = users.find((u) => ord.userId && u.id.startsWith(ord.userId));
                         const userPercent = (boosterSettings.userCashbackPercent ?? 88) / 100;
                         const comm = Number(ord.commissionAmount) || 0;
                         const netComm = Math.round(comm * 0.89);
                         // Tiền hoàn thực tế chuẩn xác sau khi đã trừ 11% thuế & phí sàn
                         const customerCashback = Math.round(netComm * userPercent);
+                        const completedLabel = extractShopeeCompletedLabel(ord);
+                        const isChecked = selectedOrderIds.includes(ord.orderId);
 
                         return (
-                          <tr key={ord.orderId || idx} className="admin-table-row">
+                          <tr key={ord.orderId || idx} className={`admin-table-row ${isChecked ? "bg-emerald-50/40" : ""}`}>
+                            <td className="text-center">
+                              {ord.status === "pending" && (
+                                <input
+                                  type="checkbox"
+                                  aria-label={`Chọn đơn ${ord.orderId}`}
+                                  checked={isChecked}
+                                  onChange={() => toggleOrderSelection(ord.orderId)}
+                                />
+                              )}
+                            </td>
                             <td className="font-mono text-xs font-bold text-stone-900">{ord.orderId}</td>
                             <td>
                               {matchedUser ? (
@@ -2491,6 +2814,9 @@ export default function AdminUsersClient({
                             </td>
                             <td className="text-right text-xs font-black text-emerald-700 bg-emerald-50/50">
                               +{formatVnd(customerCashback)}
+                            </td>
+                            <td className="text-center text-xs text-stone-600 whitespace-nowrap">
+                              {completedLabel || "—"}
                             </td>
                             <td className="text-center">
                               <span
@@ -2511,6 +2837,22 @@ export default function AdminUsersClient({
                             </td>
                             <td className="text-right text-xs text-stone-500 whitespace-nowrap">
                               {ord.orderedAt ? formatDate(ord.orderedAt) : "—"}
+                            </td>
+                            <td className="text-right whitespace-nowrap">
+                              {ord.status === "pending" ? (
+                                <button
+                                  type="button"
+                                  disabled={updatingOrderId === ord.orderId || isSettlingOrders}
+                                  onClick={() => handleUpdateOrderStatus(ord.orderId, "Shopee", "completed")}
+                                  className="btn-approve-mini inline-flex items-center gap-1 disabled:opacity-50"
+                                  title="Duyệt cộng tiền khả dụng cho thành viên ngay"
+                                >
+                                  <Check size={12} weight="bold" />
+                                  <span>{updatingOrderId === ord.orderId ? "Đang duyệt..." : "Duyệt khả dụng"}</span>
+                                </button>
+                              ) : (
+                                <span className="text-[11px] text-stone-400">—</span>
+                              )}
                             </td>
                           </tr>
                         );
@@ -2811,10 +3153,26 @@ export default function AdminUsersClient({
                               </span>
                             )}
                             {ord.status === "pending" && (
-                              <span className="w-badge w-pending inline-flex items-center gap-1">
-                                <Clock size={11} weight="bold" />
-                                <span>Chờ duyệt</span>
-                              </span>
+                              <div className="pending-actions-wrap">
+                                <span className="w-badge w-pending inline-flex items-center gap-1">
+                                  <Clock size={11} weight="bold" />
+                                  <span>Chờ duyệt</span>
+                                </span>
+                                {Number(ord.cashback_amount) > 0 && (
+                                  <div className="flex gap-1 mt-2">
+                                    <button
+                                      type="button"
+                                      disabled={updatingOrderId === ord.order_id}
+                                      onClick={() => handleUpdateOrderStatus(ord.order_id, ord.platform || "Shopee", "completed")}
+                                      className="btn-approve-mini flex items-center gap-1 disabled:opacity-50"
+                                      title="Duyệt cộng tiền khả dụng cho đơn này"
+                                    >
+                                      <Check size={12} weight="bold" />
+                                      <span>{updatingOrderId === ord.order_id ? "Đang duyệt..." : "Duyệt khả dụng"}</span>
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>

@@ -1,5 +1,6 @@
 import { parseUserIdFromSubId } from "./affiliate";
 import { DEFAULT_BOOSTER_SETTINGS } from "./cashback-booster-types";
+import { formatVnDateShort } from "./shopee-payout";
 
 export interface ParsedShopeeOrder {
   orderId: string;
@@ -621,27 +622,31 @@ export function parseShopeeConversionReport(
     let status: "pending" | "completed" | "rejected" = "pending";
     let isHoldPeriod = false;
     let orderNote: string | undefined = undefined;
+    const completedLabel = formatVnDateShort(completedDate);
+    const completedTag = completedLabel ? `Shopee HT ${completedLabel}` : "";
 
     if (allRejected) {
       status = "rejected";
       orderNote = "Shopee đã hủy hoặc từ chối hoa hồng đơn hàng này";
     } else if (anyCommPending) {
       status = "pending";
-      orderNote = "Shopee đang đối soát hoa hồng (Chờ đối soát)";
+      orderNote = completedTag
+        ? `${completedTag} · Shopee đang đối soát hoa hồng (Chờ đối soát)`
+        : "Shopee đang đối soát hoa hồng (Chờ đối soát)";
     } else if (anyPaid) {
       status = "completed";
+      orderNote = completedTag || undefined;
     } else if (anyOrderCompleted) {
       if (hasPassedHold) {
         status = "completed";
+        orderNote = completedTag || undefined;
       } else {
         status = "pending";
         isHoldPeriod = true;
         const availableDate = refDate ? new Date(refDate.getTime() + HOLD_MS) : new Date(Date.now() + HOLD_MS);
-        const vnAvail = new Date(availableDate.getTime() + 7 * 60 * 60 * 1000);
-        const dayStr = String(vnAvail.getUTCDate()).padStart(2, "0");
-        const monthStr = String(vnAvail.getUTCMonth() + 1).padStart(2, "0");
-        const yearStr = vnAvail.getUTCFullYear();
-        orderNote = `Chờ đối soát T+15 (dự kiến khả dụng: ${dayStr}/${monthStr}/${yearStr})`;
+        const availLabel = formatVnDateShort(availableDate) || "";
+        const holdMsg = `Chờ đối soát T+15 (dự kiến khả dụng: ${availLabel})`;
+        orderNote = completedTag ? `${completedTag} · ${holdMsg}` : holdMsg;
       }
     } else {
       status = "pending";

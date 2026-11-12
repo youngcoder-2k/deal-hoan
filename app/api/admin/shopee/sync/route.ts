@@ -105,10 +105,28 @@ export async function POST(request: NextRequest) {
       const { parseShopeeConversionReport } = await import("@/lib/deals/shopee-import");
       const { recordCashbackOrder } = await import("@/lib/deals/cashback");
       const { getBoosterSettingsSync } = await import("@/lib/deals/cashback-booster");
+      const { isAdminSettledNote, buildAdminSettlementNote } = await import("@/lib/deals/shopee-payout");
       const boosterSettings = getBoosterSettingsSync();
       const report = parseShopeeConversionReport(body.csvContent, {
         userCashbackPercent: boosterSettings.userCashbackPercent,
       });
+
+      const existingMap = new Map<string, { status: string; note?: string | null }>();
+      const supabaseAdmin = getSupabaseAdminClient();
+      const importOrderIds = report.validOrders.map((o) => o.orderId).filter(Boolean);
+      if (supabaseAdmin && importOrderIds.length > 0) {
+        const { data: existingRows } = await supabaseAdmin
+          .from("cashback_orders")
+          .select("order_id,status,note")
+          .eq("platform", "Shopee")
+          .in("order_id", importOrderIds);
+        for (const row of existingRows || []) {
+          existingMap.set(String(row.order_id || "").trim().toUpperCase(), {
+            status: String(row.status || ""),
+            note: row.note,
+          });
+        }
+      }
 
       const FULL_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       let importedCount = 0;
@@ -118,6 +136,17 @@ export async function POST(request: NextRequest) {
       for (const ord of report.validOrders) {
         if (ord.orderId && ord.subId) {
           const explicitUuid = ord.userId && FULL_UUID_RE.test(ord.userId) ? ord.userId : undefined;
+          const prev = existingMap.get(ord.orderId.trim().toUpperCase());
+          const keepAdminSettled =
+            prev &&
+            prev.status === "completed" &&
+            isAdminSettledNote(prev.note) &&
+            ord.status !== "rejected";
+          const effectiveStatus = keepAdminSettled ? "completed" : ord.status;
+          const effectiveNote = keepAdminSettled
+            ? buildAdminSettlementNote(prev.note || "Admin đã duyệt hoàn tiền", ord.note)
+            : ord.note;
+
           const rec = await recordCashbackOrder({
             orderId: ord.orderId,
             subId: ord.subId,
@@ -127,9 +156,9 @@ export async function POST(request: NextRequest) {
             orderValue: ord.orderValue,
             commissionAmount: ord.commissionAmount,
             cashbackAmount: ord.cashbackAmount,
-            status: ord.status,
+            status: effectiveStatus,
             orderedAt: ord.orderedAt,
-            note: ord.note,
+            note: effectiveNote,
           });
           if (rec.success) {
             importedCount++;
@@ -140,9 +169,11 @@ export async function POST(request: NextRequest) {
               productName: ord.productName,
               orderValue: ord.orderValue,
               commissionAmount: ord.commissionAmount,
-              cashbackAmount: ord.cashbackAmount,
-              status: ord.status,
+              cashbackAmount: rec.order?.cashback_amount ?? ord.cashbackAmount,
+              status: effectiveStatus,
               orderedAt: ord.orderedAt,
+              confirmedAt: rec.order?.confirmed_at || ord.completedAt || undefined,
+              note: rec.order?.note || effectiveNote || undefined,
             });
           } else {
             failedOrders.push({

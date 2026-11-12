@@ -3,6 +3,7 @@ import { checkAdminApiAuth } from "@/lib/auth/admin-server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { recordCashbackOrder } from "@/lib/deals/cashback";
 import { isSyntheticTestOrder } from "@/lib/deals/shopee-import";
+import { buildAdminSettlementNote } from "@/lib/deals/shopee-payout";
 
 export const dynamic = "force-dynamic";
 
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Admin duyệt (completed) hoặc từ chối (rejected) đơn hàng
+ * Admin duyệt (completed) hoặc từ chối (rejected) 1 hoặc nhiều đơn hàng
  */
 export async function PATCH(request: NextRequest) {
   try {
@@ -145,32 +146,86 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { orderId, platform = "Shopee", status, note } = body;
+    const { orderId, orderIds, platform = "Shopee", status, note } = body;
 
-    if (!orderId || !status) {
+    const targetIds: string[] = Array.from(
+      new Set(
+        (Array.isArray(orderIds) ? orderIds : orderId ? [orderId] : [])
+          .map((id) => String(id || "").trim())
+          .filter(Boolean)
+      )
+    );
+
+    if (targetIds.length === 0 || !status) {
       return NextResponse.json({ error: "Thiếu orderId hoặc status cần cập nhật." }, { status: 400 });
     }
 
     const db = getSupabaseAdminClient();
-    const existing = db ? await db.from("cashback_orders").select("user_id,order_value").eq("order_id", orderId).eq("platform", platform).maybeSingle() : null;
-    if (!existing?.data || existing.error) return NextResponse.json({ error: "Chưa tìm thấy đơn hàng cần cập nhật." }, { status: 404 });
-    const result = await recordCashbackOrder({
-      userId: existing.data.user_id,
-      orderId,
-      platform,
-      orderValue: Number(existing.data.order_value),
-      status,
-      note: note || `Admin cập nhật trạng thái sang ${status}`,
-    });
+    if (!db) {
+      return NextResponse.json({ error: "Chưa cấu hình kết nối cơ sở dữ liệu." }, { status: 500 });
+    }
 
-    if (!result.success) {
-      return NextResponse.json({ error: result.error }, { status: 400 });
+    const { data: existingRows, error: fetchError } = await db
+      .from("cashback_orders")
+      .select("user_id,order_id,order_value,commission_amount,cashback_amount,note")
+      .in("order_id", targetIds)
+      .eq("platform", platform);
+
+    if (fetchError || !existingRows || existingRows.length === 0) {
+      return NextResponse.json({ error: "Chưa tìm thấy đơn hàng cần cập nhật." }, { status: 404 });
+    }
+
+    const updatedOrders = [];
+    const failedOrders: Array<{ orderId: string; error: string }> = [];
+
+    for (const row of existingRows) {
+      const defaultNote =
+        status === "completed"
+          ? "Admin duyệt giải ngân Shopee"
+          : `Admin cập nhật trạng thái sang ${status}`;
+      const finalNote =
+        status === "completed"
+          ? buildAdminSettlementNote(typeof note === "string" && note.trim() ? note : defaultNote, row.note)
+          : note || defaultNote;
+
+      const comm = Number(row.commission_amount);
+      const result = await recordCashbackOrder({
+        userId: row.user_id,
+        orderId: row.order_id,
+        platform,
+        orderValue: Number(row.order_value) || 0,
+        ...(Number.isSafeInteger(comm) && comm >= 0 ? { commissionAmount: comm } : {}),
+        status,
+        note: finalNote,
+      });
+
+      if (result.success && result.order) {
+        updatedOrders.push(result.order);
+      } else {
+        failedOrders.push({
+          orderId: row.order_id,
+          error: result.error || "Không thể cập nhật đơn hàng.",
+        });
+      }
+    }
+
+    if (updatedOrders.length === 0) {
+      return NextResponse.json(
+        { error: failedOrders[0]?.error || "Không thể cập nhật đơn hàng.", failedOrders },
+        { status: 400 }
+      );
     }
 
     return NextResponse.json({
       success: true,
-      message: `Đã cập nhật đơn sang trạng thái ${status}!`,
-      order: result.order,
+      message:
+        updatedOrders.length === 1
+          ? `Đã cập nhật đơn ${updatedOrders[0].order_id} sang trạng thái ${status}!`
+          : `Đã duyệt thành công ${updatedOrders.length}/${targetIds.length} đơn hàng!`,
+      updatedCount: updatedOrders.length,
+      order: updatedOrders[0],
+      orders: updatedOrders,
+      failedOrders,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
