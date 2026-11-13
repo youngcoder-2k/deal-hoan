@@ -170,9 +170,9 @@ export function CashbackReceipt({
   const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : (isFood ? `Hoàn ${cashbackRate}%` : "Chưa xác định");
   const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.com");
   const displayImageUrl =
-    isFood && (!product.imageUrl || product.imageUrl === "/brand/shopeefood-logo.png")
-      ? "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80"
-      : product.imageUrl;
+    isFood && (!product.imageUrl || product.imageUrl === "/brand/shopeefood-logo.png" || product.imageUrl.includes("unsplash.com"))
+      ? "/brand/shopeefood-icon.png"
+      : (product.imageUrl || (isFood ? "/brand/shopeefood-icon.png" : undefined));
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>
@@ -182,7 +182,18 @@ export function CashbackReceipt({
         {displayImageUrl && (
           // Marketplace images stay direct: some CDNs reject image-optimizer requests.
           // eslint-disable-next-line @next/next/no-img-element
-          <img className={styles.productImage} src={displayImageUrl} alt={product.name} width={64} height={64} />
+          <img
+            className={`${styles.productImage} ${isFood ? styles.foodProductImage : ""}`}
+            src={displayImageUrl}
+            alt={product.name}
+            width={64}
+            height={64}
+            onError={(e) => {
+              if (isFood) {
+                e.currentTarget.src = "/brand/shopeefood-icon.png";
+              }
+            }}
+          />
         )}
         <div>
           <h3 title={product.name}>{product.name}</h3>

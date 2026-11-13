@@ -358,7 +358,7 @@ export async function POST(request: NextRequest) {
       : (hoanNgayProduct?.name || atProduct?.name || ogTitle || baseProduct.name);
 
     const finalImage = isCurrentShopeeFood
-      ? (ogImage || (baseProduct.imageUrl !== "/brand/shopeefood-logo.png" ? baseProduct.imageUrl : null) || "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80")
+      ? (ogImage || (baseProduct.imageUrl && !baseProduct.imageUrl.includes("unsplash.com") && baseProduct.imageUrl !== "/brand/shopeefood-logo.png" ? baseProduct.imageUrl : null) || "/brand/shopeefood-icon.png")
       : (hoanNgayProduct?.imageUrl || atProduct?.imageUrl || ogImage || baseProduct.imageUrl);
 
     const finalPrice = isCurrentShopeeFood

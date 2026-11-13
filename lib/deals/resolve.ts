@@ -37,7 +37,7 @@ export const SAMPLE_CHIP_PRODUCTS: Record<string, CalculatedProduct> = {
   },
   "https://shopeefood.vn/tra-sua-gong-cha": {
     name: "Trà sữa Gong Cha Oolong Milk Foam trân châu đen",
-    imageUrl: "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/brand/shopeefood-icon.png",
     price: 58000,
     originalPrice: 75000,
     cashback: 8000,
@@ -198,7 +198,7 @@ export const CATEGORY_FALLBACKS: Array<{
   },
   {
     keywords: ["trà sữa", "tra sua", "cơm", "com", "bún", "bun", "phở", "pho", "bánh", "banh", "mì", "mi", "gà rán", "ga ran", "cafe", "cà phê", "pizza", "burger", "đồ ăn", "thức uống", "now-food", "shopeefood", "quán"],
-    imageUrl: "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80",
+    imageUrl: "/brand/shopeefood-icon.png",
     nameFallback: "Món ngon ShopeeFood giao tận nơi",
     defaultPrice: 65000,
     defaultOriginalPrice: 85000,
@@ -364,7 +364,7 @@ export function resolveProductLocally(
 
   const imageUrl =
     isFood
-      ? (categoryMatch?.imageUrl || "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80")
+      ? "/brand/shopeefood-icon.png"
       : categoryMatch?.imageUrl ||
         "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80";
 
