@@ -2566,9 +2566,6 @@ export default function AdminUsersClient({
                     <HandCoins size={20} weight="bold" className="text-emerald-600" />
                     <span>Đối Soát Giải Ngân Shopee (Chờ duyệt → Khả dụng)</span>
                   </h4>
-                  <p className="text-xs text-stone-500 mt-1 mb-0">
-                    Lọc theo ngày hoa hồng hoàn thành trên phiếu thanh toán Shopee hoặc tích chọn từng đơn ở bảng dưới để xem chính xác mỗi thành viên được cộng bao nhiêu tiền khả dụng.
-                  </p>
                 </div>
                 {selectedOrderIds.length > 0 && (
                   <button
@@ -2642,11 +2639,7 @@ export default function AdminUsersClient({
               </div>
 
               {/* Tổng hợp phân bổ tiền khả dụng theo từng user */}
-              {payoutReconciliation.orders.length === 0 ? (
-                <div className="p-4 rounded-xl bg-stone-50 border border-dashed border-stone-200 text-xs text-stone-500">
-                  Không có đơn <b>Chờ duyệt</b> nào khớp bộ lọc hiện tại. Mẹo: Nạp lại file CSV Shopee mới nhất để tự động gắn <i>Ngày hoàn thành Shopee</i> cho các đơn cũ, hoặc tích chọn trực tiếp đơn ở bảng bên dưới.
-                </div>
-              ) : (
+              {payoutReconciliation.orders.length > 0 && (
                 <div className="flex flex-col gap-3">
                   <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-emerald-50 border border-emerald-200">
                     <div className="flex flex-wrap items-center gap-4 text-xs">
