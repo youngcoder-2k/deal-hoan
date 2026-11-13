@@ -169,16 +169,20 @@ export function CashbackReceipt({
   const hasPrice = price > 0;
   const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : (isFood ? `Hoàn ${cashbackRate}%` : "Chưa xác định");
   const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.com");
+  const displayImageUrl =
+    isFood && (!product.imageUrl || product.imageUrl === "/brand/shopeefood-logo.png")
+      ? "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80"
+      : product.imageUrl;
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>
         <h2 id="cashback-result-title">Kết quả hoàn tiền</h2>
       </div>
       <div className={styles.product}>
-        {product.imageUrl && (
+        {displayImageUrl && (
           // Marketplace images stay direct: some CDNs reject image-optimizer requests.
           // eslint-disable-next-line @next/next/no-img-element
-          <img className={styles.productImage} src={product.imageUrl} alt={product.name} width={64} height={64} />
+          <img className={styles.productImage} src={displayImageUrl} alt={product.name} width={64} height={64} />
         )}
         <div>
           <h3 title={product.name}>{product.name}</h3>
@@ -199,16 +203,13 @@ export function CashbackReceipt({
           <PercentIcon className={`${styles.rewardPercent} ${styles.rewardPercentRight}`} weight="bold" aria-hidden="true" />
         </>}
         <div className={styles.rewardContent}>
-          <p>{isFood ? "Ưu đãi hoàn tiền ShopeeFood" : "Bạn được hoàn dự kiến"}</p>
+          <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
             {(hasPrice || isFood) && <Image className={styles.rewardCoin} src="/hero/cashback-coin-stack.webp" width={272} height={216} alt="" sizes="(max-width: 600px) 28px, 34px" />}
-            <strong className={(reward.length > 9 || (isFood && !hasPrice)) ? styles.longAmount : ""}>
+            <strong className={reward.length > 9 ? styles.longAmount : ""}>
               {reward}{hasPrice && <span className={styles.rewardCurrency}> đồng</span>}
             </strong>
           </div>
-          {isFood && !hasPrice && (
-            <span className={styles.rewardTiming}>Tính trên toàn bộ tổng tiền thanh toán thực tế khi chốt đơn.</span>
-          )}
           {!hasPrice && !isFood && (
             <span className={styles.rewardTiming}>Chưa có giá và tiền hoàn từ sàn cho sản phẩm này.</span>
           )}
@@ -216,9 +217,7 @@ export function CashbackReceipt({
         {(hasPrice || isFood) && (
           <div className={styles.rewardRate}>
             <span className={styles.ratePill}>
-              {isFood
-                ? `Hoàn ${cashbackRate.toLocaleString("vi-VN")}% toàn bộ đơn hàng (Ví dụ: Đơn 100k hoàn ${Math.round(100000 * (cashbackRate / 100)).toLocaleString("vi-VN")}đ)`
-                : `Hoàn ${cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng`}
+              {`Hoàn ${cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng`}
             </span>
           </div>
         )}
@@ -263,11 +262,6 @@ export function CashbackReceipt({
           <ShoppingCartIcon size={22} weight="duotone" aria-hidden="true" />
           Đăng nhập để MUA NGAY
         </button>
-      )}
-      {product.platform?.toLowerCase().includes("food") && (
-        <p className={styles.foodAppNote}>
-          💡 Mở ứng dụng ShopeeFood để đặt món &amp; nhận hoàn {cashbackRate.toLocaleString("vi-VN")}% tự động vào tài khoản DealHoàn.
-        </p>
       )}
       <div className={styles.receiptFooter}>
         <span>Ghi nhận trong 24 giờ · <a href="#how">điều kiện</a></span>

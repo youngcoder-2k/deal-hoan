@@ -364,7 +364,7 @@ export function resolveProductLocally(
 
   const imageUrl =
     isFood
-      ? "/brand/shopeefood-logo.png"
+      ? (categoryMatch?.imageUrl || "https://images.unsplash.com/photo-1558857563-b37cb4200ec1?auto=format&fit=crop&w=800&q=80")
       : categoryMatch?.imageUrl ||
         "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80";
 
