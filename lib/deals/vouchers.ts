@@ -79,6 +79,7 @@ export async function fetchLiveShopeeVouchers(): Promise<Coupon[]> {
   const endpoints = [
     "https://api.riokupon.com/vn/htm/home.php?store_merchant=shopee&voucher_main=all&type=&layout=voucher-list&limit=150",
     "https://api.riokupon.com/vn/htm/home.php?store_merchant=shopee&voucher_main=freeship&type=&layout=voucher-list&limit=50",
+    "https://riokupon.com/api/vn/voucher/data/voucher-list-today_list.txt",
   ];
 
   const results = await Promise.allSettled(
@@ -102,6 +103,15 @@ export async function fetchLiveShopeeVouchers(): Promise<Coupon[]> {
     const items = html.match(/<li[^>]*class="bc_voucher_item"[^>]*>[\s\S]*?<\/li>/g) || [];
 
     for (const item of items) {
+      // 1. Bỏ qua các mã bị ẩn trên website (đây là mã chết, mã đã hết lượt hoặc mã cũ)
+      if (item.includes("display: none") || item.includes("display:none")) continue;
+
+      // 2. Bỏ qua mã ưu đãi thăng hạng (mã cá nhân theo bậc thành viên Shopee Rewards, không dùng chung được)
+      if (item.includes("Ưu đãi thăng hạng") || item.includes("thang-hang")) continue;
+
+      // 3. Bỏ qua mã có thời hạn bất thường từ data cũ
+      if (item.includes("còn 11 năm") || item.includes("còn 10 năm") || item.includes("còn 12 năm")) continue;
+
       const codeMatch = item.match(/data-code=["']([A-Z0-9\-_]+)["']/i);
       if (!codeMatch) continue;
       const code = codeMatch[1].trim();
@@ -122,6 +132,7 @@ export async function fetchLiveShopeeVouchers(): Promise<Coupon[]> {
 
       const useMatch = item.match(/width:\s*(\d+)%/i);
       const usagePercent = useMatch ? parseInt(useMatch[1], 10) : 50;
+      if (usagePercent >= 90) continue; // Bỏ qua mã đã cạn lượt
 
       let targetUrl = "https://shopee.vn";
       const urlMatch = item.match(/href=["'][^"']*url=([^"'&]+)/i);
