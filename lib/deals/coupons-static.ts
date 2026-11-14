@@ -18,7 +18,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       category: "freeship",
       platform: "Shopee",
       badge: "FREESHIP",
-      url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn%2Fm%2Fmien-phi-van-chuyen",
+      url: "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn%2Fm%2Fmien-phi-van-chuyen",
       usagePercent: 51,
     },
     {
@@ -33,7 +33,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       category: "toan_san",
       platform: "Shopee",
       badge: "HOT",
-      url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn",
+      url: "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn",
       usagePercent: 85,
     },
     {
@@ -48,7 +48,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       category: "toan_san",
       platform: "Shopee",
       badge: "TOÀN SÀN",
-      url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn",
+      url: "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn",
       usagePercent: 70,
     },
     {
@@ -63,7 +63,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       category: "toan_san",
       platform: "Shopee",
       badge: "SHOPEE APP",
-      url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn",
+      url: "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn",
       usagePercent: 30,
     },
     {
@@ -78,7 +78,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       category: "toan_san",
       platform: "Shopee",
       badge: "VOUCHER XTRA",
-      url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn",
+      url: "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn",
       usagePercent: 76,
     },
     {
@@ -93,7 +93,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       category: "toan_san",
       platform: "Shopee",
       badge: "HOT DEAL",
-      url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn",
+      url: "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn",
       usagePercent: 78,
     },
     {
@@ -108,7 +108,7 @@ export function getDailyShopeeCoupons(): Coupon[] {
       category: "toan_san",
       platform: "Shopee",
       badge: "VIP DEAL",
-      url: "https://s.shopee.vn/an_redir?affiliate_id=17333200656&url=https%3A%2F%2Fshopee.vn",
+      url: "https://s.shopee.vn/an_redir?origin_link=https%3A%2F%2Fshopee.vn",
       usagePercent: 65,
     },
   ];

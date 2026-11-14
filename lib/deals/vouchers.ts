@@ -130,7 +130,7 @@ export async function fetchLiveShopeeVouchers(): Promise<Coupon[]> {
       }
 
       // Bọc link affiliate của DealHoàn
-      const trackedUrl = `https://s.shopee.vn/an_redir?affiliate_id=${DEALHOAN_AFFILIATE_ID}&url=${encodeURIComponent(targetUrl)}`;
+      const trackedUrl = `https://s.shopee.vn/an_redir?origin_link=${encodeURIComponent(targetUrl)}&affiliate_id=${DEALHOAN_AFFILIATE_ID}`;
 
       const amtMatch =
         title.match(/(\d+%(?:\s+tối\s+đa\s+\d+k)?|\d+k|\d+,\d+đ|\d+đ)/i) ||
