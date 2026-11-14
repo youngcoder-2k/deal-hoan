@@ -1,6 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { matchVouchersForProduct, evaluateCoupon, isPaymentRestrictedCoupon } from "../lib/deals/matching.ts";
+import {
+  matchVouchersForProduct,
+  evaluateCoupon,
+  isPaymentRestrictedCoupon,
+  isShopeeLiveOrVideoCoupon,
+  isExcludedShopeeVoucher,
+} from "../lib/deals/matching.ts";
 import { getDailyShopeeCoupons } from "../lib/deals/coupons-static.ts";
 
 test("voucher matching logic: matches applicable vouchers for 300k Shopee product", () => {
@@ -158,4 +164,72 @@ test("voucher matching logic: strictly filters out SPayLater and ShopeePay vouch
   assert.equal(matched[0].coupon.code, "GFSWQM", "Mã giảm sâu nhất (25% = 50k) đứng đầu");
   assert.equal(matched[1].coupon.code, "OCT26ID17", "Mã 20% đứng thứ hai");
   assert.equal(bestDiscount, 50000, "Mức giảm tốt nhất phải là 50,000đ từ mã Shopee App");
+});
+
+test("voucher matching logic: strictly excludes ShopeeLive and ShopeeVideo vouchers, keeping only standard Shopee vouchers", () => {
+  const mixedCoupons = [
+    {
+      id: "shopee-live-1",
+      code: "LIVEHOT50K",
+      amount: "50K",
+      unit: "giảm",
+      title: "Mã Shopee Live: Giảm 50K",
+      subtitle: "Chỉ áp dụng trên livestream Shopee",
+      condition: "Đơn từ 100K",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 30,
+    },
+    {
+      id: "shopee-video-1",
+      code: "VIDEOMOI20K",
+      amount: "20K",
+      unit: "giảm",
+      title: "Mã Shopee Video: Giảm 20K",
+      subtitle: "Chỉ áp dụng khi mua trên video",
+      condition: "Đơn từ 50K",
+      color: "orange",
+      category: "toan_san",
+      usagePercent: 40,
+    },
+    {
+      id: "shopee-standard-1",
+      code: "SHOPEEALL30K",
+      amount: "30K",
+      unit: "giảm",
+      title: "Mã giảm giá Shopee: Giảm 30K toàn sàn",
+      subtitle: "Áp dụng toàn sàn cho mọi phương thức thanh toán",
+      condition: "Đơn từ 100K",
+      color: "red",
+      category: "toan_san",
+      usagePercent: 20,
+    },
+    {
+      id: "shopee-freeship-1",
+      code: "FSV-STANDARD",
+      amount: "70K",
+      unit: "ship",
+      title: "Mã Freeship: Giảm 70K phí vận chuyển",
+      subtitle: "Áp dụng toàn sàn",
+      condition: "Đơn từ 100K",
+      color: "green",
+      category: "freeship",
+      usagePercent: 15,
+    },
+  ];
+
+  assert.equal(isShopeeLiveOrVideoCoupon(mixedCoupons[0]), true, "LIVEHOT50K phải là mã ShopeeLive");
+  assert.equal(isShopeeLiveOrVideoCoupon(mixedCoupons[1]), true, "VIDEOMOI20K phải là mã ShopeeVideo");
+  assert.equal(isShopeeLiveOrVideoCoupon(mixedCoupons[2]), false, "SHOPEEALL30K phải là mã Shopee chuẩn");
+  assert.equal(isShopeeLiveOrVideoCoupon(mixedCoupons[3]), false, "FSV-STANDARD phải là mã Freeship chuẩn");
+
+  assert.equal(isExcludedShopeeVoucher(mixedCoupons[0]), true);
+  assert.equal(isExcludedShopeeVoucher(mixedCoupons[1]), true);
+  assert.equal(isExcludedShopeeVoucher(mixedCoupons[2]), false);
+  assert.equal(isExcludedShopeeVoucher(mixedCoupons[3]), false);
+
+  const { matched } = matchVouchersForProduct(150000, "Shopee", mixedCoupons);
+  assert.equal(matched.length, 2, "Chỉ được giữ lại mã toàn sàn và freeship thông thường");
+  assert.equal(matched.some((m) => m.coupon.code === "LIVEHOT50K"), false, "Không có mã ShopeeLive");
+  assert.equal(matched.some((m) => m.coupon.code === "VIDEOMOI20K"), false, "Không có mã ShopeeVideo");
 });

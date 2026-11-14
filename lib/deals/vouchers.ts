@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Coupon } from "./types";
 import { getDailyShopeeCoupons } from "./coupons-static";
-import { isPaymentRestrictedCoupon } from "./matching";
+import { isExcludedShopeeVoucher } from "./matching";
 
 const VOUCHER_CACHE_DIR = path.join(process.cwd(), "lib/deals/cache");
 const VOUCHER_CACHE_PATH = path.join(VOUCHER_CACHE_DIR, "shopee-vouchers.json");
@@ -168,7 +168,7 @@ export async function fetchLiveShopeeVouchers(): Promise<Coupon[]> {
     }
   }
 
-  return parsed.filter((c) => !isPaymentRestrictedCoupon(c));
+  return parsed.filter((c) => !isExcludedShopeeVoucher(c));
 }
 
 /**
@@ -236,9 +236,9 @@ export async function getVouchers(): Promise<Coupon[]> {
     }
   }
 
-  // 4. Trả về danh sách mã thật đã cache (loại bỏ triệt để mã SPayLater & ShopeePay)
+  // 4. Trả về danh sách mã thật đã cache (loại bỏ triệt để mã SPayLater, ShopeePay, ShopeeLive và ShopeeVideo)
   if (cachedVouchers.length > 0) {
-    return cachedVouchers.filter((c) => !isPaymentRestrictedCoupon(c));
+    return cachedVouchers.filter((c) => !isExcludedShopeeVoucher(c));
   }
 
   // 5. Fallback cuối cùng

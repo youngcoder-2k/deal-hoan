@@ -53,6 +53,52 @@ export function isPaymentRestrictedCoupon(coupon: Coupon): boolean {
 }
 
 /**
+ * Kiểm tra xem mã có bị giới hạn riêng cho ShopeeLive (Livestream) hoặc ShopeeVideo hay không.
+ * DealHoàn chỉ giữ các mã Shopee mua sắm thông thường (Toàn sàn, Ngành hàng, Freeship, Shopee Mall).
+ */
+export function isShopeeLiveOrVideoCoupon(coupon: Coupon): boolean {
+  const code = (coupon.code || "").toUpperCase().trim();
+  const text = `${coupon.code} ${coupon.title || ""} ${coupon.subtitle || ""} ${coupon.condition || ""} ${coupon.badge || ""} ${coupon.category || ""} ${coupon.url || ""}`.toLowerCase();
+
+  // 1. Kiểm tra ShopeeLive
+  if (
+    code.startsWith("LIVE") ||
+    text.includes("shopeelive") ||
+    text.includes("shopee live") ||
+    text.includes("livestream") ||
+    text.includes("trên live") ||
+    text.includes("áp dụng trên live") ||
+    text.includes("chỉ trên live")
+  ) {
+    return true;
+  }
+
+  // 2. Kiểm tra ShopeeVideo
+  if (
+    code.startsWith("VID") ||
+    text.includes("shopeevideo") ||
+    text.includes("shopee video") ||
+    text.includes("video shopee") ||
+    text.includes("trên video") ||
+    text.includes("mua trên video") ||
+    text.includes("áp dụng trên video") ||
+    text.includes("chỉ trên video")
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Lọc bỏ toàn bộ các mã không phải mã Shopee mua sắm thông thường:
+ * Bỏ SPayLater, ShopeePay, ShopeeLive và ShopeeVideo.
+ */
+export function isExcludedShopeeVoucher(coupon: Coupon): boolean {
+  return isPaymentRestrictedCoupon(coupon) || isShopeeLiveOrVideoCoupon(coupon);
+}
+
+/**
  * Trả về thông tin khung giờ vàng Shopee hiện tại và đợt mở mã kế tiếp
  */
 export function getCurrentShopeeSlotInfo() {
@@ -282,8 +328,8 @@ export function matchVouchersForProduct(
   let bestDiscount = 0;
 
   for (const c of vouchers) {
-    // Loại bỏ mã yêu cầu phương thức thanh toán đặc thù (SPayLater, ShopeePay)
-    if (isPaymentRestrictedCoupon(c)) {
+    // Loại bỏ mã yêu cầu phương thức thanh toán đặc thù (SPayLater, ShopeePay) hoặc chỉ dùng trên Live/Video
+    if (isExcludedShopeeVoucher(c)) {
       continue;
     }
 
