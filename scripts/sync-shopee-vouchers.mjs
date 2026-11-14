@@ -22,6 +22,7 @@ export async function syncShopeeVouchers() {
   }
 
   const endpoints = [
+    "https://riokupon.com/api/vn/voucher/data/voucher-list-today_list.txt",
     "https://api.riokupon.com/vn/htm/home.php?store_merchant=shopee&voucher_main=all&type=&layout=voucher-list&limit=150",
     "https://api.riokupon.com/vn/htm/home.php?store_merchant=shopee&voucher_main=freeship&type=&layout=voucher-list&limit=50",
   ];
@@ -58,10 +59,33 @@ export async function syncShopeeVouchers() {
     const items = html.match(/<li[^>]*class="bc_voucher_item"[^>]*>[\s\S]*?<\/li>/g) || [];
 
     for (const item of items) {
+      // 1. Bỏ qua các mã bị ẩn trên website (đây là mã chết, mã đã hết lượt hoặc mã cũ)
+      if (item.includes("display: none") || item.includes("display:none")) continue;
+
+      // 2. Bỏ qua mã ưu đãi thăng hạng (mã cá nhân theo bậc thành viên Shopee Rewards, không dùng chung được)
+      if (item.includes("Ưu đãi thăng hạng") || item.includes("thang-hang")) continue;
+
+      // 3. Bỏ qua mã có thời hạn bất thường từ data cũ (lỗi tính toán năm của nguồn cào)
+      if (item.includes("còn 11 năm") || item.includes("còn 10 năm") || item.includes("còn 12 năm")) continue;
+
       const codeMatch = item.match(/data-code=["\x27]([A-Z0-9\-_]+)["\x27]/i);
       if (!codeMatch) continue;
       const code = codeMatch[1].trim();
       if (seenCodes.has(code)) continue;
+
+      // 4. Bỏ qua mã yêu cầu ví/thẻ đặc thù (SPayLater, ShopeePay)
+      const isPaymentRestricted =
+        code.startsWith("SPL") ||
+        code.startsWith("SPP") ||
+        code.startsWith("SPAY") ||
+        code.startsWith("SHOPEEPAY") ||
+        code.startsWith("AIRPAY") ||
+        item.toLowerCase().includes("spaylater") ||
+        item.toLowerCase().includes("shopeepay") ||
+        item.toLowerCase().includes("ví shopee") ||
+        item.toLowerCase().includes("ví điện tử");
+      if (isPaymentRestricted) continue;
+
       seenCodes.add(code);
 
       const labelMatch = item.match(/class="bc_voucher_label"[^>]*>([\s\S]*?)<\/span>/i);
@@ -78,6 +102,7 @@ export async function syncShopeeVouchers() {
 
       const useMatch = item.match(/width:\s*(\d+)%/i);
       const usagePercent = useMatch ? parseInt(useMatch[1], 10) : 50;
+      if (usagePercent >= 90) continue; // Bỏ qua mã đã cạn lượt / đã dùng >= 90%
 
       let targetUrl = "https://shopee.vn";
       const urlMatch = item.match(/href=["\x27][^"\x27]*url=([^"&\x27]+)/i);
