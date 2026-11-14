@@ -91,6 +91,55 @@ function formatDate(iso: string) {
   }
 }
 
+function formatDateShort(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function cleanProductTitle(raw: string): string {
+  if (!raw) return "Sản phẩm mua qua DealHoàn";
+  let title = raw.trim();
+  // Bỏ hậu tố số lượng sản phẩm gộp "(+1 sp)"
+  title = title.replace(/\(\+\d+\s*sp\)$/i, "").trim();
+  // Bỏ tiền tố ngoặc vuông quảng cáo spam [CHÍNH HÃNG], [KHÔNG LED], ...
+  title = title.replace(/^\[[^\]]+\]\s*/g, "").trim();
+  // Nếu có thông số kỹ thuật phân tách bởi | thì lấy tên chính gọn gàng
+  if (title.includes("|")) {
+    const parts = title.split("|").map((p) => p.trim()).filter(Boolean);
+    if (parts[0] && parts[0].length >= 15) {
+      title = parts[0];
+    }
+  }
+  return title || raw;
+}
+
+function cleanUserNote(note?: string | null, status?: string): string | null {
+  if (!note || status === "completed") return null;
+  const lower = note.toLowerCase();
+  // Lọc bỏ toàn bộ thuật ngữ nội bộ kế toán của admin
+  if (lower.includes("admin duyệt") || lower.includes("giải ngân")) return null;
+  // Trích xuất ngày dự kiến hoàn tiền ngắn gọn
+  const estMatch = note.match(/dự kiến\s*(?:khả dụng|cộng ví)?[:\s]*(\d{1,2}\/\d{1,2}(?:\/\d{4})?)/i);
+  if (estMatch) {
+    return `Dự kiến: ${estMatch[1]}`;
+  }
+  if (status === "rejected" || lower.includes("hủy") || lower.includes("từ chối")) {
+    return "Đơn bị hủy hoặc không đủ điều kiện";
+  }
+  if (lower.includes("tra cứu")) {
+    return "Đang chờ đối soát từ sàn";
+  }
+  return null;
+}
+
 export default function AccountModal({
   user,
   initialBalance,
@@ -613,7 +662,7 @@ export default function AccountModal({
         </header>
         <div className={s.stats} aria-label="Tổng quan ví" aria-busy={loading.wallet}>
           {[
-            { label: "Chờ nền tảng duyệt", value: wallet.pending_balance, Icon: Clock },
+            { label: "Chờ duyệt", value: wallet.pending_balance, Icon: Clock },
             { label: "Có thể rút", value: wallet.balance, Icon: Wallet, isAvailable: true },
           ].map(({ label, value, Icon, isAvailable }) => (
             <div className={`${s.stat} ${isAvailable ? s.available : ""}`} key={label}>
@@ -649,31 +698,48 @@ export default function AccountModal({
               </div>
             ) : (
               <div className={s.list}>
-                <div className={s.orderNotice}>
-                  <Info size={16} weight="bold" />
-                  <span>Đơn hàng của bạn sẽ được Shopee cập nhật sau 9h hàng ngày</span>
+                {orders.map((order) => {
+                  const cleanedTitle = cleanProductTitle(order.product_name || "");
+                  const userNote = cleanUserNote(order.note, order.status);
+                  return (
+                    <article className={s.record} key={order.id}>
+                      <div className={s.recordBody}>
+                        <div className={s.recordLeft}>
+                          <h4 className={s.productTitle} title={order.product_name || ""}>
+                            {cleanedTitle}
+                          </h4>
+                          <div className={s.recordMeta}>
+                            <span>{order.platform}</span>
+                            <span className={s.dot}>·</span>
+                            <time>{formatDateShort(order.ordered_at)}</time>
+                            <span className={s.dot}>·</span>
+                            <span>Đơn {formatVnd(order.order_value)}</span>
+                          </div>
+                          {userNote && (
+                            <div className={s.userNote}>
+                              <Clock size={11} weight="bold" />
+                              <span>{userNote}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className={s.recordRight}>
+                          <span className={s.cashbackAmount}>
+                            +{formatVnd(order.cashback_amount)}
+                          </span>
+                          <span className={s.status} data-status={order.status}>
+                            {statusLabel(order.status)}
+                          </span>
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+
+                <div className={s.bottomHelp}>
+                  <Info size={13} weight="bold" />
+                  <span>Đơn mới thường được cập nhật tự động sau 9h sáng mỗi ngày</span>
                 </div>
-                {orders.map((order) => (
-                  <article className={s.record} key={order.id}>
-                    <div className={s.recordTop}>
-                      <span>
-                        {order.platform} · #{order.order_id}
-                      </span>
-                      <span className={s.status} data-status={order.status}>
-                        {statusLabel(order.status)}
-                      </span>
-                    </div>
-                    <div className={s.recordMain}>
-                      <strong>{order.product_name || "Sản phẩm mua qua DealHoàn"}</strong>
-                      <b>+{formatVnd(order.cashback_amount)}</b>
-                    </div>
-                    <div className={s.recordMeta}>
-                      <span>Giá trị đơn: {formatVnd(order.order_value)}</span>
-                      <time>{formatDate(order.ordered_at)}</time>
-                    </div>
-                    {order.note && <p>{order.note}</p>}
-                  </article>
-                ))}
               </div>
             )}
           </>}
