@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
-  serverExternalPackages: ["@sparticuz/chromium", "playwright-core"],
+  serverExternalPackages: ["@sparticuz/chromium", "playwright-core", "nodemailer"],
   outputFileTracingIncludes: {
     "/api/cron/sync-deals": ["./node_modules/@sparticuz/chromium/bin/**/*", "./node_modules/playwright-core/**/*"],
   },

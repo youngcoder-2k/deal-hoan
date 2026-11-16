@@ -32,6 +32,8 @@ import {
   Crown,
   ChatDots,
   ShoppingBag,
+  EnvelopeSimple,
+  PaperPlaneTilt,
 } from "@phosphor-icons/react";
 import design from "./admin-users.module.css";
 import type { AdminUserItem, AdminKPIStats } from "@/lib/auth/admin";
@@ -213,6 +215,33 @@ export default function AdminUsersClient({
   const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
+
+  // State cấu hình gửi Email thông báo (dealhoan@gmail.com)
+  const [emailSettings, setEmailSettings] = useState<{
+    enabled: boolean;
+    senderEmail: string;
+    senderName: string;
+    smtpHost: string;
+    smtpPort: number;
+    smtpSecure: boolean;
+    smtpUser: string;
+    hasPassword: boolean;
+    adminEmails: string[];
+  }>({
+    enabled: true,
+    senderEmail: "dealhoan@gmail.com",
+    senderName: "DealHoàn",
+    smtpHost: "smtp.gmail.com",
+    smtpPort: 465,
+    smtpSecure: true,
+    smtpUser: "dealhoan@gmail.com",
+    hasPassword: false,
+    adminEmails: ["trungquan2000bg@gmail.com", "quangvh.technical@gmail.com"],
+  });
+  const [emailPasswordInput, setEmailPasswordInput] = useState("");
+  const [adminEmailsInput, setAdminEmailsInput] = useState("");
+  const [testingEmail, setTestingEmail] = useState(false);
+  const [emailTestResult, setEmailTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
 
   // State tự động đồng bộ qua Cookie Shopee (Auto-Pilot 24/7)
   const [shopeeCookie, setShopeeCookie] = useState<string>(() => {
@@ -737,7 +766,7 @@ export default function AdminUsersClient({
     return () => clearInterval(interval);
   }, [autoSyncEnabled, shopeeCookie]);
 
-  // Tải cấu hình tỷ lệ hoàn tiền
+  // Tải cấu hình tỷ lệ hoàn tiền & cấu hình email thông báo
   const loadBoosterSettings = async () => {
     setSettingsLoading(true);
     try {
@@ -749,6 +778,10 @@ export default function AdminUsersClient({
         if (data.settings) {
           setBoosterSettings(data.settings);
         }
+        if (data.emailSettings) {
+          setEmailSettings(data.emailSettings);
+          setAdminEmailsInput(data.emailSettings.adminEmails.join(", "));
+        }
       }
     } catch (err) {
       console.warn("Failed to load booster settings:", err);
@@ -757,19 +790,39 @@ export default function AdminUsersClient({
     }
   };
 
-  // Lưu cấu hình tỷ lệ hoàn tiền
+  // Lưu cấu hình tỷ lệ hoàn tiền & cấu hình email
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
+      const parsedAdminEmails = adminEmailsInput
+        .split(",")
+        .map((e) => e.trim().toLowerCase())
+        .filter((e) => e.includes("@"));
+
+      const payload = {
+        ...boosterSettings,
+        emailSettings: {
+          enabled: emailSettings.enabled,
+          senderName: emailSettings.senderName,
+          adminEmails: parsedAdminEmails.length > 0 ? parsedAdminEmails : emailSettings.adminEmails,
+          ...(emailPasswordInput.trim() ? { smtpPass: emailPasswordInput.trim() } : {}),
+        },
+      };
+
       const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
-        body: JSON.stringify(boosterSettings),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (res.ok && data.success) {
-        setBoosterSettings(data.settings);
-        setToastMsg("✓ Đã lưu cấu hình tỷ lệ hoàn tiền thành công!");
+        if (data.settings) setBoosterSettings(data.settings);
+        if (data.emailSettings) {
+          setEmailSettings(data.emailSettings);
+          setAdminEmailsInput(data.emailSettings.adminEmails.join(", "));
+          setEmailPasswordInput("");
+        }
+        setToastMsg("✓ Đã lưu cấu hình hệ thống & thông báo email thành công!");
         setTimeout(() => setToastMsg(null), 3500);
       } else {
         setToastMsg("⚠️ " + (data.error || "Không thể lưu cấu hình."));
@@ -780,6 +833,57 @@ export default function AdminUsersClient({
       setTimeout(() => setToastMsg(null), 3500);
     } finally {
       setSavingSettings(false);
+    }
+  };
+
+  // Kiểm tra kết nối SMTP & Gửi email thử nghiệm
+  const handleTestEmail = async () => {
+    setTestingEmail(true);
+    setEmailTestResult(null);
+    try {
+      if (emailPasswordInput.trim() || adminEmailsInput.trim()) {
+        const parsedAdminEmails = adminEmailsInput
+          .split(",")
+          .map((e) => e.trim().toLowerCase())
+          .filter((e) => e.includes("@"));
+
+        await fetch("/api/admin/settings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+          body: JSON.stringify({
+            emailSettings: {
+              enabled: emailSettings.enabled,
+              senderName: emailSettings.senderName,
+              adminEmails: parsedAdminEmails.length > 0 ? parsedAdminEmails : emailSettings.adminEmails,
+              ...(emailPasswordInput.trim() ? { smtpPass: emailPasswordInput.trim() } : {}),
+            },
+          }),
+        });
+      }
+
+      const res = await fetch("/api/admin/settings/email/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setEmailTestResult({ success: true, message: data.message });
+        setToastMsg("✓ " + data.message);
+        setTimeout(() => setToastMsg(null), 4000);
+      } else {
+        const errMsg = data.error || data.details || "Không thể gửi email thử nghiệm.";
+        setEmailTestResult({ success: false, message: errMsg });
+        setToastMsg("⚠️ " + errMsg);
+        setTimeout(() => setToastMsg(null), 4000);
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : "Lỗi kết nối khi gửi thử nghiệm.";
+      setEmailTestResult({ success: false, message: errMsg });
+      setToastMsg("⚠️ " + errMsg);
+      setTimeout(() => setToastMsg(null), 4000);
+    } finally {
+      setTestingEmail(false);
     }
   };
 
@@ -2446,6 +2550,191 @@ export default function AdminUsersClient({
                   style={{ width: `${100 - (boosterSettings.userCashbackPercent ?? 88.0)}%` }}
                   className="h-full bg-[#109452] transition-all duration-300"
                 ></div>
+              </div>
+            </div>
+
+            {/* PHẦN CẤU HÌNH GỬI EMAIL THÔNG BÁO CHO ADMIN */}
+            <div className="bg-white border border-[#dfe5ed] rounded-2xl p-6 shadow-sm mb-6">
+              <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#edf2f7] flex-wrap gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#ee4c23] flex items-center justify-center shrink-0">
+                    <EnvelopeSimple size={22} weight="bold" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
+                      Thông Báo Rút Tiền Qua Email (Gmail)
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        dealhoan@gmail.com
+                      </span>
+                    </h3>
+                    <p className="text-xs text-stone-500 m-0 mt-0.5">
+                      Tự động gửi email thông báo chi tiết cho tất cả Admin khi có người dùng gửi lệnh rút tiền mới.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Switch Bật/Tắt gửi thông báo */}
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <span className="text-xs font-semibold text-stone-600">
+                    {emailSettings.enabled ? "Đang bật thông báo" : "Đã tạm dừng"}
+                  </span>
+                  <div
+                    onClick={() =>
+                      setEmailSettings((prev) => ({ ...prev, enabled: !prev.enabled }))
+                    }
+                    className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out ${
+                      emailSettings.enabled ? "bg-[#109452]" : "bg-stone-300"
+                    }`}
+                  >
+                    <div
+                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
+                        emailSettings.enabled ? "translate-x-5" : "translate-x-0"
+                      }`}
+                    />
+                  </div>
+                </label>
+              </div>
+
+              {/* Form cấu hình Email */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
+                {/* Cột 1: Email người gửi & Mật khẩu ứng dụng */}
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                      Email gửi thông báo (Sender)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        readOnly
+                        value="dealhoan@gmail.com"
+                        className="w-full h-11 px-3.5 bg-stone-100 border border-stone-300 rounded-xl text-stone-700 font-semibold text-sm outline-none cursor-not-allowed"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                        Mặc định
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-stone-500 mt-1 block">
+                      Máy chủ SMTP: smtp.gmail.com (Port 465 SSL)
+                    </span>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">
+                        Mật khẩu ứng dụng Gmail (App Password)
+                      </label>
+                      {emailSettings.hasPassword && (
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
+                          <Check size={12} weight="bold" /> Đã lưu mật khẩu
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      placeholder={
+                        emailSettings.hasPassword
+                          ? "•••••••••••••••• (Nhập mật khẩu mới nếu muốn đổi)"
+                          : "Nhập 16 ký tự mật khẩu ứng dụng Gmail..."
+                      }
+                      value={emailPasswordInput}
+                      onChange={(e) => setEmailPasswordInput(e.target.value)}
+                      className="w-full h-11 px-3.5 bg-white border border-stone-300 focus:border-[#ee4c23] rounded-xl text-stone-900 text-sm outline-none transition-colors"
+                    />
+                    <div className="mt-2 text-[11px] text-stone-500 bg-stone-50 p-2.5 rounded-lg border border-stone-200 leading-relaxed">
+                      💡 <strong>Cách lấy App Password:</strong> Đăng nhập Gmail <em>dealhoan@gmail.com</em> ➔ Vào{" "}
+                      <a
+                        href="https://myaccount.google.com/apppasswords"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[#ee4c23] underline font-semibold"
+                      >
+                        myaccount.google.com/apppasswords
+                      </a>{" "}
+                      ➔ Đặt tên ứng dụng là &quot;DealHoàn&quot; ➔ Copy 16 ký tự dán vào đây và bấm <strong>Lưu</strong>.
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cột 2: Danh sách Admin nhận thông báo */}
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
+                      Danh sách Email Admin nhận thông báo
+                    </label>
+                    <textarea
+                      rows={3}
+                      placeholder="trungquan2000bg@gmail.com, quangvh.technical@gmail.com"
+                      value={adminEmailsInput}
+                      onChange={(e) => setAdminEmailsInput(e.target.value)}
+                      className="w-full p-3 bg-white border border-stone-300 focus:border-[#ee4c23] rounded-xl text-stone-900 text-sm outline-none transition-colors resize-none leading-relaxed"
+                    />
+                    <span className="text-[11px] text-stone-500 mt-1 block">
+                      Nhập các email admin cách nhau bằng dấu phẩy (,). Mọi Admin trong danh sách sẽ nhận được thông báo khi có người dùng rút tiền.
+                    </span>
+                  </div>
+
+                  {/* Nút hành động kiểm tra & kết quả */}
+                  <div className="flex flex-col gap-2.5 mt-auto">
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={handleTestEmail}
+                        disabled={testingEmail}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold text-xs transition-colors disabled:opacity-50"
+                      >
+                        {testingEmail ? (
+                          <>
+                            <ArrowClockwise size={16} className="animate-spin text-[#ee4c23]" />
+                            <span>Đang kiểm tra kết nối...</span>
+                          </>
+                        ) : (
+                          <>
+                            <PaperPlaneTilt size={16} weight="bold" className="text-[#ee4c23]" />
+                            <span>Gửi email thử nghiệm (Test)</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleSaveSettings}
+                        disabled={savingSettings}
+                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#ee4c23] hover:bg-[#d83f18] text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50"
+                      >
+                        {savingSettings ? (
+                          <>
+                            <ArrowClockwise size={16} className="animate-spin" />
+                            <span>Đang lưu...</span>
+                          </>
+                        ) : (
+                          <>
+                            <FloppyDisk size={16} weight="bold" />
+                            <span>Lưu cấu hình Email</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                    {emailTestResult && (
+                      <div
+                        className={`text-xs p-3 rounded-xl border flex items-start gap-2 ${
+                          emailTestResult.success
+                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                            : "bg-red-50 border-red-200 text-red-800"
+                        }`}
+                      >
+                        {emailTestResult.success ? (
+                          <CheckCircle size={16} className="text-emerald-600 shrink-0 mt-0.5" weight="bold" />
+                        ) : (
+                          <WarningCircle size={16} className="text-red-600 shrink-0 mt-0.5" weight="bold" />
+                        )}
+                        <span>{emailTestResult.message}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </section>

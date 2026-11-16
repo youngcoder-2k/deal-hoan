@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { parseJsonBody, handleApiError } from "@/lib/api/response";
+import { sendWithdrawalAlertToAdmins } from "@/lib/email/withdrawal-notification";
 import type { WithdrawalRecord } from "@/lib/deals/withdrawals-store";
 
 export const dynamic = "force-dynamic";
@@ -175,6 +176,24 @@ export async function POST(request: NextRequest) {
       );
 
       if (!rpcErr && rpcRes && rpcRes.success) {
+        const createdReq = (rpcRes.request as Record<string, unknown>) || {};
+        // Gửi email thông báo cho các Admin (chạy nền non-blocking, không chặn phản hồi của user)
+        sendWithdrawalAlertToAdmins({
+          withdrawalId: String(createdReq.id || `w_${Date.now()}`),
+          userId: user.id,
+          userEmail: user.email || undefined,
+          userName: String(user.user_metadata?.full_name || bank_account_name || ""),
+          userRefCode: String(user.user_metadata?.ref_code || `u_${user.id.slice(0, 8)}`),
+          amount,
+          bankName: bank_name,
+          bankAccountNo: bank_account_no,
+          bankAccountName: bank_account_name,
+          createdAt: String(createdReq.created_at || new Date().toISOString()),
+          note: typeof createdReq.note === "string" ? createdReq.note : null,
+        }).catch((alertErr) => {
+          console.error("Non-blocking withdrawal alert error:", alertErr);
+        });
+
         return NextResponse.json({
           success: true,
           message: `Đã gửi yêu cầu rút ${amount.toLocaleString(
@@ -268,12 +287,31 @@ export async function POST(request: NextRequest) {
       console.warn("Wallet deduction warning:", updateWalletError);
     }
 
+    const finalRecord = inserted || newRequest;
+
+    // Gửi email thông báo cho các Admin (chạy nền non-blocking, không chặn phản hồi của user)
+    sendWithdrawalAlertToAdmins({
+      withdrawalId: String(finalRecord.id),
+      userId: user.id,
+      userEmail: user.email || undefined,
+      userName: String(user.user_metadata?.full_name || bank_account_name || ""),
+      userRefCode: String(user.user_metadata?.ref_code || `u_${user.id.slice(0, 8)}`),
+      amount,
+      bankName: bank_name,
+      bankAccountNo: bank_account_no,
+      bankAccountName: bank_account_name,
+      createdAt: finalRecord.created_at,
+      note: finalRecord.note || null,
+    }).catch((alertErr) => {
+      console.error("Non-blocking withdrawal alert error:", alertErr);
+    });
+
     return NextResponse.json({
       success: true,
       message: `Đã gửi yêu cầu rút ${amount.toLocaleString(
         "vi-VN"
       )}đ về ${bank_name}. Tiền sẽ được chuyển trong 24–48h làm việc.`,
-      request: inserted || newRequest,
+      request: finalRecord,
       newBalance,
     });
   } catch (err: unknown) {
