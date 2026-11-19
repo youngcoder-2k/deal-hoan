@@ -18,15 +18,17 @@ test('parseShopeeDate parses DD-MM-YYYY, DD/MM/YYYY, ISO, and Vietnamese timesta
 test('Shopee CSV Import: Orders within 15-day hold period must remain in pending (Chờ duyệt)', () => {
   const { parseShopeeConversionReport } = loadTs({})('lib/deals/shopee-import.ts');
 
-  // Case 1: Đơn của Thảo Hà (2611039UJRDH19) đặt ngày 03/11/2026 (cách đây 4 ngày < 15 ngày)
+  // Case 1: Đơn mới đặt cách đây 3 ngày (< 15 ngày)
+  const recentDate = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+  const recentDateStr = `${recentDate.getFullYear()}-${String(recentDate.getMonth() + 1).padStart(2, '0')}-${String(recentDate.getDate()).padStart(2, '0')} 07:14`;
   const recentCsv = `Mã đơn hàng,Thời gian đặt hàng,Sub_ID,Tên sản phẩm,Giá trị đơn hàng (VND),Hoa hồng ước tính (VND),Trạng thái đơn hàng
-2611039UJRDH19,2026-11-03 07:14,dh61f113c93212470f80bb111222333444,Sản phẩm Shopee,800415,80021,Hoàn thành`;
+2611039UJRDH19,${recentDateStr},dh61f113c93212470f80bb111222333444,Sản phẩm Shopee,800415,80021,Hoàn thành`;
 
   const report = parseShopeeConversionReport(recentCsv, { userCashbackPercent: 88.0 });
   assert.equal(report.validOrders.length, 1);
   const ord = report.validOrders[0];
   assert.equal(ord.orderId, '2611039UJRDH19');
-  assert.equal(ord.status, 'pending', 'Đơn hàng mới hoàn thành 4 ngày trước bắt buộc phải ở trạng thái pending (Chờ đối soát T+15)');
+  assert.equal(ord.status, 'pending', 'Đơn hàng mới hoàn thành 3 ngày trước bắt buộc phải ở trạng thái pending (Chờ đối soát T+15)');
   assert.equal(ord.isHoldPeriod, true);
   assert.match(ord.note, /Chờ đối soát T\+15/);
 });

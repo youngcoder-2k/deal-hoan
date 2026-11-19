@@ -95,7 +95,7 @@ export function normalizeEmailSettings(
     smtpPort: port,
     smtpSecure: typeof raw.smtpSecure === "boolean" ? raw.smtpSecure : port === 465,
     smtpUser: raw.smtpUser?.trim() || defaults.smtpUser,
-    smtpPass: typeof raw.smtpPass === "string" ? raw.smtpPass.trim() : defaults.smtpPass,
+    smtpPass: typeof raw.smtpPass === "string" ? raw.smtpPass.replace(/\s+/g, "") : (defaults.smtpPass ? defaults.smtpPass.replace(/\s+/g, "") : ""),
     adminEmails: Array.from(new Set(adminList)),
   };
 }

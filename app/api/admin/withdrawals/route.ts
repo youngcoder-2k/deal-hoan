@@ -5,6 +5,7 @@ import {
   fetchRealAdminUsers,
 } from "@/lib/auth/admin-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { notifyUserWithdrawalApproved } from "@/lib/email/withdrawal-notification";
 
 export const dynamic = "force-dynamic";
 
@@ -185,6 +186,11 @@ export async function PATCH(request: NextRequest) {
         }
       );
       if (!rpcErr && rpcRes && rpcRes.success) {
+        if (status === "completed") {
+          notifyUserWithdrawalApproved(clientToUse, withdrawalId, { note: finalNote }).catch((err) =>
+            console.error("Non-blocking notify user withdrawal approved error:", err)
+          );
+        }
         return NextResponse.json({
           success: true,
           message:
@@ -212,7 +218,7 @@ export async function PATCH(request: NextRequest) {
 
     const { data: currentWr } = await clientToUse
       .from("withdrawal_requests")
-      .select("user_id, amount, status")
+      .select("user_id, amount, status, bank_name, bank_account_no, bank_account_name")
       .eq("id", withdrawalId)
       .maybeSingle();
 
@@ -274,6 +280,20 @@ export async function PATCH(request: NextRequest) {
       } catch (refundErr) {
         console.warn("Failed to refund wallet balance on rejection:", refundErr);
       }
+    }
+
+    // 3. Nếu DUYỆT (completed): Gửi email thông báo rút tiền thành công cho user
+    if (status === "completed") {
+      notifyUserWithdrawalApproved(clientToUse, withdrawalId, {
+        user_id: targetUserId,
+        amount: targetAmount,
+        bank_name: currentWr.bank_name,
+        bank_account_no: currentWr.bank_account_no,
+        bank_account_name: currentWr.bank_account_name,
+        note: finalNote,
+      }).catch((err) =>
+        console.error("Non-blocking notify user withdrawal approved error:", err)
+      );
     }
 
     return NextResponse.json({

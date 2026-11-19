@@ -40,6 +40,7 @@ yarn-error.log*
 # Shopee scraper — session cookies and scraped output; never commit these
 /.secrets/
 /lib/deals/cache/
+/data/email-settings.json
 
 # typescript
 *.tsbuildinfo

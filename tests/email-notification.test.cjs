@@ -48,3 +48,41 @@ test("Admin settings route supports email settings and test endpoint", async () 
   assert.match(settingsContent, /emailSettings/, "Admin settings must expose emailSettings");
   assert.match(settingsContent, /updateEmailSettings/, "Admin settings must support updating email settings");
 });
+
+test("Admin approval triggers user withdrawal success notification email non-blocking", async () => {
+  const adminWithdrawalsPath = path.join(process.cwd(), "app", "api", "admin", "withdrawals", "route.ts");
+  const userWithdrawalsPath = path.join(process.cwd(), "app", "api", "admin", "users", "[id]", "withdrawals", "route.ts");
+  const notificationPath = path.join(process.cwd(), "lib", "email", "withdrawal-notification.ts");
+
+  const notificationContent = fs.readFileSync(notificationPath, "utf-8");
+  assert.match(
+    notificationContent,
+    /sendWithdrawalSuccessAlertToUser/,
+    "withdrawal-notification.ts must export sendWithdrawalSuccessAlertToUser"
+  );
+  assert.match(
+    notificationContent,
+    /notifyUserWithdrawalApproved/,
+    "withdrawal-notification.ts must export notifyUserWithdrawalApproved"
+  );
+  assert.match(
+    notificationContent,
+    /Rút Tiền Thành Công|Yêu cầu rút tiền .* của bạn đã thành công/,
+    "Email template must have success message for users"
+  );
+
+  const adminContent = fs.readFileSync(adminWithdrawalsPath, "utf-8");
+  assert.match(
+    adminContent,
+    /notifyUserWithdrawalApproved\(clientToUse,\s*withdrawalId/,
+    "Global admin approval route must call notifyUserWithdrawalApproved"
+  );
+
+  const userContent = fs.readFileSync(userWithdrawalsPath, "utf-8");
+  assert.match(
+    userContent,
+    /notifyUserWithdrawalApproved\(clientToUse,\s*withdrawalId/,
+    "User-specific admin approval route must call notifyUserWithdrawalApproved"
+  );
+});
+
