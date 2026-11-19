@@ -67,3 +67,67 @@ test('isAuthorizedCron accepts Supabase pg_cron token and rejects unauthorized r
     false
   );
 });
+
+test('isHqvTestWithdrawal correctly identifies Huy Quang Vu test withdrawal requests and preserves real users', () => {
+  const load = loadTs({
+    '@supabase/supabase-js': {
+      createClient: () => ({}),
+    },
+  });
+
+  const { isHqvTestWithdrawal } = load('lib/auth/admin.ts');
+
+  // Test cases: Huy Quang Vũ test requests
+  assert.equal(
+    isHqvTestWithdrawal({
+      userEmail: 'quangvh.technical@gmail.com',
+      amount: 50000,
+    }),
+    true,
+    'Should identify by email quangvh.technical@gmail.com'
+  );
+
+  assert.equal(
+    isHqvTestWithdrawal({
+      bankAccountName: 'HUY QUANG VU',
+      bankAccountNo: '0988889999',
+      amount: 50000,
+    }),
+    true,
+    'Should identify by bankAccountName HUY QUANG VU'
+  );
+
+  assert.equal(
+    isHqvTestWithdrawal({
+      userName: 'Huy Quang Vũ',
+      amount: 100000,
+    }),
+    true,
+    'Should identify by userName Huy Quang Vũ'
+  );
+
+  // Real user cases (must NOT be excluded!)
+  assert.equal(
+    isHqvTestWithdrawal({
+      userEmail: 'hathithao2412@gmail.com',
+      userName: 'Thảo Hà',
+      bankAccountName: 'HA THI THAO',
+      bankAccountNo: '1028371928',
+      amount: 62673,
+    }),
+    false,
+    'Must NOT identify real user Thảo Hà as test'
+  );
+
+  assert.equal(
+    isHqvTestWithdrawal({
+      userEmail: 'tuyenpham202212@gmail.com',
+      userName: 'Tuyến Anh',
+      bankAccountName: 'PHAM TUYEN ANH',
+      amount: 15327,
+    }),
+    false,
+    'Must NOT identify real user Tuyến Anh as test'
+  );
+});
+

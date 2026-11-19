@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdminClient } from "@/lib/auth/admin";
+import { getSupabaseAdminClient, isHqvTestWithdrawal } from "@/lib/auth/admin";
 import {
   checkAdminApiAuth,
   fetchRealAdminUsers,
@@ -47,7 +47,35 @@ export async function GET(request: NextRequest) {
     let dbWithdrawals: any[] = [];
 
     if (clientToUse) {
-      // 1. Lấy trực tiếp từ bảng withdrawal_requests trong CSDL Supabase
+      // 1. Tự động dọn dẹp các lệnh rút test của Huy Quang Vũ (100k) khỏi CSDL Supabase
+      try {
+        const { data: testRows } = await clientToUse
+          .from("withdrawal_requests")
+          .select("id, user_id, amount, bank_account_name, bank_account_no, note");
+
+        if (Array.isArray(testRows) && testRows.length > 0) {
+          const testMatches = testRows.filter((r) => isHqvTestWithdrawal(r));
+          if (testMatches.length > 0) {
+            const testIds = testMatches.map((r) => r.id);
+            await clientToUse
+              .from("withdrawal_requests")
+              .delete()
+              .in("id", testIds);
+
+            const affectedUserIds = Array.from(new Set(testMatches.map((r) => r.user_id).filter(Boolean)));
+            for (const uid of affectedUserIds) {
+              await clientToUse
+                .from("user_wallets")
+                .update({ total_withdrawn: 0, updated_at: new Date().toISOString() })
+                .eq("user_id", uid);
+            }
+          }
+        }
+      } catch (cleanErr) {
+        console.warn("Auto-clean test withdrawal requests in DB error:", cleanErr);
+      }
+
+      // 2. Lấy trực tiếp từ bảng withdrawal_requests trong CSDL Supabase
       try {
         const { data, error } = await clientToUse
           .from("withdrawal_requests")
@@ -60,7 +88,7 @@ export async function GET(request: NextRequest) {
         console.warn("withdrawal_requests query error:", err);
       }
 
-      // 2. Nếu bảng trực tiếp chưa có dữ liệu, thử view admin_withdrawals_overview
+      // 3. Nếu bảng trực tiếp chưa có dữ liệu, thử view admin_withdrawals_overview
       if (dbWithdrawals.length === 0) {
         try {
           const { data: ovData, error: ovErr } = await clientToUse
@@ -118,9 +146,15 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // 6. Lọc bỏ triệt để 2 lệnh rút tiền test của Huy Quang Vũ (tổng 100k) để số tiền đã chi trả chuẩn xác 78k
+    const cleanList = formattedList.filter((item) => {
+      const matchedUser = userMap.get(item.userId);
+      return !isHqvTestWithdrawal(item, matchedUser);
+    });
+
     // Sắp xếp: Ưu tiên các lệnh 'pending' lên hàng đầu để Admin duyệt ngay,
     // sau đó sắp xếp theo thời gian mới nhất
-    formattedList.sort((a, b) => {
+    cleanList.sort((a, b) => {
       if (a.status === "pending" && b.status !== "pending") return -1;
       if (a.status !== "pending" && b.status === "pending") return 1;
       return (
@@ -128,7 +162,7 @@ export async function GET(request: NextRequest) {
       );
     });
 
-    return NextResponse.json({ withdrawals: formattedList });
+    return NextResponse.json({ withdrawals: cleanList });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
     return NextResponse.json({ error: message }, { status: 500 });
@@ -311,3 +345,70 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const auth = await checkAdminApiAuth(request);
+    if (!auth.isAuthorized) {
+      return NextResponse.json(
+        { error: "Không có quyền xóa yêu cầu rút tiền." },
+        { status: 403 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const id = searchParams.get("id");
+    const cleanTest = searchParams.get("clean_test") === "true";
+
+    const supabaseAdmin = getSupabaseAdminClient();
+    let supabaseServer: any = null;
+    try {
+      supabaseServer = await createSupabaseServerClient();
+    } catch {}
+    const clientToUse = supabaseAdmin || supabaseServer;
+
+    if (!clientToUse) {
+      return NextResponse.json(
+        { error: "Không thể kết nối CSDL Supabase để xóa." },
+        { status: 500 }
+      );
+    }
+
+    if (cleanTest) {
+      const { data: allW } = await clientToUse
+        .from("withdrawal_requests")
+        .select("id, user_id, bank_account_name, bank_account_no, note");
+      if (Array.isArray(allW)) {
+        const matches = allW.filter((r) => isHqvTestWithdrawal(r));
+        if (matches.length > 0) {
+          const ids = matches.map((r) => r.id);
+          await clientToUse.from("withdrawal_requests").delete().in("id", ids);
+          for (const uid of new Set(matches.map((r) => r.user_id).filter(Boolean))) {
+            await clientToUse.from("user_wallets").update({ total_withdrawn: 0 }).eq("user_id", uid);
+          }
+          return NextResponse.json({ success: true, deletedCount: ids.length, deletedIds: ids });
+        }
+      }
+      return NextResponse.json({ success: true, deletedCount: 0 });
+    }
+
+    if (!id) {
+      return NextResponse.json({ error: "Thiếu id lệnh rút cần xóa." }, { status: 400 });
+    }
+
+    const { error: delErr } = await clientToUse
+      .from("withdrawal_requests")
+      .delete()
+      .eq("id", id);
+
+    if (delErr) {
+      return NextResponse.json({ error: delErr.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: `Đã xóa lệnh rút ${id}` });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Internal error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+

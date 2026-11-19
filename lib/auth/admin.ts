@@ -102,6 +102,50 @@ export function getSupabaseAdminClient() {
   return null;
 }
 
+// Helper nhận diện lệnh rút tiền test của tài khoản Huy Quang Vũ (Admin/Dev test)
+export function isHqvTestWithdrawal(
+  w: {
+    userId?: string;
+    userEmail?: string;
+    userName?: string;
+    bankAccountName?: string;
+    bankAccountNo?: string;
+    note?: string | null;
+    amount?: number;
+  },
+  user?: {
+    email?: string;
+    fullName?: string;
+    bankAccountName?: string;
+    bankAccountNo?: string;
+  }
+): boolean {
+  const email = (w.userEmail || user?.email || "").toLowerCase().trim();
+  const name = (w.userName || user?.fullName || "").toLowerCase().trim();
+  const bankAccName = (w.bankAccountName || user?.bankAccountName || "").toUpperCase().trim();
+  const bankAccNo = (w.bankAccountNo || user?.bankAccountNo || "").trim();
+  const note = (w.note || "").toLowerCase().trim();
+
+  // 1. Email của Huy Quang Vũ (Admin/Dev)
+  if (email === "quangvh.technical@gmail.com") return true;
+
+  // 2. Tên người dùng hoặc chủ tài khoản ngân hàng là Huy Quang Vũ
+  if (
+    name.includes("huy quang vũ") ||
+    name.includes("huy quang vu") ||
+    bankAccName.includes("HUY QUANG VU") ||
+    bankAccName.includes("HUY QUANG VŨ")
+  ) {
+    return true;
+  }
+
+  // 3. Số tài khoản test hoặc ghi chú test
+  if (bankAccNo === "0988889999") return true;
+  if (note.includes("test rút tiền") || note.includes("test huy quang vu")) return true;
+
+  return false;
+}
+
 // Dữ liệu mẫu phong phú mô phỏng hệ thống thực tế khi chưa kết nối Supabase Service Role
 export const DEMO_ADMIN_USERS: AdminUserItem[] = [
   {
@@ -115,20 +159,14 @@ export const DEMO_ADMIN_USERS: AdminUserItem[] = [
     lastSignInAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
     balance: 40000,
     pendingBalance: 0,
-    totalWithdrawn: 60000,
-    totalEarned: 100000,
+    totalWithdrawn: 0,
+    totalEarned: 40000,
     bankName: "MB Bank (MBB)",
     bankAccountNo: "0988889999",
     bankAccountName: "HUY QUANG VU",
     isBankConfigured: true,
-    withdrawalCount: 3,
-    latestWithdrawal: {
-      id: "w-hqv-10k",
-      amount: 10000,
-      status: "pending",
-      createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
-      note: "Đang chờ đối soát & chuyển khoản qua Napas247",
-    },
+    withdrawalCount: 0,
+    latestWithdrawal: null,
   },
   {
     id: "usr_dh_002",

@@ -7,6 +7,7 @@ import {
   DEMO_ADMIN_USERS,
   getSupabaseAdminClient,
   isAdminUser,
+  isHqvTestWithdrawal,
 } from "./admin";
 
 /**
@@ -236,6 +237,9 @@ export async function fetchRealAdminUsers(): Promise<{
       } catch {}
     }
 
+    // Lọc bỏ triệt để các lệnh rút test của Huy Quang Vũ (Admin/Dev test 100k)
+    withdrawalsData = withdrawalsData.filter((w) => !isHqvTestWithdrawal(w));
+
     // Map wallets và withdrawals theo user_id
     const walletsMap = new Map<string, any>();
     walletsData.forEach((w) => {
@@ -260,10 +264,15 @@ export async function fetchRealAdminUsers(): Promise<{
             const uid = String(row.user_id || row.id);
             const balance = Number(row.balance || 0);
             const pendingBalance = Number(row.pending_balance || 0);
-            const totalWithdrawn = Number(row.total_withdrawn || 0);
             const bankName = String(row.bank_name || "");
             const bankAccountNo = String(row.bank_account_no || "");
             const bankAccountName = String(row.bank_account_name || "");
+            const isHqv =
+              String(row.email || "").toLowerCase() === "quangvh.technical@gmail.com" ||
+              String(row.full_name || "").toLowerCase().includes("huy quang vũ") ||
+              String(row.full_name || "").toLowerCase().includes("huy quang vu") ||
+              bankAccountName.includes("HUY QUANG VU");
+            const totalWithdrawn = isHqv ? 0 : Number(row.total_withdrawn || 0);
 
             const userWithdrawals = withdrawalsMap.get(uid) || [];
             const latestW = userWithdrawals[0];
@@ -327,7 +336,12 @@ export async function fetchRealAdminUsers(): Promise<{
 
         const balance = Number(wallet?.balance ?? 0);
         const pendingBalance = Number(wallet?.pending_balance ?? 0);
-        const totalWithdrawn = Number(wallet?.total_withdrawn ?? 0);
+        const isHqv =
+          u.email?.toLowerCase() === "quangvh.technical@gmail.com" ||
+          String(u.user_metadata?.full_name || "").toLowerCase().includes("huy quang vũ") ||
+          String(u.user_metadata?.full_name || "").toLowerCase().includes("huy quang vu") ||
+          bankAccountName.includes("HUY QUANG VU");
+        const totalWithdrawn = isHqv ? 0 : Number(wallet?.total_withdrawn ?? 0);
 
         return {
           id: u.id,
@@ -373,10 +387,11 @@ export async function fetchRealAdminUsers(): Promise<{
         const latestW = userWithdrawals[0];
         const balance = Number(w.balance ?? 0);
         const pendingBalance = Number(w.pending_balance ?? 0);
-        const totalWithdrawn = Number(w.total_withdrawn ?? 0);
         const bankName = String(w.bank_name || "");
         const bankAccountNo = String(w.bank_account_no || "");
         const bankAccountName = String(w.bank_account_name || "");
+        const isHqv = bankAccountName.includes("HUY QUANG VU") || bankAccountNo === "0988889999";
+        const totalWithdrawn = isHqv ? 0 : Number(w.total_withdrawn ?? 0);
 
         return {
           id: uid,

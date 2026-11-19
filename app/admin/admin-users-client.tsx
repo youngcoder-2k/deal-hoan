@@ -34,9 +34,10 @@ import {
   ShoppingBag,
   EnvelopeSimple,
   PaperPlaneTilt,
+  Trash,
 } from "@phosphor-icons/react";
 import design from "./admin-users.module.css";
-import type { AdminUserItem, AdminKPIStats } from "@/lib/auth/admin";
+import { type AdminUserItem, type AdminKPIStats, isHqvTestWithdrawal } from "@/lib/auth/admin";
 import {
   type CashbackBoosterSettings,
   DEFAULT_BOOSTER_SETTINGS,
@@ -921,13 +922,43 @@ export default function AdminUsersClient({
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.withdrawals)) {
-          setAllWithdrawals(data.withdrawals);
+          // Lọc triệt để các lệnh rút test của Huy Quang Vũ (100k)
+          const validWithdrawals = data.withdrawals.filter((w: any) => !isHqvTestWithdrawal(w));
+          setAllWithdrawals(validWithdrawals);
         }
       }
     } catch (err) {
       console.warn("Failed to load all withdrawals:", err);
     } finally {
       setLoadingAllWithdrawals(false);
+    }
+  };
+
+  // Xóa trực tiếp một lệnh rút tiền (tiện lợi cho việc dọn dẹp lệnh test)
+  const handleDeleteWithdrawalDirect = async (item: AdminWithdrawalRecord) => {
+    if (
+      !confirm(
+        `Bạn có chắc chắn muốn xóa lệnh rút ${formatVnd(item.amount)} của ${item.userName}?\nThao tác này sẽ loại bỏ lệnh rút khỏi danh sách và số liệu chi trả.`
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/admin/withdrawals?id=${item.id}`, {
+        method: "DELETE",
+        headers: getAdminFetchHeaders(),
+      });
+      if (res.ok) {
+        setAllWithdrawals((prev) => prev.filter((w) => w.id !== item.id));
+        setToastMsg("✓ Đã xóa lệnh rút tiền thành công.");
+        setTimeout(() => setToastMsg(null), 3000);
+      } else {
+        const data = await res.json();
+        alert(data.error || "Không thể xóa lệnh rút tiền.");
+      }
+    } catch (err) {
+      console.warn("Delete withdrawal error:", err);
+      alert("Đã xảy ra lỗi khi xóa lệnh rút.");
     }
   };
 
@@ -2355,7 +2386,17 @@ export default function AdminUsersClient({
                                     </button>
                                   </div>
                                 ) : (
-                                  <span className="text-stone-300 select-none font-medium text-sm">—</span>
+                                  <div className="flex items-center justify-end">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteWithdrawalDirect(w)}
+                                      className="inline-flex items-center gap-1 px-2 py-1 text-xs text-stone-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                                      title="Xóa lệnh rút tiền này khỏi hệ thống"
+                                    >
+                                      <Trash size={12} weight="bold" />
+                                      <span>Xóa</span>
+                                    </button>
+                                  </div>
                                 )}
                               </td>
                             </tr>
