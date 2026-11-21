@@ -131,6 +131,7 @@ create index if not exists idx_wallet_ledger_reference on public.wallet_ledger(r
 create or replace function public.prevent_wallet_ledger_mutation()
 returns trigger
 language plpgsql
+set search_path = pg_catalog
 as $$
 begin
   raise exception 'wallet_ledger_is_immutable';
@@ -151,7 +152,7 @@ grant usage, select on sequence public.wallet_ledger_seq_seq to service_role;
 drop policy if exists "Users can view own wallet ledger" on public.wallet_ledger;
 create policy "Users can view own wallet ledger"
   on public.wallet_ledger for select to authenticated
-  using (auth.uid() = user_id);
+  using ((select auth.uid()) = user_id);
 
 -- ============================================================================
 -- 4. Bảng user_device_signals: Lưu dấu vân tay thiết bị / trình duyệt / IP chống spam
@@ -223,7 +224,7 @@ grant all on public.user_referrals to service_role;
 drop policy if exists "Users can view own referrals" on public.user_referrals;
 create policy "Users can view own referrals"
   on public.user_referrals for select to authenticated
-  using (auth.uid() = referrer_id or auth.uid() = referee_id);
+  using ((select auth.uid()) = referrer_id or (select auth.uid()) = referee_id);
 
 -- ============================================================================
 -- 6. Hàm nội bộ ghi 1 dòng vào Sổ cái (append_wallet_ledger)
@@ -685,7 +686,7 @@ declare
   v_block_same_device boolean := true;
   v_flag_ip_hours int := 24;
   v_max_ip_7d int := 3;
-  v_max_account_age_days int := 7;
+  v_max_account_age_days int := 1;
   v_referee_created_at timestamptz;
   v_fraud_status text := 'clean';
   v_fraud_reasons jsonb := '[]'::jsonb;
@@ -1576,7 +1577,8 @@ begin
 end;
 $$;
 
-grant execute on function public.create_withdrawal_request(uuid,bigint,text,text,text) to authenticated, service_role;
+revoke all on function public.create_withdrawal_request(uuid,bigint,text,text,text) from public, anon, authenticated;
+grant execute on function public.create_withdrawal_request(uuid,bigint,text,text,text) to service_role;
 
 -- 13C. process_withdrawal_decision: duyệt / từ chối lệnh rút + ghi Sổ cái nguyên tử (ghi rõ actor_id thật của Admin)
 drop function if exists public.process_withdrawal_decision(uuid,text,text);
@@ -1687,7 +1689,8 @@ grant execute on function public.process_withdrawal_decision(uuid,text,text,text
 -- ============================================================================
 -- 14. View đối soát Sổ cái vs Ví hiện tại (wallet_ledger_reconciliation)
 -- ============================================================================
-create or replace view public.wallet_ledger_reconciliation as
+create or replace view public.wallet_ledger_reconciliation
+with (security_invoker = true) as
 select
   w.user_id,
   w.balance as wallet_balance,
