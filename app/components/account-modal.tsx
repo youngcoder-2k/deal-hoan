@@ -696,7 +696,7 @@ export default function AccountModal({
     status === "unlocked"
       ? "Đã mở khóa"
       : status === "review_pending"
-      ? "Chờ Admin duyệt"
+      ? "Chờ duyệt"
       : status === "expired"
       ? "Hết hạn"
       : status === "revoked"
@@ -873,50 +873,50 @@ export default function AccountModal({
               </div>
             )}
           </>}
-          {activeTab === "referral" && (
-            <div>
-              {referral && !referral.settings.enabled && (
-                <div className={s.orderNotice} role="status">
-                  <Info size={16} weight="bold" />
-                  <span>
-                    Chương trình giới thiệu hiện đang tạm dừng nhận lượt mới. Các khoản thưởng đã ghi nhận trước đó vẫn tiếp tục được xét mở khóa bình thường.
-                  </span>
-                </div>
-              )}
-              <div className={s.refHero}>
-                <div className={s.refHeroTop}>
-                  <div>
-                    <h3>
-                      Mời bạn bè — Mỗi người nhận ngay{" "}
-                      {formatVnd(referral?.settings?.referrerReward ?? 10000)}
-                    </h3>
-                    <p>
-                      Bạn bè đăng ký qua link mời sẽ nhận ngay{" "}
-                      <strong>{formatVnd(referral?.settings?.refereeReward ?? 10000)}</strong> và bạn nhận{" "}
-                      <strong>{formatVnd(referral?.settings?.referrerReward ?? 10000)}</strong> vào mục{" "}
-                      <strong>Đang khóa</strong>. Tự động mở khóa sang <strong>Có thể rút</strong> khi{" "}
-                      {(() => {
-                        const aMin = referral?.settings?.referrerMinQualifyingCashback ?? 50000;
-                        const bMin = referral?.settings?.refereeMinQualifyingCashback ?? 50000;
-                        return aMin === bMin ? (
-                          <>
-                            cả hai cùng đạt tổng hoàn tiền khả dụng + đã rút từ{" "}
-                            <strong>{formatVnd(bMin)}</strong>
-                          </>
-                        ) : (
-                          <>
-                            bạn đạt từ <strong>{formatVnd(aMin)}</strong> và bạn bè đạt từ{" "}
-                            <strong>{formatVnd(bMin)}</strong> (khả dụng + đã rút)
-                          </>
-                        );
-                      })()}{" "}
-                      trong <strong>{referral?.settings?.expiryDays ?? 90} ngày</strong>.
-                    </p>
+          {activeTab === "referral" && (() => {
+            const referrerReward = referral?.settings?.referrerReward ?? 10000;
+            const refereeReward = referral?.settings?.refereeReward ?? 10000;
+            const referrerMin = referral?.settings?.referrerMinQualifyingCashback ?? 50000;
+            const refereeMin = referral?.settings?.refereeMinQualifyingCashback ?? 50000;
+            const expiryDays = referral?.settings?.expiryDays ?? 90;
+            const outgoing = referral?.outgoing ?? [];
+            const incoming = referral?.incoming ?? null;
+            const hasReferralActivity = Boolean(
+              referral &&
+                (referral.totalInvited > 0 ||
+                  incoming ||
+                  effectiveLockedBalance > 0 ||
+                  referral.totalUnlockedBonus > 0)
+            );
+            const isIncomingActive = Boolean(
+              incoming && (incoming.status === "locked" || incoming.status === "review_pending")
+            );
+            const hasActiveReferral =
+              isIncomingActive ||
+              outgoing.some((i) => i.status === "locked" || i.status === "review_pending");
+            const isActiveRefereeOnly = isIncomingActive && outgoing.length === 0;
+            const ownTarget = isActiveRefereeOnly
+              ? incoming?.refereeTarget ?? refereeMin
+              : referrerMin;
+            const ownCurrent = referral?.ownQualifyingCashback ?? 0;
+            const ownPct = ownTarget > 0 ? Math.min(100, Math.round((ownCurrent / ownTarget) * 100)) : 100;
+            const ownDone = ownCurrent >= ownTarget;
+
+            return (
+              <div>
+                {referral && !referral.settings.enabled && (
+                  <div className={s.orderNotice} role="status">
+                    <Info size={16} weight="bold" />
+                    <span>Chương trình tạm dừng nhận lượt mới. Thưởng trước đó vẫn giữ nguyên.</span>
                   </div>
-                  <span className={s.refBadge}>
-                    <Gift size={14} weight="fill" /> +{formatVnd(referral?.settings?.referrerReward ?? 10000)} / lượt
-                  </span>
-                </div>
+                )}
+
+                <h3 className={s.sectionTitle}>Mời bạn bè, nhận {formatVnd(referrerReward)}</h3>
+                <p className={s.refSub}>
+                  {referrerReward === refereeReward && referrerMin === refereeMin
+                    ? `Mỗi người nhận ${formatVnd(referrerReward)} khi cùng đạt ${formatVnd(refereeMin)} tiền hoàn trong ${expiryDays} ngày.`
+                    : `Bạn nhận ${formatVnd(referrerReward)}, bạn bè nhận ${formatVnd(refereeReward)} khi đạt mốc hoàn tiền trong ${expiryDays} ngày.`}
+                </p>
 
                 <div className={s.refLinkBox}>
                   <input
@@ -927,247 +927,223 @@ export default function AccountModal({
                     className={s.refLinkInput}
                     onFocus={(e) => e.currentTarget.select()}
                   />
-                  <button type="button" className={s.refBtnPrimary} onClick={copyRefLink}>
-                    <Copy size={15} weight="bold" /> Sao chép link
-                  </button>
-                  <button type="button" className={s.refBtnSecondary} onClick={shareRefLink}>
-                    <ShareNetwork size={15} weight="bold" /> Chia sẻ
-                  </button>
-                </div>
-
-                <div className={s.refMiniGrid}>
-                  <div className={s.refMiniCard}>
-                    <span>Bạn đã mời</span>
-                    <strong>{referral?.totalInvited ?? 0} người</strong>
-                  </div>
-                  <div className={`${s.refMiniCard} ${s.amber}`}>
-                    <span>Thưởng đang khóa</span>
-                    <strong>{formatVnd(effectiveLockedBalance)}</strong>
-                  </div>
-                  <div className={`${s.refMiniCard} ${s.green}`}>
-                    <span>Đã mở khóa</span>
-                    <strong>{formatVnd(referral?.totalUnlockedBonus ?? 0)}</strong>
+                  <div className={s.refLinkActions}>
+                    <button type="button" className={s.refBtnPrimary} onClick={copyRefLink}>
+                      <Copy size={15} weight="bold" /> Sao chép
+                    </button>
+                    <button type="button" className={s.refBtnSecondary} onClick={shareRefLink}>
+                      <ShareNetwork size={15} weight="bold" /> Chia sẻ
+                    </button>
                   </div>
                 </div>
-              </div>
 
-              {/* Thanh tiến độ điều kiện mở khóa của bản thân */}
-              {(() => {
-                const isActiveRefereeOnly =
-                  Boolean(referral?.incoming) &&
-                  (referral?.incoming?.status === "locked" || referral?.incoming?.status === "review_pending") &&
-                  (referral?.outgoing?.length ?? 0) === 0;
-                const target = isActiveRefereeOnly
-                  ? referral?.incoming?.refereeTarget ?? referral?.settings?.refereeMinQualifyingCashback ?? 50000
-                  : referral?.settings?.referrerMinQualifyingCashback ?? 50000;
-                const current = referral?.ownQualifyingCashback ?? 0;
-                const pct = target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 100;
-                const done = current >= target;
-                return (
+                {referral?.canEnterManualCode && (
+                  <form className={s.refManualForm} onSubmit={handleClaimManualRef}>
+                    <div className={s.refManualRow}>
+                      <input
+                        id="manual-ref-code"
+                        type="text"
+                        aria-label="Nhập mã giới thiệu"
+                        value={manualRefInput}
+                        onChange={(e) => {
+                          setManualRefInput(e.target.value);
+                          setClaimRefError("");
+                        }}
+                        placeholder="Có mã giới thiệu? Nhập tại đây (VD: u_1a2b3c4d)"
+                        disabled={claimingRef}
+                      />
+                      <button type="submit" className={s.refBtnSecondary} disabled={claimingRef}>
+                        {claimingRef ? "Đang kiểm tra…" : "Áp dụng"}
+                      </button>
+                    </div>
+                    {claimRefError && <span className={s.refErrorText}>{claimRefError}</span>}
+                  </form>
+                )}
+
+                {hasReferralActivity && (
+                  <div className={s.refSummaryStrip}>
+                    <div>
+                      <span>Đã mời</span>
+                      <strong>{referral?.totalInvited ?? 0}</strong>
+                    </div>
+                    <div className={effectiveLockedBalance > 0 ? s.amber : ""}>
+                      <span>Đang khóa</span>
+                      <strong>{formatVnd(effectiveLockedBalance)}</strong>
+                    </div>
+                    <div className={(referral?.totalUnlockedBonus ?? 0) > 0 ? s.green : ""}>
+                      <span>Đã mở khóa</span>
+                      <strong>{formatVnd(referral?.totalUnlockedBonus ?? 0)}</strong>
+                    </div>
+                  </div>
+                )}
+
+                {hasActiveReferral && (
                   <div className={s.refProgressCard}>
                     <div className={s.refProgressHead}>
-                      <strong>Điều kiện của bạn (Khả dụng + Đã rút từ đơn hàng)</strong>
-                      <span style={{ color: done ? "#047857" : "#b45309", fontWeight: 700 }}>
-                        {done ? "✓ Đã đạt mốc" : `${formatVnd(current)} / ${formatVnd(target)}`}
-                      </span>
+                      <span>Mốc hoàn tiền của bạn</span>
+                      <strong className={ownDone ? s.refDone : s.refPending}>
+                        {ownDone ? "✓ Đã đạt" : `${formatVnd(ownCurrent)} / ${formatVnd(ownTarget)}`}
+                      </strong>
                     </div>
                     <div className={s.refProgressBar}>
                       <div
-                        className={`${s.refProgressFill} ${done ? s.refProgressFillDone : ""}`}
-                        style={{ width: `${pct}%` }}
+                        className={`${s.refProgressFill} ${ownDone ? s.refProgressFillDone : ""}`}
+                        style={{ width: `${ownPct}%` }}
                       />
                     </div>
                   </div>
-                );
-              })()}
+                )}
 
-              {/* Form nhập mã giới thiệu thủ công (chỉ hiện với tài khoản mới chưa có đơn & chưa gắn mã) */}
-              {referral?.canEnterManualCode && (
-                <form className={s.refManualForm} onSubmit={handleClaimManualRef}>
-                  <label htmlFor="manual-ref-code">Bạn có mã giới thiệu từ bạn bè?</label>
-                  <div className={s.refManualRow}>
-                    <input
-                      id="manual-ref-code"
-                      type="text"
-                      value={manualRefInput}
-                      onChange={(e) => {
-                        setManualRefInput(e.target.value);
-                        setClaimRefError("");
-                      }}
-                      placeholder="Nhập mã giới thiệu (VD: u_1a2b3c4d)"
-                      disabled={claimingRef}
-                    />
-                    <button type="submit" className={s.refBtnPrimary} disabled={claimingRef}>
-                      {claimingRef ? "Đang kiểm tra…" : "Áp dụng"}
-                    </button>
-                  </div>
-                  {claimRefError && (
-                    <span style={{ fontSize: 12, color: "#b91c1c", fontWeight: 500 }}>{claimRefError}</span>
-                  )}
-                </form>
-              )}
-
-              {/* Thưởng chào mừng nếu bạn là người được mời (B) */}
-              {referral?.incoming && (
-                <>
-                  <h4 className={s.refSectionHead}>
-                    <span>Thưởng chào mừng của bạn</span>
-                    <span className={s.status} data-status={referral.incoming.status}>
-                      {referralStatusLabel(referral.incoming.status)}
-                    </span>
-                  </h4>
-                  <article className={s.record}>
-                    <div className={s.recordBody}>
-                      <div className={s.recordLeft}>
-                        <h4 className={s.productTitle}>Được mời bởi {referral.incoming.referrerLabel}</h4>
-                        <div className={s.recordMeta}>
-                          <span>Mã: {referral.incoming.refCode}</span>
-                          <span className={s.dot}>·</span>
-                          <span>
-                            {referral.incoming.status === "unlocked"
-                              ? `Đã mở khóa ${formatDateShort(referral.incoming.unlockedAt || referral.incoming.createdAt)}`
-                              : referral.incoming.status === "locked"
-                              ? `Còn ${daysRemaining(referral.incoming.expiresAt)} ngày`
-                              : formatDateShort(referral.incoming.createdAt)}
-                          </span>
-                        </div>
-                      </div>
-                      <div className={s.recordRight}>
-                        <span className={s.cashbackAmount}>+{formatVnd(referral.incoming.rewardAmount)}</span>
-                      </div>
-                    </div>
-                    <div className={s.refItemMeta}>
-                      <div className={s.refMiniProgressRow}>
-                        <span>Của bạn:</span>
-                        <div className={s.refProgressBar}>
-                          <div
-                            className={`${s.refProgressFill} ${
-                              referral.incoming.refereeQualifying >= referral.incoming.refereeTarget
-                                ? s.refProgressFillDone
-                                : ""
-                            }`}
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                referral.incoming.refereeTarget > 0
-                                  ? Math.round(
-                                      (referral.incoming.refereeQualifying / referral.incoming.refereeTarget) * 100
-                                    )
-                                  : 100
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                        <span>
-                          {formatVnd(referral.incoming.refereeQualifying)} / {formatVnd(referral.incoming.refereeTarget)}
-                        </span>
-                      </div>
-                      <div className={s.refMiniProgressRow}>
-                        <span>Người mời:</span>
-                        <div className={s.refProgressBar}>
-                          <div
-                            className={`${s.refProgressFill} ${
-                              referral.incoming.referrerQualifying >= referral.incoming.referrerTarget
-                                ? s.refProgressFillDone
-                                : ""
-                            }`}
-                            style={{
-                              width: `${Math.min(
-                                100,
-                                referral.incoming.referrerTarget > 0
-                                  ? Math.round(
-                                      (referral.incoming.referrerQualifying / referral.incoming.referrerTarget) * 100
-                                    )
-                                  : 100
-                              )}%`,
-                            }}
-                          />
-                        </div>
-                        <span>
-                          {formatVnd(referral.incoming.referrerQualifying)} / {formatVnd(referral.incoming.referrerTarget)}
-                        </span>
-                      </div>
-                    </div>
-                  </article>
-                </>
-              )}
-
-              {/* Danh sách bạn bè đã mời (vai trò A) */}
-              <h4 className={s.refSectionHead}>
-                <span>Danh sách bạn bè đã mời ({referral?.outgoing?.length ?? 0})</span>
-              </h4>
-              {referralLoading && !referral ? (
-                <p className={s.loading} role="status">Đang tải danh sách giới thiệu…</p>
-              ) : !referral || referral.outgoing.length === 0 ? (
-                <div className={s.empty} style={{ paddingTop: 18 }}>
-                  <span className={s.emptyIcon}><Gift size={34} weight="light" /></span>
-                  <h3>Chưa có bạn bè nào đăng ký</h3>
-                  <p className={s.emptyHint}>
-                    Gửi link giới thiệu của bạn cho bạn bè qua Zalo hoặc Messenger. Cả hai cùng nhận{" "}
-                    <strong>{formatVnd(referral?.settings?.referrerReward ?? 10000)}</strong> khi đăng ký và mở khóa
-                    ngay khi cả hai đủ mốc {formatVnd(referral?.settings?.refereeMinQualifyingCashback ?? 50000)}!
-                  </p>
-                </div>
-              ) : (
-                <div className={s.list}>
-                  {referral.outgoing.map((item) => {
-                    const bDone = item.refereeQualifying >= item.refereeTarget;
-                    const bPct =
-                      item.refereeTarget > 0
-                        ? Math.min(100, Math.round((item.refereeQualifying / item.refereeTarget) * 100))
-                        : 100;
-                    return (
-                      <article className={s.record} key={item.id}>
-                        <div className={s.recordBody}>
-                          <div className={s.recordLeft}>
-                            <h4 className={s.productTitle}>{item.refereeLabel}</h4>
-                            <div className={s.recordMeta}>
-                              <span>Mời ngày {formatDateShort(item.createdAt)}</span>
-                              <span className={s.dot}>·</span>
-                              <span>
-                                {item.status === "unlocked"
-                                  ? `Mở khóa ${formatDateShort(item.unlockedAt || item.createdAt)}`
-                                  : item.status === "locked"
-                                  ? `Còn ${daysRemaining(item.expiresAt)} ngày`
-                                  : referralStatusLabel(item.status)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className={s.recordRight}>
-                            <span className={s.cashbackAmount}>+{formatVnd(item.rewardAmount)}</span>
-                            <span className={s.status} data-status={item.status}>
-                              {referralStatusLabel(item.status)}
+                {incoming && (
+                  <>
+                    <h4 className={s.refSectionHead}>
+                      <span>Được mời bởi</span>
+                      <span className={s.status} data-status={incoming.status}>
+                        {referralStatusLabel(incoming.status)}
+                      </span>
+                    </h4>
+                    <article className={s.record}>
+                      <div className={s.recordBody}>
+                        <div className={s.recordLeft}>
+                          <h4 className={s.productTitle}>{incoming.referrerLabel}</h4>
+                          <div className={s.recordMeta}>
+                            <span>
+                              {incoming.status === "unlocked"
+                                ? `Mở khóa ${formatDateShort(incoming.unlockedAt || incoming.createdAt)}`
+                                : incoming.status === "locked"
+                                ? `Còn ${daysRemaining(incoming.expiresAt)} ngày`
+                                : formatDateShort(incoming.createdAt)}
                             </span>
                           </div>
                         </div>
+                        <div className={s.recordRight}>
+                          <span className={s.cashbackAmount}>+{formatVnd(incoming.rewardAmount)}</span>
+                        </div>
+                      </div>
+                      {isIncomingActive && (
                         <div className={s.refItemMeta}>
                           <div className={s.refMiniProgressRow}>
-                            <span>Bạn bè:</span>
+                            <span>Bạn</span>
                             <div className={s.refProgressBar}>
                               <div
-                                className={`${s.refProgressFill} ${bDone ? s.refProgressFillDone : ""}`}
-                                style={{ width: `${bPct}%` }}
+                                className={`${s.refProgressFill} ${
+                                  incoming.refereeQualifying >= incoming.refereeTarget ? s.refProgressFillDone : ""
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    incoming.refereeTarget > 0
+                                      ? Math.round((incoming.refereeQualifying / incoming.refereeTarget) * 100)
+                                      : 100
+                                  )}%`,
+                                }}
                               />
                             </div>
                             <span>
-                              {formatVnd(item.refereeQualifying)} / {formatVnd(item.refereeTarget)}
+                              {formatVnd(incoming.refereeQualifying)} / {formatVnd(incoming.refereeTarget)}
+                            </span>
+                          </div>
+                          <div className={s.refMiniProgressRow}>
+                            <span>Người mời</span>
+                            <div className={s.refProgressBar}>
+                              <div
+                                className={`${s.refProgressFill} ${
+                                  incoming.referrerQualifying >= incoming.referrerTarget ? s.refProgressFillDone : ""
+                                }`}
+                                style={{
+                                  width: `${Math.min(
+                                    100,
+                                    incoming.referrerTarget > 0
+                                      ? Math.round((incoming.referrerQualifying / incoming.referrerTarget) * 100)
+                                      : 100
+                                  )}%`,
+                                }}
+                              />
+                            </div>
+                            <span>
+                              {formatVnd(incoming.referrerQualifying)} / {formatVnd(incoming.referrerTarget)}
                             </span>
                           </div>
                         </div>
-                      </article>
-                    );
-                  })}
-                </div>
-              )}
+                      )}
+                    </article>
+                  </>
+                )}
 
-              <div className={s.bottomHelp}>
-                <Info size={14} />
-                <span>
-                  Hệ thống tự động chống gian lận theo thiết bị, trình duyệt và số tài khoản ngân hàng. Mọi giao dịch thưởng đều được ghi nhận trong Sổ cái minh bạch.
-                </span>
+                {referralLoading && !referral ? (
+                  <p className={s.loading} role="status">Đang tải…</p>
+                ) : outgoing.length === 0 ? (
+                  !incoming && (
+                    <div className={s.empty}>
+                      <span className={s.emptyIcon}><Gift size={36} weight="light" /></span>
+                      <h3>Chưa có bạn bè nào</h3>
+                      <p className={s.emptyHint}>
+                        Gửi link ở trên qua Zalo hoặc Messenger để mời bạn bè
+                      </p>
+                    </div>
+                  )
+                ) : (
+                  <>
+                    <h4 className={s.refSectionHead}>
+                      <span>Bạn bè đã mời ({outgoing.length})</span>
+                    </h4>
+                    <div className={s.list}>
+                      {outgoing.map((item) => {
+                        const isItemActive = item.status === "locked" || item.status === "review_pending";
+                        const bDone = item.refereeQualifying >= item.refereeTarget;
+                        const bPct =
+                          item.refereeTarget > 0
+                            ? Math.min(100, Math.round((item.refereeQualifying / item.refereeTarget) * 100))
+                            : 100;
+                        return (
+                          <article className={s.record} key={item.id}>
+                            <div className={s.recordBody}>
+                              <div className={s.recordLeft}>
+                                <h4 className={s.productTitle}>{item.refereeLabel}</h4>
+                                <div className={s.recordMeta}>
+                                  <span>{formatDateShort(item.createdAt)}</span>
+                                  <span className={s.dot}>·</span>
+                                  <span>
+                                    {item.status === "unlocked"
+                                      ? `Mở khóa ${formatDateShort(item.unlockedAt || item.createdAt)}`
+                                      : item.status === "locked"
+                                      ? `Còn ${daysRemaining(item.expiresAt)} ngày`
+                                      : referralStatusLabel(item.status)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className={s.recordRight}>
+                                <span className={s.cashbackAmount}>+{formatVnd(item.rewardAmount)}</span>
+                                <span className={s.status} data-status={item.status}>
+                                  {referralStatusLabel(item.status)}
+                                </span>
+                              </div>
+                            </div>
+                            {isItemActive && (
+                              <div className={s.refItemMeta}>
+                                <div className={s.refMiniProgressRow}>
+                                  <span>Bạn bè</span>
+                                  <div className={s.refProgressBar}>
+                                    <div
+                                      className={`${s.refProgressFill} ${bDone ? s.refProgressFillDone : ""}`}
+                                      style={{ width: `${bPct}%` }}
+                                    />
+                                  </div>
+                                  <span>
+                                    {formatVnd(item.refereeQualifying)} / {formatVnd(item.refereeTarget)}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
           {activeTab === "withdraw" && <>
             <h3 className={s.sectionTitle}>Rút tiền về ngân hàng</h3>
             {loading.wallet ? <p className={s.loading} role="status">Đang tải thông tin ví…</p> : <>
