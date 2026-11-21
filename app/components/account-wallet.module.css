@@ -50,10 +50,12 @@
 .refLinkInput{flex:1;min-width:0;height:42px;padding:0 12px;border:1px solid #d6dde6;border-radius:8px;background:#f8fafc;color:#334155;font-size:13px;font-family:monospace}
 .refLinkInput:focus{border-color:var(--orange);background:#fff;outline:none}
 .refLinkActions{display:flex;gap:8px;flex-shrink:0}
-.refBtnPrimary{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 16px;border-radius:8px;border:0;background:var(--orange);color:#fff;font-size:13px;font-weight:650;white-space:nowrap}
+.refBtnPrimary{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 16px;border-radius:8px;border:0;background:var(--orange);color:#fff;font-size:13px;font-weight:650;white-space:nowrap;transition:background .15s}
 .refBtnPrimary:hover:not(:disabled){background:#d8401b}
-.refBtnSecondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 14px;border-radius:8px;border:1px solid #d6dde6;background:#fff;color:#334155;font-size:13px;font-weight:600;white-space:nowrap}
+.refBtnCopied,.refBtnCopied:hover:not(:disabled){background:#059669}
+.refBtnSecondary{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:42px;padding:0 14px;border-radius:8px;border:1px solid #d6dde6;background:#fff;color:#334155;font-size:13px;font-weight:600;white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
 .refBtnSecondary:hover:not(:disabled){background:#f8fafc;border-color:#94a3b8}
+.refBtnSecondaryCopied,.refBtnSecondaryCopied:hover:not(:disabled){background:#ecfdf5;border-color:#a7f3d0;color:#047857}
 .refSummaryStrip{margin-top:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #e9ecf0;border-radius:10px;background:#f8fafc;padding:10px 0}
 .refSummaryStrip>div{display:flex;flex-direction:column;gap:2px;padding:0 14px;border-left:1px solid #e2e8f0}
 .refSummaryStrip>div:first-child{border-left:0}
@@ -74,6 +76,7 @@
 .refManualRow input:focus{border-color:var(--orange);outline:none}
 .refManualRow .refBtnSecondary{height:40px}
 .refErrorText{font-size:12px;color:#b91c1c;font-weight:500}
+.refSuccessText{margin:10px 0 0;display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#047857;font-weight:600}
 .refSectionHead{margin:18px 0 10px;font-size:13px;font-weight:650;color:var(--muted);display:flex;align-items:center;justify-content:space-between}
 .refItemMeta{display:grid;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid #f1f5f9}
 .refMiniProgressRow{display:flex;align-items:center;gap:8px;font-size:11.5px;color:#64748b}

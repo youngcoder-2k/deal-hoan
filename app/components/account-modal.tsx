@@ -79,6 +79,36 @@ function formatVnd(amount: number) {
   return amount.toLocaleString("vi-VN") + "đ";
 }
 
+async function copyTextToClipboard(text: string): Promise<boolean> {
+  if (typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // Fallback below for restricted clipboard contexts
+    }
+  }
+  if (typeof document !== "undefined") {
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.top = "-9999px";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      textarea.setSelectionRange(0, text.length);
+      const ok = document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return ok;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 function formatDate(iso: string) {
   try {
     const d = new Date(iso);
@@ -241,6 +271,9 @@ export default function AccountModal({
   const [manualRefInput, setManualRefInput] = useState("");
   const [claimingRef, setClaimingRef] = useState(false);
   const [claimRefError, setClaimRefError] = useState("");
+  const [claimRefSuccess, setClaimRefSuccess] = useState("");
+  const [copiedTarget, setCopiedTarget] = useState<"link" | "share" | "code" | null>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [nowMs] = useState(() => Date.now());
   const openerRef = useRef<HTMLElement | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -253,6 +286,7 @@ export default function AccountModal({
     document.body.style.overflow = "hidden";
     dialogRef.current?.focus();
     return () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
       document.body.style.overflow = oldOverflow;
       openerRef.current?.focus();
     };
@@ -624,17 +658,25 @@ export default function AccountModal({
     referral?.refLink ||
     (typeof window !== "undefined" ? `${window.location.origin}/?ref=${refCode}` : `https://dealhoan.com/?ref=${refCode}`);
 
-  const copyRefCode = () => {
-    if (typeof navigator !== "undefined") {
-      navigator.clipboard.writeText(refCode);
-      onNotify("✓ Đã copy mã giới thiệu: " + refCode);
+  const markCopied = (target: "link" | "share" | "code") => {
+    setCopiedTarget(target);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedTarget(null), 2200);
+  };
+
+  const copyRefCode = async () => {
+    const ok = await copyTextToClipboard(refCode);
+    if (ok) {
+      markCopied("code");
+      onNotify("Đã sao chép mã giới thiệu: " + refCode);
     }
   };
 
-  const copyRefLink = () => {
-    if (typeof navigator !== "undefined") {
-      navigator.clipboard.writeText(refLink);
-      onNotify("✓ Đã copy link giới thiệu!");
+  const copyRefLink = async () => {
+    const ok = await copyTextToClipboard(refLink);
+    if (ok) {
+      markCopied("link");
+      onNotify("Đã sao chép link giới thiệu");
     }
   };
 
@@ -648,16 +690,23 @@ export default function AccountModal({
           url: refLink,
         });
         return;
-      } catch {
-        // User cancelled or share unsupported -> fallback to copy
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
       }
     }
-    copyRefLink();
+    const ok = await copyTextToClipboard(refLink);
+    if (ok) {
+      markCopied("share");
+      onNotify("Đã sao chép link giới thiệu");
+    }
   };
 
   const handleClaimManualRef = async (e: React.FormEvent) => {
     e.preventDefault();
     setClaimRefError("");
+    setClaimRefSuccess("");
     const code = manualRefInput.trim();
     if (!code) {
       setClaimRefError("Vui lòng nhập mã giới thiệu của bạn bè.");
@@ -674,7 +723,9 @@ export default function AccountModal({
       const data = await res.json();
       if (res.ok && data.success) {
         setManualRefInput("");
-        onNotify("🎉 " + (data.message || "Áp dụng mã giới thiệu thành công!"));
+        const msg = data.message || "Áp dụng mã giới thiệu thành công!";
+        setClaimRefSuccess(msg);
+        onNotify(msg);
         setRefreshKey((k) => k + 1);
       } else {
         setClaimRefError(data.error || "Không thể áp dụng mã giới thiệu.");
@@ -763,7 +814,17 @@ export default function AccountModal({
             <summary><span className={s.avatar}>{avatarUrl ? <Image unoptimized src={avatarUrl} alt="" width={32} height={32} /> : getInitials(displayName)}</span><span className={s.profileLabel}>Tài khoản của bạn</span><CaretDown size={16} /></summary>
             <div className={s.accountMenu}>
               <strong>{displayName}</strong><span className={s.email}>{user.email}</span>
-              <button type="button" onClick={copyRefCode}><Copy size={18} /> Mã mời: {refCode}</button>
+              <button type="button" onClick={copyRefCode}>
+                {copiedTarget === "code" ? (
+                  <>
+                    <CheckCircle size={18} color="#059669" /> Đã sao chép: {refCode}
+                  </>
+                ) : (
+                  <>
+                    <Copy size={18} /> Mã mời: {refCode}
+                  </>
+                )}
+              </button>
               <button type="button" onClick={onSignOut}><SignOut size={18} /> Đăng xuất</button>
             </div>
           </details>
@@ -928,14 +989,44 @@ export default function AccountModal({
                     onFocus={(e) => e.currentTarget.select()}
                   />
                   <div className={s.refLinkActions}>
-                    <button type="button" className={s.refBtnPrimary} onClick={copyRefLink}>
-                      <Copy size={15} weight="bold" /> Sao chép
+                    <button
+                      type="button"
+                      className={`${s.refBtnPrimary} ${copiedTarget === "link" ? s.refBtnCopied : ""}`}
+                      onClick={copyRefLink}
+                    >
+                      {copiedTarget === "link" ? (
+                        <>
+                          <CheckCircle size={15} weight="bold" /> Đã sao chép
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={15} weight="bold" /> Sao chép
+                        </>
+                      )}
                     </button>
-                    <button type="button" className={s.refBtnSecondary} onClick={shareRefLink}>
-                      <ShareNetwork size={15} weight="bold" /> Chia sẻ
+                    <button
+                      type="button"
+                      className={`${s.refBtnSecondary} ${copiedTarget === "share" ? s.refBtnSecondaryCopied : ""}`}
+                      onClick={shareRefLink}
+                    >
+                      {copiedTarget === "share" ? (
+                        <>
+                          <CheckCircle size={15} weight="bold" /> Đã sao chép
+                        </>
+                      ) : (
+                        <>
+                          <ShareNetwork size={15} weight="bold" /> Chia sẻ
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
+
+                {claimRefSuccess && (
+                  <p className={s.refSuccessText} role="status">
+                    <CheckCircle size={15} weight="bold" /> {claimRefSuccess}
+                  </p>
+                )}
 
                 {referral?.canEnterManualCode && (
                   <form className={s.refManualForm} onSubmit={handleClaimManualRef}>
