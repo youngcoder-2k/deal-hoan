@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { getSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * Smart Cashback Booster for DealHoàn
@@ -61,6 +62,8 @@ export function normalizeBoosterSettings(raw?: Partial<CashbackBoosterSettings>)
 // In-memory cache for fast read in hot API paths
 let cachedSettings: CashbackBoosterSettings = { ...DEFAULT_BOOSTER_SETTINGS };
 let isInitialized = false;
+let lastDbLoadedAt = 0;
+const DB_CACHE_TTL_MS = 15_000;
 
 const SETTINGS_FILE_PATH = path.join(process.cwd(), "data", "booster-settings.json");
 
@@ -101,20 +104,52 @@ export function getBoosterSettingsSync(): CashbackBoosterSettings {
 }
 
 /**
- * Đọc cấu hình hiện tại (Async)
+ * Đọc cấu hình hiện tại (Async — ưu tiên đồng bộ từ bảng app_settings trên Supabase để bền vững trên Vercel)
  */
-export async function getBoosterSettings(): Promise<CashbackBoosterSettings> {
-  return getBoosterSettingsSync();
+export async function getBoosterSettings(options: { forceRefresh?: boolean } = {}): Promise<CashbackBoosterSettings> {
+  const now = Date.now();
+  if (!options.forceRefresh && isInitialized && lastDbLoadedAt > 0 && now - lastDbLoadedAt < DB_CACHE_TTL_MS) {
+    return cachedSettings;
+  }
+
+  const db = getSupabaseServiceClient();
+  if (db) {
+    try {
+      const { data, error } = await db
+        .from("app_settings")
+        .select("settings, updated_at, updated_by")
+        .eq("id", "cashback_booster")
+        .maybeSingle();
+
+      if (!error && data?.settings) {
+        const merged = normalizeBoosterSettings({
+          ...(data.settings as Partial<CashbackBoosterSettings>),
+          updatedAt: data.updated_at || (data.settings as Partial<CashbackBoosterSettings>).updatedAt,
+          updatedBy: data.updated_by || (data.settings as Partial<CashbackBoosterSettings>).updatedBy,
+        });
+        cachedSettings = merged;
+        isInitialized = true;
+        lastDbLoadedAt = now;
+        return merged;
+      }
+    } catch {
+      // Bảng app_settings có thể chưa được khởi tạo -> dùng fallback file cục bộ
+    }
+  }
+
+  const local = getBoosterSettingsSync();
+  lastDbLoadedAt = now;
+  return local;
 }
 
 /**
- * Cập nhật cấu hình mới từ Admin Dashboard
+ * Cập nhật cấu hình mới từ Admin Dashboard (lưu cả Supabase app_settings lẫn file cục bộ)
  */
 export async function updateBoosterSettings(
   partial: Partial<CashbackBoosterSettings>,
   updatedBy = "admin"
 ): Promise<CashbackBoosterSettings> {
-  const current = getBoosterSettingsSync();
+  const current = await getBoosterSettings({ forceRefresh: true });
   const next = normalizeBoosterSettings({
     ...current,
     ...partial,
@@ -122,8 +157,29 @@ export async function updateBoosterSettings(
     updatedBy,
   });
 
+  const db = getSupabaseServiceClient();
+  if (db) {
+    try {
+      const { error } = await db.from("app_settings").upsert(
+        {
+          id: "cashback_booster",
+          settings: next,
+          updated_by: updatedBy,
+          updated_at: next.updatedAt,
+        },
+        { onConflict: "id" }
+      );
+      if (error) {
+        console.warn("Failed to upsert cashback_booster to app_settings:", error.message);
+      }
+    } catch (err) {
+      console.warn("Failed to persist cashback_booster to app_settings:", err);
+    }
+  }
+
   cachedSettings = next;
   isInitialized = true;
+  lastDbLoadedAt = Date.now();
   saveSettingsToFile(next);
 
   return next;

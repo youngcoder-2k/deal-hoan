@@ -12,6 +12,7 @@ export interface AdminUserItem {
   lastSignInAt?: string;
   balance: number;
   pendingBalance: number;
+  lockedBalance?: number;
   totalWithdrawn: number;
   totalEarned: number;
   bankName: string;
@@ -32,6 +33,7 @@ export interface AdminKPIStats {
   totalUsers: number;
   totalBalance: number;
   totalPendingBalance: number;
+  totalLockedBalance?: number;
   totalWithdrawn: number;
   bankLinkedUsers: number;
   bankLinkedRate: number;
@@ -55,7 +57,7 @@ const DEFAULT_ADMIN_EMAILS = [
 
 export function getAdminEmails(): string[] {
   const envEmails = process.env.ADMIN_EMAILS
-    ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase())
+    ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim().toLowerCase()).filter(Boolean)
     : [];
   return Array.from(
     new Set([...DEFAULT_ADMIN_EMAILS.map((e) => e.toLowerCase()), ...envEmails])

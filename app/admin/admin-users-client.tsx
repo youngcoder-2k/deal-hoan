@@ -32,9 +32,9 @@ import {
   Crown,
   ChatDots,
   ShoppingBag,
-  EnvelopeSimple,
-  PaperPlaneTilt,
   Trash,
+  Gift,
+  BookOpenText,
 } from "@phosphor-icons/react";
 import design from "./admin-users.module.css";
 import { type AdminUserItem, type AdminKPIStats, isHqvTestWithdrawal } from "@/lib/auth/admin";
@@ -42,7 +42,14 @@ import {
   type CashbackBoosterSettings,
   DEFAULT_BOOSTER_SETTINGS,
 } from "@/lib/deals/cashback-booster-types";
-import { isSyntheticTestOrder } from "@/lib/deals/shopee-import";
+import { DEFAULT_REFERRAL_SETTINGS, type ReferralSettings } from "@/lib/referral/types";
+import { escapeCsvCell } from "@/lib/referral/csv";
+import {
+  AdminLedgerTab,
+  AdminReferralSettingsCard,
+  AdminReferralsTab,
+} from "./admin-referral-ledger";
+import { isSyntheticTestOrder, parseShopeeConversionReport } from "@/lib/deals/shopee-import";
 import {
   extractShopeeCompletedDateKey,
   extractShopeeCompletedLabel,
@@ -177,7 +184,7 @@ export default function AdminUsersClient({
   initialUsers: AdminUserItem[];
   initialStats: AdminKPIStats;
   isInitialRealData: boolean;
-  initialTab?: "users" | "withdrawals" | "settings" | "sync" | "import";
+  initialTab?: "users" | "withdrawals" | "referrals" | "ledger" | "settings" | "sync" | "import";
 }) {
   const [users, setUsers] = useState<AdminUserItem[]>(() => applyLocalBalanceOverrides(initialUsers));
   const [stats, setStats] = useState<AdminKPIStats>(initialStats);
@@ -185,14 +192,18 @@ export default function AdminUsersClient({
   const [loading, setLoading] = useState(false);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Tab điều hướng: "users" (Quản lý User), "withdrawals" (Duyệt rút tiền), "settings" (Cấu hình % Hoàn tiền), "sync" (Nạp đơn Shopee)
-  const [activeTab, setActiveTab] = useState<"users" | "withdrawals" | "settings" | "sync" | "import">(() => {
+  // Tab điều hướng: users, withdrawals, referrals, ledger, settings, sync
+  const [activeTab, setActiveTab] = useState<
+    "users" | "withdrawals" | "referrals" | "ledger" | "settings" | "sync" | "import"
+  >(() => {
     if (typeof window !== "undefined") {
       const p = new URLSearchParams(window.location.search);
       const t = p.get("tab");
       if (t === "sync" || t === "import" || t === "shopee") return "sync";
       if (t === "settings") return "settings";
       if (t === "withdrawals" || t === "rut-tien") return "withdrawals";
+      if (t === "referrals" || t === "gioi-thieu") return "referrals";
+      if (t === "ledger" || t === "so-cai") return "ledger";
     }
     return initialTab === "import" ? "sync" : initialTab;
   });
@@ -214,35 +225,9 @@ export default function AdminUsersClient({
   } | null>(null);
 
   const [boosterSettings, setBoosterSettings] = useState<CashbackBoosterSettings>(DEFAULT_BOOSTER_SETTINGS);
+  const [referralSettings, setReferralSettings] = useState<ReferralSettings>(DEFAULT_REFERRAL_SETTINGS);
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
-
-  // State cấu hình gửi Email thông báo (dealhoan@gmail.com)
-  const [emailSettings, setEmailSettings] = useState<{
-    enabled: boolean;
-    senderEmail: string;
-    senderName: string;
-    smtpHost: string;
-    smtpPort: number;
-    smtpSecure: boolean;
-    smtpUser: string;
-    hasPassword: boolean;
-    adminEmails: string[];
-  }>({
-    enabled: true,
-    senderEmail: "dealhoan@gmail.com",
-    senderName: "DealHoàn",
-    smtpHost: "smtp.gmail.com",
-    smtpPort: 465,
-    smtpSecure: true,
-    smtpUser: "dealhoan@gmail.com",
-    hasPassword: false,
-    adminEmails: ["trungquan2000bg@gmail.com", "quangvh.technical@gmail.com"],
-  });
-  const [emailPasswordInput, setEmailPasswordInput] = useState("");
-  const [adminEmailsInput, setAdminEmailsInput] = useState("");
-  const [testingEmail, setTestingEmail] = useState(false);
-  const [emailTestResult, setEmailTestResult] = useState<{ success?: boolean; message?: string } | null>(null);
 
   // State tự động đồng bộ qua Cookie Shopee (Auto-Pilot 24/7)
   const [shopeeCookie, setShopeeCookie] = useState<string>(() => {
@@ -438,6 +423,7 @@ export default function AdminUsersClient({
   const [showCookieGuide, setShowCookieGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
+  const [csvUploadProgress, setCsvUploadProgress] = useState<string | null>(null);
   const [csvUploadResult, setCsvUploadResult] = useState<{
     success: boolean;
     message: string;
@@ -464,46 +450,221 @@ export default function AdminUsersClient({
 
     try {
       setIsUploadingCsv(true);
+      setCsvUploadProgress("Đang đọc file CSV...");
       setCsvUploadResult(null);
+
       const text = await file.text();
-      const res = await fetch("/api/admin/shopee/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
-        body: JSON.stringify({ csvContent: text }),
+      if (!text.trim()) {
+        setCsvUploadResult({ success: false, message: "File CSV rỗng, không có dữ liệu đơn hàng." });
+        return;
+      }
+      if (text.includes("\u0000")) {
+        setCsvUploadResult({
+          success: false,
+          message: "File không phải định dạng CSV văn bản hợp lệ (có thể là file Excel nhị phân .xlsx). Vui lòng tải file CSV từ Shopee Affiliate.",
+        });
+        return;
+      }
+
+      // Parse CSV ngay trên trình duyệt để chỉ gửi dữ liệu đơn gọn nhẹ theo từng lô nhỏ,
+      // tránh lỗi vượt giới hạn dung lượng 4.5MB hoặc timeout serverless gây "Failed to fetch"
+      const report = parseShopeeConversionReport(text, {
+        userCashbackPercent: boosterSettings.userCashbackPercent,
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+
+      const unmatchedOrders = report.unmatchedOrders.map((u) => ({
+        orderId: u.orderId,
+        subId: u.subId || "(trống)",
+        productName: u.productName,
+        commissionAmount: u.commissionAmount,
+        orderedAt: u.orderedAt,
+      }));
+
+      if (report.totalRows === 0) {
+        setCsvUploadResult({
+          success: false,
+          message: report.warnings[0] || "Không đọc được dòng đơn hàng nào trong file CSV.",
+        });
+        return;
+      }
+
+      if (report.validOrders.length === 0) {
         setCsvUploadResult({
           success: true,
-          message: data.message,
-          unmatchedOrders: Array.isArray(data.unmatchedOrders) ? data.unmatchedOrders : [],
-          failedOrders: Array.isArray(data.failedOrders) ? data.failedOrders : [],
+          message: `Đã đọc ${report.totalRows} đơn từ file CSV nhưng chưa có đơn nào khớp Sub_ID DealHoàn (${unmatchedOrders.length} đơn chưa khớp Sub_ID).`,
+          unmatchedOrders,
+          failedOrders: [],
         });
-        setToastMsg("🎉 " + data.message);
-        setTimeout(() => setToastMsg(null), 4000);
-        if (Array.isArray(data.syncedOrders) && data.syncedOrders.length > 0) {
-          setRecentSyncedOrders((prev) => {
-            const merged = new Map<string, (typeof prev)[number]>();
-            for (const o of data.syncedOrders) {
-              const key = String(o.orderId || "").trim().toUpperCase();
-              if (key) merged.set(key, o);
-            }
-            for (const o of prev) {
-              const key = String(o.orderId || "").trim().toUpperCase();
-              if (key && !merged.has(key)) merged.set(key, o);
-            }
-            return Array.from(merged.values());
-          });
-        }
-        await Promise.all([reloadUsers(), loadShopeeSyncConfig()]);
-      } else {
-        setCsvUploadResult({ success: false, message: data.error || "Không thể nạp file CSV." });
+        return;
       }
+
+      const BATCH_SIZE = 25;
+      const totalValid = report.validOrders.length;
+      const totalBatches = Math.ceil(totalValid / BATCH_SIZE);
+
+      let totalImported = 0;
+      const allSyncedOrders: Array<Record<string, unknown>> = [];
+      const allFailedOrders: Array<{
+        orderId: string;
+        subId: string;
+        productName: string;
+        commissionAmount: number;
+        error: string;
+      }> = [];
+
+      const postBatchWithRetry = async (payload: Record<string, unknown>, batchIndex: number) => {
+        const MAX_ATTEMPTS = 2;
+        let lastErr: unknown = null;
+
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+          try {
+            const res = await fetch("/api/admin/shopee/sync", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
+              body: JSON.stringify(payload),
+            });
+
+            const rawBody = await res.text();
+            let data: Record<string, unknown> = {};
+            try {
+              data = rawBody ? (JSON.parse(rawBody) as Record<string, unknown>) : {};
+            } catch {
+              if (!res.ok) {
+                throw new Error(`Máy chủ phản hồi lỗi HTTP ${res.status} ở lô ${batchIndex + 1}/${totalBatches}.`);
+              }
+              throw new Error(`Phản hồi không hợp lệ từ máy chủ ở lô ${batchIndex + 1}/${totalBatches}.`);
+            }
+
+            if (!res.ok || !data.success) {
+              const serverError = typeof data.error === "string" ? data.error : `Lỗi HTTP ${res.status}`;
+              // Không retry lỗi quyền/validation 4xx (trừ 408/429)
+              if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
+                throw new Error(serverError);
+              }
+              throw new Error(serverError);
+            }
+
+            return data;
+          } catch (err: unknown) {
+            lastErr = err;
+            const isNetworkError =
+              err instanceof TypeError ||
+              (err instanceof Error && /failed to fetch|networkerror|load failed/i.test(err.message));
+            if (isNetworkError && attempt < MAX_ATTEMPTS) {
+              setCsvUploadProgress(`Kết nối chập chờn, đang thử lại lô ${batchIndex + 1}/${totalBatches}...`);
+              await new Promise((r) => setTimeout(r, 800));
+              continue;
+            }
+            if (isNetworkError) {
+              const savedHint =
+                totalImported > 0
+                  ? ` Đã lưu thành công ${totalImported}/${totalValid} đơn trước khi mất kết nối;`
+                  : "";
+              throw new Error(
+                `Không thể kết nối tới máy chủ khi nạp lô ${batchIndex + 1}/${totalBatches} (mất mạng, phiên server khởi động lại hoặc timeout).${savedHint} Vui lòng kiểm tra kết nối hoặc tải lại trang rồi nạp lại file (các đơn đã lưu sẽ không bị cộng trùng).`
+              );
+            }
+            throw err;
+          }
+        }
+        throw lastErr instanceof Error ? lastErr : new Error("Không thể nạp file CSV.");
+      };
+
+      for (let b = 0; b < totalBatches; b++) {
+        const start = b * BATCH_SIZE;
+        const chunk = report.validOrders.slice(start, start + BATCH_SIZE);
+        const isFinalBatch = b === totalBatches - 1;
+        setCsvUploadProgress(
+          totalBatches > 1
+            ? `Đang nạp ${Math.min(start + chunk.length, totalValid)}/${totalValid} đơn (lô ${b + 1}/${totalBatches})...`
+            : `Đang nạp ${totalValid} đơn hàng...`
+        );
+
+        const compactOrders = chunk.map((o) => ({
+          orderId: o.orderId,
+          subId: o.subId,
+          userId: o.userId || undefined,
+          productName: o.productName,
+          orderValue: o.orderValue,
+          commissionAmount: o.commissionAmount,
+          status: o.status,
+          orderedAt: o.orderedAt,
+          completedAt: o.completedAt,
+          note: o.note,
+        }));
+
+        const data = await postBatchWithRetry(
+          {
+            orders: compactOrders,
+            totalRows: report.totalRows,
+            skipConfigUpdate: !isFinalBatch,
+            ...(isFinalBatch
+              ? {
+                  summary: {
+                    importedCount: totalImported,
+                    totalRows: report.totalRows,
+                    unmatchedCount: unmatchedOrders.length,
+                    failedCount: allFailedOrders.length,
+                  },
+                }
+              : {}),
+          },
+          b
+        );
+
+        totalImported += Number(data.importedCount || 0);
+        if (Array.isArray(data.syncedOrders)) {
+          allSyncedOrders.push(...(data.syncedOrders as Array<Record<string, unknown>>));
+        }
+        if (Array.isArray(data.failedOrders)) {
+          allFailedOrders.push(
+            ...(data.failedOrders as Array<{
+              orderId: string;
+              subId: string;
+              productName: string;
+              commissionAmount: number;
+              error: string;
+            }>)
+          );
+        }
+      }
+
+      const extraNotices: string[] = [];
+      if (unmatchedOrders.length > 0) extraNotices.push(`${unmatchedOrders.length} đơn chưa khớp Sub_ID`);
+      if (allFailedOrders.length > 0) extraNotices.push(`${allFailedOrders.length} đơn lưu lỗi`);
+      const suffix = extraNotices.length > 0 ? ` (${extraNotices.join(", ")})` : "";
+      const finalMsg = `Đã nạp ${totalImported}/${report.totalRows} đơn hàng từ file CSV Shopee!${suffix}`;
+
+      setCsvUploadResult({
+        success: true,
+        message: finalMsg,
+        unmatchedOrders,
+        failedOrders: allFailedOrders,
+      });
+      setToastMsg("🎉 " + finalMsg);
+      setTimeout(() => setToastMsg(null), 4000);
+
+      if (allSyncedOrders.length > 0) {
+        setRecentSyncedOrders((prev) => {
+          const merged = new Map<string, (typeof prev)[number]>();
+          for (const o of allSyncedOrders) {
+            const key = String(o.orderId || "").trim().toUpperCase();
+            if (key) merged.set(key, o as (typeof prev)[number]);
+          }
+          for (const o of prev) {
+            const key = String(o.orderId || "").trim().toUpperCase();
+            if (key && !merged.has(key)) merged.set(key, o);
+          }
+          return Array.from(merged.values());
+        });
+      }
+      await Promise.allSettled([reloadUsers(), loadShopeeSyncConfig()]);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Lỗi đọc file CSV";
       setCsvUploadResult({ success: false, message: msg });
     } finally {
       setIsUploadingCsv(false);
+      setCsvUploadProgress(null);
       if (csvFileInputRef.current) csvFileInputRef.current.value = "";
     }
   };
@@ -767,7 +928,7 @@ export default function AdminUsersClient({
     return () => clearInterval(interval);
   }, [autoSyncEnabled, shopeeCookie]);
 
-  // Tải cấu hình tỷ lệ hoàn tiền & cấu hình email thông báo
+  // Tải cấu hình tỷ lệ hoàn tiền & chương trình giới thiệu
   const loadBoosterSettings = async () => {
     setSettingsLoading(true);
     try {
@@ -779,9 +940,8 @@ export default function AdminUsersClient({
         if (data.settings) {
           setBoosterSettings(data.settings);
         }
-        if (data.emailSettings) {
-          setEmailSettings(data.emailSettings);
-          setAdminEmailsInput(data.emailSettings.adminEmails.join(", "));
+        if (data.referralSettings) {
+          setReferralSettings(data.referralSettings);
         }
       }
     } catch (err) {
@@ -791,39 +951,23 @@ export default function AdminUsersClient({
     }
   };
 
-  // Lưu cấu hình tỷ lệ hoàn tiền & cấu hình email
+  // Lưu cấu hình tỷ lệ hoàn tiền & chương trình giới thiệu
   const handleSaveSettings = async () => {
     setSavingSettings(true);
     try {
-      const parsedAdminEmails = adminEmailsInput
-        .split(",")
-        .map((e) => e.trim().toLowerCase())
-        .filter((e) => e.includes("@"));
-
-      const payload = {
-        ...boosterSettings,
-        emailSettings: {
-          enabled: emailSettings.enabled,
-          senderName: emailSettings.senderName,
-          adminEmails: parsedAdminEmails.length > 0 ? parsedAdminEmails : emailSettings.adminEmails,
-          ...(emailPasswordInput.trim() ? { smtpPass: emailPasswordInput.trim() } : {}),
-        },
-      };
-
       const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...boosterSettings,
+          referralSettings,
+        }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         if (data.settings) setBoosterSettings(data.settings);
-        if (data.emailSettings) {
-          setEmailSettings(data.emailSettings);
-          setAdminEmailsInput(data.emailSettings.adminEmails.join(", "));
-          setEmailPasswordInput("");
-        }
-        setToastMsg("✓ Đã lưu cấu hình hệ thống & thông báo email thành công!");
+        if (data.referralSettings) setReferralSettings(data.referralSettings);
+        setToastMsg("✓ Đã lưu cấu hình hệ thống & giới thiệu thành công!");
         setTimeout(() => setToastMsg(null), 3500);
       } else {
         setToastMsg("⚠️ " + (data.error || "Không thể lưu cấu hình."));
@@ -834,57 +978,6 @@ export default function AdminUsersClient({
       setTimeout(() => setToastMsg(null), 3500);
     } finally {
       setSavingSettings(false);
-    }
-  };
-
-  // Kiểm tra kết nối SMTP & Gửi email thử nghiệm
-  const handleTestEmail = async () => {
-    setTestingEmail(true);
-    setEmailTestResult(null);
-    try {
-      if (emailPasswordInput.trim() || adminEmailsInput.trim()) {
-        const parsedAdminEmails = adminEmailsInput
-          .split(",")
-          .map((e) => e.trim().toLowerCase())
-          .filter((e) => e.includes("@"));
-
-        await fetch("/api/admin/settings", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
-          body: JSON.stringify({
-            emailSettings: {
-              enabled: emailSettings.enabled,
-              senderName: emailSettings.senderName,
-              adminEmails: parsedAdminEmails.length > 0 ? parsedAdminEmails : emailSettings.adminEmails,
-              ...(emailPasswordInput.trim() ? { smtpPass: emailPasswordInput.trim() } : {}),
-            },
-          }),
-        });
-      }
-
-      const res = await fetch("/api/admin/settings/email/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setEmailTestResult({ success: true, message: data.message });
-        setToastMsg("✓ " + data.message);
-        setTimeout(() => setToastMsg(null), 4000);
-      } else {
-        const errMsg = data.error || data.details || "Không thể gửi email thử nghiệm.";
-        setEmailTestResult({ success: false, message: errMsg });
-        setToastMsg("⚠️ " + errMsg);
-        setTimeout(() => setToastMsg(null), 4000);
-      }
-    } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : "Lỗi kết nối khi gửi thử nghiệm.";
-      setEmailTestResult({ success: false, message: errMsg });
-      setToastMsg("⚠️ " + errMsg);
-      setTimeout(() => setToastMsg(null), 4000);
-    } finally {
-      setTestingEmail(false);
     }
   };
 
@@ -1230,6 +1323,7 @@ export default function AdminUsersClient({
   const [adjustBalanceMode, setAdjustBalanceMode] = useState(false);
   const [newBalance, setNewBalance] = useState<number>(0);
   const [newPending, setNewPending] = useState<number>(0);
+  const [newLocked, setNewLocked] = useState<number>(0);
   const [adjustNote, setAdjustNote] = useState("");
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
   const [showOrdersDropdown, setShowOrdersDropdown] = useState(false);
@@ -1288,6 +1382,8 @@ export default function AdminUsersClient({
     setSelectedUser(user);
     setNewBalance(user.balance);
     setNewPending(user.pendingBalance);
+    setNewLocked(user.lockedBalance ?? 0);
+    setAdjustNote("");
     setAdjustBalanceMode(false);
     setShowOrdersDropdown(false);
     setShowWithdrawalsDropdown(false);
@@ -1334,36 +1430,50 @@ export default function AdminUsersClient({
     try {
       const res = await fetch("/api/admin/users", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...getAdminFetchHeaders() },
         body: JSON.stringify({
           userId: selectedUser.id,
           balance: Number(newBalance),
           pendingBalance: Number(newPending),
+          lockedBalance: Number(newLocked),
+          note: adjustNote.trim() || undefined,
         }),
       });
       const data = await res.json();
       if (res.ok) {
+        const finalBalance =
+          typeof data.wallet?.balance === "number" ? Number(data.wallet.balance) : Number(newBalance);
+        const finalPending =
+          typeof data.wallet?.pending_balance === "number"
+            ? Number(data.wallet.pending_balance)
+            : Number(newPending);
+        const finalLocked =
+          typeof data.wallet?.locked_balance === "number"
+            ? Number(data.wallet.locked_balance)
+            : Number(newLocked);
+
         // Lưu override vào localStorage để chống việc tải lại trang bị reset
         try {
           const raw = localStorage.getItem("dealhoan_admin_balance_overrides");
           const map = raw ? JSON.parse(raw) : {};
           map[selectedUser.id] = {
-            balance: Number(newBalance),
-            pendingBalance: Number(newPending),
+            balance: finalBalance,
+            pendingBalance: finalPending,
             updatedAt: Date.now(),
           };
           localStorage.setItem("dealhoan_admin_balance_overrides", JSON.stringify(map));
         } catch {}
 
-        showToast("✅ Đã cập nhật số dư");
+        showToast("✅ Đã cập nhật số dư & ghi Sổ cái");
         setUsers((prev) =>
           prev.map((u) =>
             u.id === selectedUser.id
               ? {
                   ...u,
-                  balance: Number(newBalance),
-                  pendingBalance: Number(newPending),
-                  totalEarned: Number(newBalance) + u.totalWithdrawn,
+                  balance: finalBalance,
+                  pendingBalance: finalPending,
+                  lockedBalance: finalLocked,
+                  totalEarned: finalBalance + u.totalWithdrawn,
                 }
               : u
           )
@@ -1372,13 +1482,19 @@ export default function AdminUsersClient({
           prev
             ? {
                 ...prev,
-                balance: Number(newBalance),
-                pendingBalance: Number(newPending),
-                totalEarned: Number(newBalance) + prev.totalWithdrawn,
+                balance: finalBalance,
+                pendingBalance: finalPending,
+                lockedBalance: finalLocked,
+                totalEarned: finalBalance + prev.totalWithdrawn,
               }
             : null
         );
+        setNewBalance(finalBalance);
+        setNewPending(finalPending);
+        setNewLocked(finalLocked);
+        setAdjustNote("");
         setAdjustBalanceMode(false);
+        void reloadUsers();
       } else {
         showToast("⚠️ " + (data.error || "Không thể cập nhật"));
       }
@@ -1552,6 +1668,7 @@ export default function AdminUsersClient({
       "Ngày Tham Gia",
       "Số Dư Khả Dụng (VNĐ)",
       "Chờ Hoàn (VNĐ)",
+      "Đang Khóa (VNĐ)",
       "Tổng Đã Rút (VNĐ)",
       "Tên Ngân Hàng",
       "Số Tài Khoản",
@@ -1560,22 +1677,23 @@ export default function AdminUsersClient({
     ];
 
     const rows = filteredUsers.map((u) => [
-      `"${u.id}"`,
-      `"${u.refCode}"`,
-      `"${u.fullName.replace(/"/g, '""')}"`,
-      `"${u.email}"`,
-      `"${u.role}"`,
-      `"${formatDateShort(u.createdAt)}"`,
-      u.balance,
-      u.pendingBalance,
-      u.totalWithdrawn,
-      `"${(u.bankName || "").replace(/"/g, '""')}"`,
-      `"'\t${u.bankAccountNo}"`, // Thêm ký tự tránh Excel đổi sang dạng khoa học 1.23E+11
-      `"${(u.bankAccountName || "").replace(/"/g, '""')}"`,
-      `"${u.isBankConfigured ? "Đã liên kết" : "Chưa liên kết"}"`,
+      escapeCsvCell(u.id),
+      escapeCsvCell(u.refCode),
+      escapeCsvCell(u.fullName),
+      escapeCsvCell(u.email),
+      escapeCsvCell(u.role),
+      escapeCsvCell(formatDateShort(u.createdAt)),
+      escapeCsvCell(u.balance),
+      escapeCsvCell(u.pendingBalance),
+      escapeCsvCell(u.lockedBalance ?? 0),
+      escapeCsvCell(u.totalWithdrawn),
+      escapeCsvCell(u.bankName || ""),
+      escapeCsvCell(u.bankAccountNo ? `'${u.bankAccountNo}` : ""),
+      escapeCsvCell(u.bankAccountName || ""),
+      escapeCsvCell(u.isBankConfigured ? "Đã liên kết" : "Chưa liên kết"),
     ]);
 
-    const csvContent = "\uFEFF" + [headers.join(","), ...rows.map((r) => r.join(","))].join("\r\n");
+    const csvContent = "\uFEFF" + [headers.map(escapeCsvCell).join(","), ...rows.map((r) => r.join(","))].join("\r\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -1714,6 +1832,22 @@ export default function AdminUsersClient({
         >
           <HandCoins size={17} weight={activeTab === "withdrawals" ? "bold" : "regular"} />
           <span>Duyệt rút tiền</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-nav-tab-btn ${activeTab === "referrals" ? "active" : ""}`}
+          onClick={() => setActiveTab("referrals")}
+        >
+          <Gift size={17} weight={activeTab === "referrals" ? "bold" : "regular"} />
+          <span>Giới thiệu</span>
+        </button>
+        <button
+          type="button"
+          className={`admin-nav-tab-btn ${activeTab === "ledger" ? "active" : ""}`}
+          onClick={() => setActiveTab("ledger")}
+        >
+          <BookOpenText size={17} weight={activeTab === "ledger" ? "bold" : "regular"} />
+          <span>Sổ cái</span>
         </button>
         <button
           type="button"
@@ -1901,10 +2035,11 @@ export default function AdminUsersClient({
               <table className="admin-data-table" aria-label="Danh sách người dùng và số dư">
                 <thead>
                   <tr>
-                    <th scope="col" className="w-[45%]">Người dùng</th>
-                    <th scope="col" className={`w-[20%] ${design.numeric}`}>Chờ hoàn</th>
-                    <th scope="col" className={`w-[20%] ${design.numeric}`}>Khả dụng</th>
-                    <th scope="col" className="w-[15%] text-right"><span className={design.srOnly}>Thao tác</span></th>
+                    <th scope="col" className="w-[38%]">Người dùng</th>
+                    <th scope="col" className={`w-[16%] ${design.numeric}`}>Chờ hoàn</th>
+                    <th scope="col" className={`w-[16%] ${design.numeric}`}>Đang khóa</th>
+                    <th scope="col" className={`w-[16%] ${design.numeric}`}>Khả dụng</th>
+                    <th scope="col" className="w-[14%] text-right"><span className={design.srOnly}>Thao tác</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1942,7 +2077,16 @@ export default function AdminUsersClient({
                         )}
                       </td>
 
-                      {/* Cột 3: Số dư khả dụng */}
+                      {/* Cột 3: Thưởng đang khóa */}
+                      <td className={design.numeric}>
+                        {(u.lockedBalance ?? 0) > 0 ? (
+                          <strong className="text-amber-700 font-bold">{formatVnd(u.lockedBalance ?? 0)}</strong>
+                        ) : (
+                          <span className="text-stone-400">0đ</span>
+                        )}
+                      </td>
+
+                      {/* Cột 4: Số dư khả dụng */}
                       <td className={design.numeric}>
                         {u.balance > 0 ? (
                           <strong className="text-[#109452] font-bold">{formatVnd(u.balance)}</strong>
@@ -2594,191 +2738,32 @@ export default function AdminUsersClient({
               </div>
             </div>
 
-            {/* PHẦN CẤU HÌNH GỬI EMAIL THÔNG BÁO CHO ADMIN */}
-            <div className="bg-white border border-[#dfe5ed] rounded-2xl p-6 shadow-sm mb-6">
-              <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#edf2f7] flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-orange-50 border border-orange-200 text-[#ee4c23] flex items-center justify-center shrink-0">
-                    <EnvelopeSimple size={22} weight="bold" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-bold text-stone-900 m-0 flex items-center gap-2">
-                      Thông Báo Rút Tiền Qua Email (Gmail)
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        dealhoan@gmail.com
-                      </span>
-                    </h3>
-                    <p className="text-xs text-stone-500 m-0 mt-0.5">
-                      Tự động gửi email thông báo chi tiết cho tất cả Admin khi có người dùng gửi lệnh rút tiền mới.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Switch Bật/Tắt gửi thông báo */}
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <span className="text-xs font-semibold text-stone-600">
-                    {emailSettings.enabled ? "Đang bật thông báo" : "Đã tạm dừng"}
-                  </span>
-                  <div
-                    onClick={() =>
-                      setEmailSettings((prev) => ({ ...prev, enabled: !prev.enabled }))
-                    }
-                    className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out ${
-                      emailSettings.enabled ? "bg-[#109452]" : "bg-stone-300"
-                    }`}
-                  >
-                    <div
-                      className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                        emailSettings.enabled ? "translate-x-5" : "translate-x-0"
-                      }`}
-                    />
-                  </div>
-                </label>
-              </div>
-
-              {/* Form cấu hình Email */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-                {/* Cột 1: Email người gửi & Mật khẩu ứng dụng */}
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-                      Email gửi thông báo (Sender)
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="text"
-                        readOnly
-                        value="dealhoan@gmail.com"
-                        className="w-full h-11 px-3.5 bg-stone-100 border border-stone-300 rounded-xl text-stone-700 font-semibold text-sm outline-none cursor-not-allowed"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                        Mặc định
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-stone-500 mt-1 block">
-                      Máy chủ SMTP: smtp.gmail.com (Port 465 SSL)
-                    </span>
-                  </div>
-
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider">
-                        Mật khẩu ứng dụng Gmail (App Password)
-                      </label>
-                      {emailSettings.hasPassword && (
-                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md flex items-center gap-1">
-                          <Check size={12} weight="bold" /> Đã lưu mật khẩu
-                        </span>
-                      )}
-                    </div>
-                    <input
-                      type="password"
-                      autoComplete="off"
-                      placeholder={
-                        emailSettings.hasPassword
-                          ? "•••••••••••••••• (Nhập mật khẩu mới nếu muốn đổi)"
-                          : "Nhập 16 ký tự mật khẩu ứng dụng Gmail..."
-                      }
-                      value={emailPasswordInput}
-                      onChange={(e) => setEmailPasswordInput(e.target.value)}
-                      className="w-full h-11 px-3.5 bg-white border border-stone-300 focus:border-[#ee4c23] rounded-xl text-stone-900 text-sm outline-none transition-colors"
-                    />
-                    <div className="mt-2 text-[11px] text-stone-500 bg-stone-50 p-2.5 rounded-lg border border-stone-200 leading-relaxed">
-                      💡 <strong>Cách lấy App Password:</strong> Đăng nhập Gmail <em>dealhoan@gmail.com</em> ➔ Vào{" "}
-                      <a
-                        href="https://myaccount.google.com/apppasswords"
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[#ee4c23] underline font-semibold"
-                      >
-                        myaccount.google.com/apppasswords
-                      </a>{" "}
-                      ➔ Đặt tên ứng dụng là &quot;DealHoàn&quot; ➔ Copy 16 ký tự dán vào đây và bấm <strong>Lưu</strong>.
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cột 2: Danh sách Admin nhận thông báo */}
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-stone-700 uppercase tracking-wider mb-1.5">
-                      Danh sách Email Admin nhận thông báo
-                    </label>
-                    <textarea
-                      rows={3}
-                      placeholder="trungquan2000bg@gmail.com, quangvh.technical@gmail.com"
-                      value={adminEmailsInput}
-                      onChange={(e) => setAdminEmailsInput(e.target.value)}
-                      className="w-full p-3 bg-white border border-stone-300 focus:border-[#ee4c23] rounded-xl text-stone-900 text-sm outline-none transition-colors resize-none leading-relaxed"
-                    />
-                    <span className="text-[11px] text-stone-500 mt-1 block">
-                      Nhập các email admin cách nhau bằng dấu phẩy (,). Mọi Admin trong danh sách sẽ nhận được thông báo khi có người dùng rút tiền.
-                    </span>
-                  </div>
-
-                  {/* Nút hành động kiểm tra & kết quả */}
-                  <div className="flex flex-col gap-2.5 mt-auto">
-                    <div className="flex items-center gap-3">
-                      <button
-                        type="button"
-                        onClick={handleTestEmail}
-                        disabled={testingEmail}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-stone-300 bg-stone-50 hover:bg-stone-100 text-stone-700 font-bold text-xs transition-colors disabled:opacity-50"
-                      >
-                        {testingEmail ? (
-                          <>
-                            <ArrowClockwise size={16} className="animate-spin text-[#ee4c23]" />
-                            <span>Đang kiểm tra kết nối...</span>
-                          </>
-                        ) : (
-                          <>
-                            <PaperPlaneTilt size={16} weight="bold" className="text-[#ee4c23]" />
-                            <span>Gửi email thử nghiệm (Test)</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleSaveSettings}
-                        disabled={savingSettings}
-                        className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-[#ee4c23] hover:bg-[#d83f18] text-white font-bold text-xs shadow-xs transition-colors disabled:opacity-50"
-                      >
-                        {savingSettings ? (
-                          <>
-                            <ArrowClockwise size={16} className="animate-spin" />
-                            <span>Đang lưu...</span>
-                          </>
-                        ) : (
-                          <>
-                            <FloppyDisk size={16} weight="bold" />
-                            <span>Lưu cấu hình Email</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-
-                    {emailTestResult && (
-                      <div
-                        className={`text-xs p-3 rounded-xl border flex items-start gap-2 ${
-                          emailTestResult.success
-                            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                            : "bg-red-50 border-red-200 text-red-800"
-                        }`}
-                      >
-                        {emailTestResult.success ? (
-                          <CheckCircle size={16} className="text-emerald-600 shrink-0 mt-0.5" weight="bold" />
-                        ) : (
-                          <WarningCircle size={16} className="text-red-600 shrink-0 mt-0.5" weight="bold" />
-                        )}
-                        <span>{emailTestResult.message}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AdminReferralSettingsCard
+              referralSettings={referralSettings}
+              userCashbackPercent={boosterSettings.userCashbackPercent ?? 88.0}
+              onChange={setReferralSettings}
+            />
           </section>
+        )}
+
+        {activeTab === "referrals" && (
+          <AdminReferralsTab
+            getHeaders={getAdminFetchHeaders}
+            onToast={(msg) => {
+              setToastMsg(msg);
+              setTimeout(() => setToastMsg(null), 4000);
+            }}
+          />
+        )}
+
+        {activeTab === "ledger" && (
+          <AdminLedgerTab
+            getHeaders={getAdminFetchHeaders}
+            onToast={(msg) => {
+              setToastMsg(msg);
+              setTimeout(() => setToastMsg(null), 4000);
+            }}
+          />
         )}
 
         {(activeTab === "sync" || activeTab === "import") && (
@@ -2812,7 +2797,7 @@ export default function AdminUsersClient({
                   {isUploadingCsv ? (
                     <>
                       <ArrowClockwise size={16} weight="bold" className="animate-spin" />
-                      <span>Đang nạp file CSV...</span>
+                      <span>{csvUploadProgress || "Đang nạp file CSV..."}</span>
                     </>
                   ) : (
                     <>
@@ -3224,10 +3209,14 @@ export default function AdminUsersClient({
             {/* Modal Body */}
             <div className="admin-modal-body">
               {/* Section 1: Thống kê ví của User */}
-              <div className="modal-section-grid">
+              <div className="modal-section-grid" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
                 <div className="modal-stat-box gray-box">
                   <span className="box-label">CHỜ NỀN TẢNG DUYỆT</span>
                   <span className="box-val gray-text">{formatVnd(selectedUser.pendingBalance)}</span>
+                </div>
+                <div className="modal-stat-box" style={{ background: "#fffbeb", borderColor: "#fde68a" }}>
+                  <span className="box-label" style={{ color: "#b45309" }}>ĐANG KHÓA (THƯỞNG GT)</span>
+                  <span className="box-val" style={{ color: "#b45309" }}>{formatVnd(selectedUser.lockedBalance ?? 0)}</span>
                 </div>
                 <div className="modal-stat-box green-box">
                   <span className="box-label">CÓ THỂ RÚT</span>
@@ -3368,8 +3357,20 @@ export default function AdminUsersClient({
                         <label>Tiền chờ duyệt (VNĐ):</label>
                         <input
                           type="number"
+                          min={0}
                           value={newPending}
-                          onChange={(e) => setNewPending(Number(e.target.value))}
+                          onChange={(e) => setNewPending(Math.max(0, Number(e.target.value) || 0))}
+                          className="admin-input"
+                          step={1000}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Tiền đang khóa (VNĐ):</label>
+                        <input
+                          type="number"
+                          min={0}
+                          value={newLocked}
+                          onChange={(e) => setNewLocked(Math.max(0, Number(e.target.value) || 0))}
                           className="admin-input"
                           step={1000}
                         />

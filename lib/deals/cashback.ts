@@ -1,6 +1,6 @@
 import { getSupabaseServiceClient } from "@/lib/supabase/service";
 import { parseUserIdFromSubId } from "@/lib/deals/affiliate";
-import { getBoosterSettingsSync } from "@/lib/deals/cashback-booster";
+import * as cashbackBooster from "@/lib/deals/cashback-booster";
 import { isAdminSettledNote } from "@/lib/deals/shopee-payout";
 
 export interface CashbackOrderRecord {
@@ -36,19 +36,94 @@ export interface RecordCashbackOrderParams {
   status?: "pending" | "completed" | "rejected";
   note?: string;
   orderedAt?: string;
+  /** Optional preloaded auth.users ID list to avoid N+1 listUsers calls during batch CSV imports. */
+  preloadedUserIds?: string[] | null;
+  /** Optional audit actor fields for wallet_ledger */
+  actorType?: "system" | "user" | "admin" | "cron" | "webhook";
+  actorId?: string;
+}
+
+async function resolveLiveBoosterSettings() {
+  if (typeof cashbackBooster.getBoosterSettings === "function") {
+    try {
+      return await cashbackBooster.getBoosterSettings();
+    } catch {
+      // Fallback to sync settings
+    }
+  }
+  return cashbackBooster.getBoosterSettingsSync();
+}
+
+function resolveSafetyMarginPercent(
+  booster?: Partial<{ userCashbackPercent?: number; safetyMarginPercent?: number }> | null
+): number {
+  if (!booster) return NaN;
+  if (typeof booster.safetyMarginPercent === "number" && Number.isFinite(booster.safetyMarginPercent)) {
+    return booster.safetyMarginPercent;
+  }
+  if (typeof booster.userCashbackPercent === "number" && Number.isFinite(booster.userCashbackPercent)) {
+    return Number((100 - booster.userCashbackPercent).toFixed(1));
+  }
+  return NaN;
 }
 
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Loads the complete list of Supabase Auth user IDs once per batch.
+ * Returns null if the directory cannot be read completely (preserving the uniqueness invariant).
+ */
+export async function loadAllAuthUserIds(
+  dbOverride?: ReturnType<typeof getSupabaseServiceClient>
+): Promise<string[] | null> {
+  const db = dbOverride ?? getSupabaseServiceClient();
+  if (!db?.auth?.admin) return null;
+  const userIds: string[] = [];
+  const perPage = 1000;
+  for (let page = 1; page <= 100; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage });
+    if (error || !Array.isArray(data?.users)) return null;
+    for (const user of data.users) {
+      if (user?.id) userIds.push(user.id);
+    }
+    if (data.users.length < perPage) return userIds;
+  }
+  return null; // Truncated directory cannot prove uniqueness.
+}
+
+function matchShortPrefix(
+  parsed: string,
+  userIds: string[],
+  provided?: string
+): string | null {
+  const prefix = parsed.toLowerCase();
+  let match: string | null = null;
+  for (const id of userIds) {
+    if (id.toLowerCase().startsWith(prefix)) {
+      if (match && match !== id) return null;
+      match = id;
+    }
+  }
+  return match && (!provided || provided.toLowerCase() === match.toLowerCase()) ? match : null;
+}
+
 /** Legacy short reference codes are accepted only when they resolve unambiguously. */
-export async function resolveUserIdFromSubId(subId?: string | null, providedUserId?: string | null): Promise<string | null> {
+export async function resolveUserIdFromSubId(
+  subId?: string | null,
+  providedUserId?: string | null,
+  preloadedUserIds?: string[] | null
+): Promise<string | null> {
   const provided = providedUserId?.trim();
   const parsed = parseUserIdFromSubId(subId);
   if (provided && !UUID.test(provided)) return null;
   if (!parsed) return provided || null;
   if (UUID.test(parsed)) return !provided || parsed.toLowerCase() === provided.toLowerCase() ? parsed : null;
   if (!/^[0-9a-f]{8,32}$/i.test(parsed)) return null;
+  if (preloadedUserIds === null) return null;
+  if (Array.isArray(preloadedUserIds)) {
+    return matchShortPrefix(parsed, preloadedUserIds, provided);
+  }
   const db = getSupabaseServiceClient();
   if (!db) return null;
   let match: string | null = null;
@@ -74,7 +149,7 @@ export async function recordCashbackOrder(params: RecordCashbackOrderParams): Pr
   if (!orderId || orderId.length > 128) return { success: false, error: "Mã đơn hàng không hợp lệ." };
   const db = getSupabaseServiceClient();
   if (!db) return { success: false, error: "Chưa cấu hình kết nối ghi nhận đơn hàng. Vui lòng liên hệ quản trị viên." };
-  const userId = await resolveUserIdFromSubId(params.subId, params.userId);
+  const userId = await resolveUserIdFromSubId(params.subId, params.userId, params.preloadedUserIds);
   if (!userId) return { success: false, error: "Mã tracking không khớp tài khoản khách hàng." };
   const platform = params.platform || "Shopee";
   const status = params.status || "pending";
@@ -85,7 +160,8 @@ export async function recordCashbackOrder(params: RecordCashbackOrderParams): Pr
     if (value !== undefined && (!Number.isSafeInteger(value) || value < 0)) return { success: false, error: "Giá trị tiền phải là số nguyên không âm." };
   }
   // Never invent commission from order value. Status-only updates retain stored amounts.
-  const margin = getBoosterSettingsSync().safetyMarginPercent;
+  const booster = await resolveLiveBoosterSettings();
+  const margin = resolveSafetyMarginPercent(booster);
   if (!Number.isFinite(margin) || margin < 0 || margin > 100) return { success: false, error: "Cấu hình tỷ lệ hoàn tiền không hợp lệ." };
   if (params.cashbackAmount !== undefined && params.commissionAmount === undefined) return { success: false, error: "Cần hoa hồng đối soát để cập nhật khoản hoàn." };
   // Bóc tách thuế & phí: 10% TNCN + 1% phí dịch vụ sàn (hoa hồng thực nhận là 89%)
@@ -98,6 +174,8 @@ export async function recordCashbackOrder(params: RecordCashbackOrderParams): Pr
     order_value: params.orderValue, commission_amount: params.commissionAmount,
     cashback_amount: cashback, sub_id: params.subId || `u_${userId}`,
     note: params.note, ordered_at: params.orderedAt,
+    ...(params.actorType ? { actor_type: params.actorType } : {}),
+    ...(params.actorId ? { actor_id: params.actorId } : {}),
   } });
   if (error || !data) {
     console.error("[cashback] atomic record failed", { code: error?.code || "empty_result" });
@@ -151,6 +229,13 @@ export async function autoSettleHoldPeriodOrders(options: {
       .limit(100);
 
     if (Array.isArray(pendingOrders)) {
+      const liveBooster = await resolveLiveBoosterSettings();
+      const liveMargin = resolveSafetyMarginPercent(liveBooster);
+      const liveUserShare = Math.max(
+        0.5,
+        Math.min(0.98, (100 - (Number.isFinite(liveMargin) ? liveMargin : 12)) / 100)
+      );
+
       for (const ord of pendingOrders) {
         const note = String(ord.note || "").toLowerCase();
         // Không tự duyệt nếu đơn đã có ghi chú bị hủy/từ chối từ Shopee
@@ -172,15 +257,17 @@ export async function autoSettleHoldPeriodOrders(options: {
             commissionAmount: Number(ord.commission_amount),
             status: "completed",
             note: "Tự động duyệt sau 15 ngày đối soát Shopee T+15",
+            actorType: "cron",
+            actorId: "autoSettleHoldPeriodOrders",
           });
           if (res.success) settledCount++;
         } else {
-          // Chưa đủ 15 ngày: Chuẩn hóa lại cashbackAmount nếu đơn cũ trước đó bị tính theo gross
+          // Chưa đủ 15 ngày: Chuẩn hóa lại cashbackAmount theo cấu hình % hoàn tiền động của Admin
           const comm = Number(ord.commission_amount) || 0;
           const currentCashback = Number(ord.cashback_amount) || 0;
           if (comm > 0) {
             const netComm = Math.round(comm * 0.89);
-            const safeMaxCashback = Math.round(netComm * 0.88);
+            const safeMaxCashback = Math.round(netComm * liveUserShare);
             if (currentCashback > safeMaxCashback) {
               const res = await recordCashbackOrder({
                 orderId: ord.order_id,
@@ -192,6 +279,8 @@ export async function autoSettleHoldPeriodOrders(options: {
                 cashbackAmount: safeMaxCashback,
                 status: "pending",
                 note: ord.note || "Chuẩn hóa tiền hoàn sau thuế 11%",
+                actorType: "cron",
+                actorId: "autoSettleHoldPeriodOrders",
               });
               if (res.success) reconciledCount++;
             }
@@ -224,6 +313,8 @@ export async function autoSettleHoldPeriodOrders(options: {
             cashbackAmount: Number(ord.cashback_amount),
             status: "pending",
             note: "Chờ đối soát Shopee T+15 (tự động bảo toàn quỹ)",
+            actorType: "cron",
+            actorId: "autoSettleHoldPeriodOrders",
           });
           if (res.success) revertedCount++;
         }

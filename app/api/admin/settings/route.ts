@@ -5,18 +5,14 @@ import {
   updateBoosterSettings,
   CashbackBoosterSettings,
 } from "@/lib/deals/cashback-booster";
-import {
-  getEmailSettings,
-  updateEmailSettings,
-  maskEmailSettings,
-  EmailNotificationSettings,
-} from "@/lib/email/email-config";
+import { getReferralSettings, updateReferralSettings } from "@/lib/referral/config";
+import type { ReferralSettings } from "@/lib/referral/types";
 
 export const dynamic = "force-dynamic";
 
 /**
  * GET /api/admin/settings
- * Lấy cấu hình tỷ lệ hoàn tiền và cấu hình email thông báo hiện tại (Chỉ dành cho Admin)
+ * Lấy cấu hình tỷ lệ hoàn tiền & cấu hình chương trình giới thiệu hiện tại (Chỉ dành cho Admin)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -28,15 +24,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const [settings, rawEmailSettings] = await Promise.all([
-      getBoosterSettings(),
-      getEmailSettings(),
+    const [settings, referralSettings] = await Promise.all([
+      getBoosterSettings({ forceRefresh: true }),
+      getReferralSettings({ forceRefresh: true }),
     ]);
 
     return NextResponse.json({
       success: true,
       settings,
-      emailSettings: maskEmailSettings(rawEmailSettings),
+      referralSettings,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";
@@ -46,7 +42,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/admin/settings
- * Cập nhật cấu hình tỷ lệ hoàn tiền và/hoặc cấu hình gửi email thông báo (Chỉ dành cho Admin)
+ * Cập nhật cấu hình tỷ lệ hoàn tiền và/hoặc cấu hình chương trình giới thiệu (Chỉ dành cho Admin)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -61,16 +57,6 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const userEmail = auth.user?.email || "admin";
 
-    let updatedBooster = undefined;
-    let updatedEmail = undefined;
-
-    // 1. Cập nhật Email Settings nếu có truyền vào
-    if (body.emailSettings && typeof body.emailSettings === "object") {
-      const emailPayload = body.emailSettings as Partial<EmailNotificationSettings>;
-      updatedEmail = await updateEmailSettings(emailPayload, userEmail);
-    }
-
-    // 2. Cập nhật Booster Settings nếu có truyền vào
     let userCashbackPercent: number | undefined = undefined;
     if (typeof body.userCashbackPercent === "number" && !isNaN(body.userCashbackPercent)) {
       userCashbackPercent = Math.max(50.0, Math.min(98.0, Number(body.userCashbackPercent.toFixed(1))));
@@ -78,23 +64,27 @@ export async function POST(request: NextRequest) {
       userCashbackPercent = Math.max(50.0, Math.min(98.0, Number((100 - body.safetyMarginPercent).toFixed(1))));
     }
 
-    if (userCashbackPercent !== undefined) {
-      const partialSettings: Partial<CashbackBoosterSettings> = {
-        userCashbackPercent,
-        safetyMarginPercent: Number((100 - userCashbackPercent).toFixed(1)),
-      };
-      updatedBooster = await updateBoosterSettings(partialSettings, userEmail);
-    } else {
-      updatedBooster = await getBoosterSettings();
-    }
+    const updatedBooster =
+      userCashbackPercent !== undefined
+        ? await updateBoosterSettings(
+            {
+              userCashbackPercent,
+              safetyMarginPercent: Number((100 - userCashbackPercent).toFixed(1)),
+            } as Partial<CashbackBoosterSettings>,
+            userEmail
+          )
+        : await getBoosterSettings();
 
-    const finalEmail = updatedEmail ? updatedEmail : await getEmailSettings();
+    const updatedReferral =
+      body.referralSettings && typeof body.referralSettings === "object"
+        ? await updateReferralSettings(body.referralSettings as Partial<ReferralSettings>, userEmail)
+        : await getReferralSettings();
 
     return NextResponse.json({
       success: true,
-      message: "Đã cập nhật cấu hình hệ thống thành công.",
+      message: "Đã lưu cấu hình hệ thống thành công.",
       settings: updatedBooster,
-      emailSettings: maskEmailSettings(finalEmail),
+      referralSettings: updatedReferral,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Internal error";

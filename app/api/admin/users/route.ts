@@ -10,6 +10,7 @@ import {
   fetchRealAdminUsers,
 } from "@/lib/auth/admin-server";
 import { updateSharedWallet } from "@/lib/deals/user-wallet-store";
+import { appendWalletLedgerFallback } from "@/lib/referral/service";
 
 export const dynamic = "force-dynamic";
 
@@ -142,7 +143,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { userId, balance, pendingBalance, bankName, bankAccountNo, bankAccountName } = body;
+    const { userId, balance, pendingBalance, lockedBalance, bankName, bankAccountNo, bankAccountName, note } = body;
 
     if (!userId) {
       return NextResponse.json(
@@ -151,42 +152,132 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    for (const [label, val] of [
+      ["Số dư khả dụng", balance],
+      ["Tiền chờ duyệt", pendingBalance],
+      ["Tiền đang khóa", lockedBalance],
+    ] as const) {
+      if (val !== undefined && (typeof val !== "number" || !Number.isFinite(val) || val < 0)) {
+        return NextResponse.json(
+          { error: `${label} phải là số không âm hợp lệ.` },
+          { status: 400 }
+        );
+      }
+    }
+
     const supabaseAdmin = getSupabaseAdminClient();
+    const adminEmail = auth.user?.email || "admin";
 
     let walletSaved = false;
     let metaSaved = false;
     let walletErrorMsg = "";
+    let rpcWallet: Record<string, unknown> | null = null;
 
     if (supabaseAdmin) {
+      const hasBalanceChange =
+        typeof balance === "number" || typeof pendingBalance === "number" || typeof lockedBalance === "number";
+
+      // 1A. Nếu có chỉnh số dư -> ưu tiên gọi RPC admin_adjust_wallet để ghi Sổ cái nguyên tử & kiểm tra mở khóa referral
+      let adjustedViaRpc = false;
+      if (hasBalanceChange) {
+        try {
+          const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc("admin_adjust_wallet", {
+            p_user_id: userId,
+            p_new_balance: typeof balance === "number" ? Math.round(balance) : null,
+            p_new_pending: typeof pendingBalance === "number" ? Math.round(pendingBalance) : null,
+            p_new_locked: typeof lockedBalance === "number" ? Math.round(lockedBalance) : null,
+            p_admin_email: adminEmail,
+            p_note: typeof note === "string" && note.trim() ? note.trim() : "Admin điều chỉnh số dư ví",
+          });
+          if (!rpcErr && rpcData?.success) {
+            adjustedViaRpc = true;
+            walletSaved = true;
+            if (rpcData.wallet && typeof rpcData.wallet === "object") {
+              rpcWallet = rpcData.wallet as Record<string, unknown>;
+            }
+          } else if (
+            rpcErr &&
+            /negative_.*_not_allowed|invalid_user_id/i.test(rpcErr.message || "")
+          ) {
+            return NextResponse.json(
+              { error: "Giá trị điều chỉnh số dư không hợp lệ (không được âm)." },
+              { status: 400 }
+            );
+          }
+        } catch (rpcCatch) {
+          console.warn("admin_adjust_wallet RPC fallback:", rpcCatch);
+        }
+      }
+
+      // 1B. Cập nhật thông tin ngân hàng (và số dư nếu RPC chưa cài)
       const updateData: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
       };
-      if (typeof balance === "number") updateData.balance = balance;
-      if (typeof pendingBalance === "number") updateData.pending_balance = pendingBalance;
+      if (!adjustedViaRpc) {
+        if (typeof balance === "number") updateData.balance = balance;
+        if (typeof pendingBalance === "number") updateData.pending_balance = pendingBalance;
+        if (typeof lockedBalance === "number") updateData.locked_balance = lockedBalance;
+      }
       if (typeof bankName === "string") updateData.bank_name = bankName;
       if (typeof bankAccountNo === "string") updateData.bank_account_no = bankAccountNo;
       if (typeof bankAccountName === "string") updateData.bank_account_name = bankAccountName;
 
-      // 1. Lưu vào bảng user_wallets
-      try {
-        const { error: upsertError } = await supabaseAdmin
-          .from("user_wallets")
-          .upsert(
-            {
-              user_id: userId,
-              ...updateData,
-            },
-            { onConflict: "user_id" }
-          );
+      if (Object.keys(updateData).length > 1) {
+        try {
+          let prevWallet: { balance?: number; pending_balance?: number; locked_balance?: number } | null = null;
+          if (!adjustedViaRpc && hasBalanceChange) {
+            const { data: pw } = await supabaseAdmin
+              .from("user_wallets")
+              .select("balance, pending_balance, locked_balance")
+              .eq("user_id", userId)
+              .maybeSingle();
+            prevWallet = pw;
+          }
 
-        if (!upsertError) {
-          walletSaved = true;
-        } else {
-          walletErrorMsg = upsertError.message;
-          console.warn("user_wallets upsert warning:", upsertError.message);
+          const { error: upsertError } = await supabaseAdmin
+            .from("user_wallets")
+            .upsert(
+              {
+                user_id: userId,
+                ...updateData,
+              },
+              { onConflict: "user_id" }
+            );
+
+          if (!upsertError) {
+            walletSaved = true;
+            if (!adjustedViaRpc && hasBalanceChange) {
+              const dBal = typeof balance === "number" ? Math.round(balance) - Number(prevWallet?.balance || 0) : 0;
+              const dPen =
+                typeof pendingBalance === "number"
+                  ? Math.round(pendingBalance) - Number(prevWallet?.pending_balance || 0)
+                  : 0;
+              const dLoc =
+                typeof lockedBalance === "number"
+                  ? Math.round(lockedBalance) - Number(prevWallet?.locked_balance || 0)
+                  : 0;
+              if (dBal !== 0 || dPen !== 0 || dLoc !== 0) {
+                await appendWalletLedgerFallback({
+                  userId,
+                  entryType: "admin_adjustment",
+                  deltaBalance: dBal,
+                  deltaPending: dPen,
+                  deltaLocked: dLoc,
+                  referenceType: "admin_user_edit",
+                  referenceId: userId,
+                  actorType: "admin",
+                  actorId: adminEmail,
+                  note: typeof note === "string" && note.trim() ? note.trim() : "Admin điều chỉnh số dư ví",
+                });
+              }
+            }
+          } else {
+            walletErrorMsg = upsertError.message;
+            console.warn("user_wallets upsert warning:", upsertError.message);
+          }
+        } catch (wErr) {
+          console.warn("user_wallets upsert catch error:", wErr);
         }
-      } catch (wErr) {
-        console.warn("user_wallets upsert catch error:", wErr);
       }
 
       // 2. Đồng thời lưu trực tiếp vào user_metadata của auth.users qua Admin API
@@ -253,6 +344,7 @@ export async function PATCH(request: NextRequest) {
       message: "Cập nhật thông tin người dùng thành công.",
       walletSaved,
       metaSaved,
+      wallet: rpcWallet,
       warning: !walletSaved && walletErrorMsg ? `Bảng user_wallets chưa nhận: ${walletErrorMsg}` : undefined,
       updatedUser: inMemoryUsers.find((u) => u.id === userId),
     });

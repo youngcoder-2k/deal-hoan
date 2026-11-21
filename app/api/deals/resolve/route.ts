@@ -20,7 +20,7 @@ import type { Platform } from "@/lib/deals/types";
 import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resolve";
 import { lookupAccessTradeProduct } from "@/lib/deals/providers/accesstrade";
 import { lookupHoanNgayProduct, getShopeeCategoryRate } from "@/lib/deals/providers/hoanngay";
-import { boostCashbackRate, getBoosterSettingsSync } from "@/lib/deals/cashback-booster";
+import { boostCashbackRate, getBoosterSettings } from "@/lib/deals/cashback-booster";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 import { getVouchers } from "@/lib/deals/vouchers";
 import { matchVouchersForProduct, type MatchedCoupon } from "@/lib/deals/matching";
@@ -405,10 +405,10 @@ export async function POST(request: NextRequest) {
     }
     let finalCashback = 0;
     let cashbackRate = 0;
+    const boosterSettings = await getBoosterSettings();
 
     if (isCurrentShopeeFood) {
       // ShopeeFood gross affiliate commission ~6.8%. Net rate applies admin's userCashbackPercent:
-      const boosterSettings = getBoosterSettingsSync();
       const userShare = Math.max(0.5, Math.min(0.98, (boosterSettings.userCashbackPercent ?? 88.0) / 100));
       const grossFoodRate = 6.8;
       cashbackRate = Number((grossFoodRate * userShare).toFixed(1));
@@ -422,7 +422,7 @@ export async function POST(request: NextRequest) {
         rawRate,
         finalPrice,
         hoanNgayProduct.commission,
-        undefined,
+        boosterSettings,
         hoanNgayProduct.cap
       );
       finalCashback = boosted.cashbackAmount;
@@ -432,7 +432,7 @@ export async function POST(request: NextRequest) {
         hoanNgayProduct.cashbackRate,
         finalPrice,
         hoanNgayProduct.commission,
-        undefined,
+        boosterSettings,
         hoanNgayProduct.cap
       );
       finalCashback = boosted.cashbackAmount;

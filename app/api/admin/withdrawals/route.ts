@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { getSupabaseAdminClient, isHqvTestWithdrawal } from "@/lib/auth/admin";
 import {
   checkAdminApiAuth,
@@ -6,6 +6,7 @@ import {
 } from "@/lib/auth/admin-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { notifyUserWithdrawalApproved } from "@/lib/email/withdrawal-notification";
+import { appendWalletLedgerFallback } from "@/lib/referral/service";
 
 export const dynamic = "force-dynamic";
 
@@ -209,21 +210,39 @@ export async function PATCH(request: NextRequest) {
         : "Thông tin tài khoản ngân hàng chưa chính xác";
     const finalNote = typeof note === "string" && note.trim() ? note.trim() : defaultNote;
 
-    // 1. Thử gọi hàm Stored Procedure nguyên tử process_withdrawal_decision
+    const adminActorId = auth.user?.email || "admin";
+
+    // 1. Thử gọi hàm Stored Procedure nguyên tử process_withdrawal_decision (truyền actor_id thật của Admin)
     try {
-      const { data: rpcRes, error: rpcErr } = await clientToUse.rpc(
+      let { data: rpcRes, error: rpcErr } = await clientToUse.rpc(
         "process_withdrawal_decision",
         {
           p_withdrawal_id: withdrawalId,
           p_status: status,
           p_note: finalNote,
+          p_actor_id: adminActorId,
         }
       );
+      // Tương thích ngược nếu DB mới chỉ cài bản 3 tham số cũ
+      if (rpcErr && /process_withdrawal_decision/i.test(rpcErr.message || "")) {
+        const legacyRes = await clientToUse.rpc("process_withdrawal_decision", {
+          p_withdrawal_id: withdrawalId,
+          p_status: status,
+          p_note: finalNote,
+        });
+        rpcRes = legacyRes.data;
+        rpcErr = legacyRes.error;
+      }
       if (!rpcErr && rpcRes && rpcRes.success) {
         if (status === "completed") {
-          notifyUserWithdrawalApproved(clientToUse, withdrawalId, { note: finalNote }).catch((err) =>
+          const notifyPromise = notifyUserWithdrawalApproved(clientToUse, withdrawalId, { note: finalNote }).catch((err) =>
             console.error("Non-blocking notify user withdrawal approved error:", err)
           );
+          try {
+            after(async () => {
+              await notifyPromise;
+            });
+          } catch {}
         }
         return NextResponse.json({
           success: true,
@@ -274,17 +293,32 @@ export async function PATCH(request: NextRequest) {
     targetUserId = String(currentWr.user_id);
     targetAmount = Number(currentWr.amount || 0);
 
-    const { error: updateWrErr } = await clientToUse
+    // Khóa lạc quan: chỉ chuyển trạng thái khi dòng vẫn đang ở 'pending'
+    const { data: transitionedWr, error: updateWrErr } = await clientToUse
       .from("withdrawal_requests")
       .update({
         status,
         note: finalNote,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", withdrawalId);
+      .eq("id", withdrawalId)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
     if (updateWrErr) {
-      console.warn("Error updating withdrawal_requests in DB:", updateWrErr);
+      console.error("Error updating withdrawal_requests in DB:", updateWrErr);
+      return NextResponse.json(
+        { error: "Không thể cập nhật trạng thái lệnh rút tiền trong CSDL." },
+        { status: 500 }
+      );
+    }
+
+    if (!transitionedWr) {
+      return NextResponse.json(
+        { error: "Lệnh rút tiền này vừa được xử lý bởi thao tác khác, không thể xử lý lại." },
+        { status: 400 }
+      );
     }
 
     // 2. Nếu TỪ CHỐI (rejected) và trạng thái trước đó là 'pending': Hoàn tiền 1 lần duy nhất về ví
@@ -299,8 +333,9 @@ export async function PATCH(request: NextRequest) {
         if (walletData) {
           const currentBal = Number(walletData.balance || 0);
           const currentTotalW = Number(walletData.total_withdrawn || 0);
+          const actualWithdrawnDeduct = Math.min(currentTotalW, targetAmount);
           const newBal = currentBal + targetAmount;
-          const newTotalW = Math.max(0, currentTotalW - targetAmount);
+          const newTotalW = currentTotalW - actualWithdrawnDeduct;
 
           await clientToUse
             .from("user_wallets")
@@ -310,15 +345,52 @@ export async function PATCH(request: NextRequest) {
               updated_at: new Date().toISOString(),
             })
             .eq("user_id", targetUserId);
+
+          await appendWalletLedgerFallback({
+            userId: targetUserId,
+            entryType: "withdrawal_rejected",
+            deltaBalance: targetAmount,
+            deltaWithdrawn: -actualWithdrawnDeduct,
+            referenceType: "withdrawal_request",
+            referenceId: String(withdrawalId),
+            idempotencyKey: `wd_dec:${withdrawalId}`,
+            actorType: "admin",
+            actorId: adminActorId,
+            note: `Từ chối lệnh rút & hoàn tiền về ví: ${finalNote}`,
+            metadata: {
+              withdrawal_id: withdrawalId,
+              amount: targetAmount,
+              bank_name: currentWr.bank_name,
+              bank_account_no: currentWr.bank_account_no,
+            },
+          });
         }
       } catch (refundErr) {
         console.warn("Failed to refund wallet balance on rejection:", refundErr);
       }
     }
 
-    // 3. Nếu DUYỆT (completed): Gửi email thông báo rút tiền thành công cho user
+    // 3. Nếu DUYỆT (completed): Ghi Sổ cái xác nhận chi + Gửi email thông báo rút tiền thành công cho user
     if (status === "completed") {
-      notifyUserWithdrawalApproved(clientToUse, withdrawalId, {
+      await appendWalletLedgerFallback({
+        userId: targetUserId,
+        entryType: "withdrawal_completed",
+        deltaBalance: 0,
+        deltaWithdrawn: 0,
+        referenceType: "withdrawal_request",
+        referenceId: String(withdrawalId),
+        idempotencyKey: `wd_dec:${withdrawalId}`,
+        actorType: "admin",
+        actorId: auth.user?.email || "admin",
+        note: `Xác nhận chuyển khoản thành công ${targetAmount.toLocaleString("vi-VN")}đ${finalNote ? `: ${finalNote}` : ""}`,
+        metadata: {
+          withdrawal_id: withdrawalId,
+          amount: targetAmount,
+          bank_name: currentWr.bank_name,
+          bank_account_no: currentWr.bank_account_no,
+        },
+      });
+      const notifyPromise = notifyUserWithdrawalApproved(clientToUse, withdrawalId, {
         user_id: targetUserId,
         amount: targetAmount,
         bank_name: currentWr.bank_name,
@@ -328,6 +400,11 @@ export async function PATCH(request: NextRequest) {
       }).catch((err) =>
         console.error("Non-blocking notify user withdrawal approved error:", err)
       );
+      try {
+        after(async () => {
+          await notifyPromise;
+        });
+      } catch {}
     }
 
     return NextResponse.json({

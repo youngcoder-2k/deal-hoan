@@ -6,12 +6,18 @@ import {
   updateSharedWallet,
 } from "@/lib/deals/user-wallet-store";
 import { getSupabaseAdminClient, isAdminUser } from "@/lib/auth/admin";
+import {
+  appendWalletLedgerFallback,
+  evaluateReferralUnlocks,
+  reconcileWalletPendingBalance,
+} from "@/lib/referral/service";
 
 export const dynamic = "force-dynamic";
 
 export interface WalletData {
   balance: number;
   pending_balance: number;
+  locked_balance: number;
   total_withdrawn: number;
   bank_name: string;
   bank_account_no: string;
@@ -27,6 +33,7 @@ export async function GET(request: NextRequest) {
       const fallbackWallet = {
         balance: sw.balance,
         pending_balance: sw.pendingBalance,
+        locked_balance: 0,
         total_withdrawn: sw.totalWithdrawn,
         bank_name: sw.bankName,
         bank_account_no: sw.bankAccountNo,
@@ -56,6 +63,7 @@ export async function GET(request: NextRequest) {
       const fallbackWallet = {
         balance: sw.balance,
         pending_balance: sw.pendingBalance,
+        locked_balance: 0,
         total_withdrawn: sw.totalWithdrawn,
         bank_name: sw.bankName,
         bank_account_no: sw.bankAccountNo,
@@ -83,6 +91,9 @@ export async function GET(request: NextRequest) {
       const cleanHex = user.id.replace(/-/g, "").toLowerCase();
       const adminClient = getSupabaseAdminClient();
 
+      // Tự động kiểm tra mở khóa / hết hạn thưởng giới thiệu trước khi tải số dư ví
+      await evaluateReferralUnlocks(user.id).catch(() => {});
+
       const [walletRes, confirmedRes, claimsRes, historyRes] = await Promise.all([
         supabase.from("user_wallets").select("*").eq("user_id", user.id).maybeSingle(),
         supabase.from("cashback_orders").select("*").or(`user_id.eq.${user.id},sub_id.ilike.%${cleanHex}%`).order("ordered_at", { ascending: false }),
@@ -103,17 +114,30 @@ export async function GET(request: NextRequest) {
         mergedWallet = {
           balance: 0,
           pending_balance: 0,
+          locked_balance: 0,
           total_withdrawn: 0,
           bank_name: metaBankName,
           bank_account_no: metaAccountNo,
           bank_account_name: metaAccountName,
         };
         const clientForInsert = adminClient || supabase;
-        void clientForInsert.from("user_wallets").insert({ user_id: user.id, ...mergedWallet }).then(null, () => {});
+        void clientForInsert
+          .from("user_wallets")
+          .insert({
+            user_id: user.id,
+            balance: 0,
+            pending_balance: 0,
+            total_withdrawn: 0,
+            bank_name: metaBankName,
+            bank_account_no: metaAccountNo,
+            bank_account_name: metaAccountName,
+          })
+          .then(null, () => {});
       } else {
         mergedWallet = {
           balance: Number(wallet.balance ?? 0),
           pending_balance: Number(wallet.pending_balance ?? 0),
+          locked_balance: Number(wallet.locked_balance ?? 0),
           total_withdrawn: Number(wallet.total_withdrawn ?? 0),
           bank_name: wallet.bank_name || metaBankName,
           bank_account_no: wallet.bank_account_no || metaAccountNo,
@@ -133,18 +157,37 @@ export async function GET(request: NextRequest) {
         } catch {}
       }
 
-      // Tự động tính toán số dư chờ duyệt từ các đơn pending và đồng bộ vào ví nếu thiếu
+      // Tự động đối soát số dư chờ duyệt từ các đơn pending của đúng user_id (qua RPC nguyên tử + ghi Sổ cái)
       const computedPending = verified
-        .filter((o) => o.status === "pending")
+        .filter((o) => o.status === "pending" && o.user_id === user.id)
         .reduce((sum, o) => sum + Number(o.cashback_amount || 0), 0);
 
-      if (computedPending > mergedWallet.pending_balance) {
-        mergedWallet.pending_balance = computedPending;
-        const clientForUpdate = adminClient || supabase;
-        void clientForUpdate
-          .from("user_wallets")
-          .update({ pending_balance: computedPending, updated_at: new Date().toISOString() })
-          .eq("user_id", user.id);
+      if (computedPending > mergedWallet.pending_balance && adminClient) {
+        const rpcSync = await reconcileWalletPendingBalance(user.id, "wallet_api_sync");
+        if (rpcSync) {
+          mergedWallet.pending_balance = rpcSync.pendingBalance;
+        } else {
+          // Fallback nếu DB chưa chạy migration RPC: chỉ cập nhật qua service_role & ghi Sổ cái
+          const deltaPending = computedPending - mergedWallet.pending_balance;
+          const { error: syncErr } = await adminClient
+            .from("user_wallets")
+            .update({ pending_balance: computedPending, updated_at: new Date().toISOString() })
+            .eq("user_id", user.id)
+            .eq("pending_balance", mergedWallet.pending_balance);
+          if (!syncErr) {
+            mergedWallet.pending_balance = computedPending;
+            await appendWalletLedgerFallback({
+              userId: user.id,
+              entryType: "reconciliation_sync",
+              deltaPending,
+              referenceType: "wallet_pending_sync",
+              referenceId: user.id,
+              actorType: "system",
+              actorId: "wallet_api_sync",
+              note: "Đồng bộ số dư chờ duyệt từ đơn hàng pending đang có",
+            });
+          }
+        }
       }
 
       const keys = new Set(verified.map(order => `${order.platform}:${order.order_id}`));
@@ -182,6 +225,7 @@ export async function GET(request: NextRequest) {
         wallet: {
           balance: 0,
           pending_balance: 0,
+          locked_balance: 0,
           total_withdrawn: 0,
           bank_name: metaBankName,
           bank_account_no: metaAccountNo,
@@ -202,13 +246,17 @@ export async function GET(request: NextRequest) {
         bank_account_name: metaAccountName,
       };
       await supabase.from("user_wallets").insert(initialWallet);
-      return NextResponse.json({ wallet: initialWallet, isAdmin: isAdminUser(user) });
+      return NextResponse.json({
+        wallet: { ...initialWallet, locked_balance: 0 },
+        isAdmin: isAdminUser(user),
+      });
     }
 
     // Merge with user_metadata if user_wallets has empty bank fields
     const mergedWallet: WalletData = {
       balance: Number(wallet.balance ?? 0),
       pending_balance: Number(wallet.pending_balance ?? 0),
+      locked_balance: Number(wallet.locked_balance ?? 0),
       total_withdrawn: Number(wallet.total_withdrawn ?? 0),
       bank_name: wallet.bank_name || metaBankName,
       bank_account_no: wallet.bank_account_no || metaAccountNo,
@@ -265,6 +313,7 @@ export async function POST(request: NextRequest) {
         wallet: {
           balance: sw.balance,
           pending_balance: sw.pendingBalance,
+          locked_balance: 0,
           total_withdrawn: sw.totalWithdrawn,
           bank_name: sw.bankName,
           bank_account_no: sw.bankAccountNo,
@@ -320,6 +369,7 @@ export async function POST(request: NextRequest) {
       wallet: {
         balance: Number(updatedWallet?.balance ?? 0),
         pending_balance: Number(updatedWallet?.pending_balance ?? 0),
+        locked_balance: Number(updatedWallet?.locked_balance ?? 0),
         total_withdrawn: Number(updatedWallet?.total_withdrawn ?? 0),
         bank_name,
         bank_account_no: cleanAccountNo,

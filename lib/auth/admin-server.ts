@@ -78,6 +78,10 @@ export function calculateKPIStats(
     (sum, u) => sum + (u.pendingBalance || 0),
     0
   );
+  const totalLockedBalance = users.reduce(
+    (sum, u) => sum + (u.lockedBalance || 0),
+    0
+  );
   const totalWithdrawn = users.reduce(
     (sum, u) => sum + (u.totalWithdrawn || 0),
     0
@@ -123,6 +127,7 @@ export function calculateKPIStats(
     totalUsers,
     totalBalance,
     totalPendingBalance,
+    totalLockedBalance,
     totalWithdrawn,
     bankLinkedUsers,
     bankLinkedRate,
@@ -264,6 +269,7 @@ export async function fetchRealAdminUsers(): Promise<{
             const uid = String(row.user_id || row.id);
             const balance = Number(row.balance || 0);
             const pendingBalance = Number(row.pending_balance || 0);
+            const lockedBalance = Number(row.locked_balance || 0);
             const bankName = String(row.bank_name || "");
             const bankAccountNo = String(row.bank_account_no || "");
             const bankAccountName = String(row.bank_account_name || "");
@@ -294,6 +300,7 @@ export async function fetchRealAdminUsers(): Promise<{
                 : undefined,
               balance,
               pendingBalance,
+              lockedBalance,
               totalWithdrawn,
               totalEarned: balance + totalWithdrawn,
               bankName,
@@ -336,6 +343,7 @@ export async function fetchRealAdminUsers(): Promise<{
 
         const balance = Number(wallet?.balance ?? 0);
         const pendingBalance = Number(wallet?.pending_balance ?? 0);
+        const lockedBalance = Number(wallet?.locked_balance ?? 0);
         const isHqv =
           u.email?.toLowerCase() === "quangvh.technical@gmail.com" ||
           String(u.user_metadata?.full_name || "").toLowerCase().includes("huy quang vũ") ||
@@ -361,6 +369,7 @@ export async function fetchRealAdminUsers(): Promise<{
           lastSignInAt: u.last_sign_in_at,
           balance,
           pendingBalance,
+          lockedBalance,
           totalWithdrawn,
           totalEarned: balance + totalWithdrawn,
           bankName,
@@ -387,6 +396,7 @@ export async function fetchRealAdminUsers(): Promise<{
         const latestW = userWithdrawals[0];
         const balance = Number(w.balance ?? 0);
         const pendingBalance = Number(w.pending_balance ?? 0);
+        const lockedBalance = Number(w.locked_balance ?? 0);
         const bankName = String(w.bank_name || "");
         const bankAccountNo = String(w.bank_account_no || "");
         const bankAccountName = String(w.bank_account_name || "");
@@ -402,6 +412,7 @@ export async function fetchRealAdminUsers(): Promise<{
           createdAt: w.created_at || new Date().toISOString(),
           balance,
           pendingBalance,
+          lockedBalance,
           totalWithdrawn,
           totalEarned: balance + totalWithdrawn,
           bankName,

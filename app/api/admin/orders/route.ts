@@ -118,6 +118,8 @@ export async function POST(request: NextRequest) {
       cashbackAmount: cashbackAmount === undefined ? undefined : Number(cashbackAmount),
       status,
       note,
+      actorType: "admin",
+      actorId: auth.user?.email || "admin",
     });
 
     if (!result.success) {
@@ -197,6 +199,8 @@ export async function PATCH(request: NextRequest) {
         ...(Number.isSafeInteger(comm) && comm >= 0 ? { commissionAmount: comm } : {}),
         status,
         note: finalNote,
+        actorType: "admin",
+        actorId: auth.user?.email || "admin",
       });
 
       if (result.success && result.order) {

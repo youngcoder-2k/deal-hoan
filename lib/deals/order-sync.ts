@@ -69,6 +69,8 @@ export async function syncShopeeOrders(options: {
         commissionAmount: parseShopeeMoney(commission), status,
         orderedAt: Number.isFinite(Number(item.create_time)) && Number(item.create_time)>0 ? new Date(Number(item.create_time)*1000).toISOString() : undefined,
         note: "Đồng bộ từ báo cáo chuyển đổi Shopee Affiliate",
+        actorType: "cron",
+        actorId: "syncShopeeOrders",
       };
       const result = await record(params);
       if (result.success) processed++; else failed++;

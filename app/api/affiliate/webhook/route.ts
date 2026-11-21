@@ -79,6 +79,8 @@ export async function GET(request: NextRequest) {
     commissionAmount,
     status,
     note: `Ghi nhận tự động từ Postback ${platform}`,
+    actorType: "webhook",
+    actorId: platform,
   });
 
   if (!result.success) {
@@ -151,6 +153,8 @@ export async function POST(request: NextRequest) {
       cashbackAmount,
       status,
       note: body.note || `Ghi nhận qua Webhook ${platform}`,
+      actorType: "webhook",
+      actorId: platform,
     });
 
     if (!result.success) {

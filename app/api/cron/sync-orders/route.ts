@@ -2,6 +2,7 @@ import { isAuthorizedCron } from "@/lib/cron/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { syncShopeeOrders } from "@/lib/deals/order-sync";
 import { autoSettleHoldPeriodOrders } from "@/lib/deals/cashback";
+import { expireOverdueReferrals } from "@/lib/referral/service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 150;
@@ -11,10 +12,13 @@ async function handleSync(request: NextRequest) {
   if (!isAuthorizedCron(request)) return NextResponse.json({ error: "Unauthorized cron execution" }, { status: 401 });
   
   // Tự động kiểm tra đối soát T+15 mỗi 15 phút (chuyển pending -> completed & chuyển tiền vào ví khả dụng cho khách)
-  const settlement = await autoSettleHoldPeriodOrders().catch((e) => {
-    console.error("[cron/sync-orders] autoSettle error:", e);
-    return { settledCount: 0, revertedCount: 0, reconciledCount: 0 };
-  });
+  const [settlement, expiredReferrals] = await Promise.all([
+    autoSettleHoldPeriodOrders().catch((e) => {
+      console.error("[cron/sync-orders] autoSettle error:", e);
+      return { settledCount: 0, revertedCount: 0, reconciledCount: 0 };
+    }),
+    expireOverdueReferrals().catch(() => 0),
+  ]);
 
   try {
     const result = await syncShopeeOrders();
@@ -24,6 +28,7 @@ async function handleSync(request: NextRequest) {
       autoSettled: settlement.settledCount,
       autoReverted: settlement.revertedCount,
       autoReconciled: settlement.reconciledCount,
+      expiredReferrals,
     }, { status: result.code, headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({
@@ -32,6 +37,7 @@ async function handleSync(request: NextRequest) {
       autoSettled: settlement.settledCount,
       autoReverted: settlement.revertedCount,
       autoReconciled: settlement.reconciledCount,
+      expiredReferrals,
       message: "Đã tự động đối soát đơn T+15 ngầm thành công",
     }, { status: 200, headers: { "Cache-Control": "no-store" } });
   }

@@ -1,8 +1,12 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSupabaseAdminClient } from "@/lib/auth/admin";
 import { parseJsonBody, handleApiError } from "@/lib/api/response";
-import { sendWithdrawalAlertToAdmins } from "@/lib/email/withdrawal-notification";
+import {
+  sendWithdrawalAlertToAdmins,
+  sendWithdrawalReceiptToUser,
+} from "@/lib/email/withdrawal-notification";
+import { appendWalletLedgerFallback } from "@/lib/referral/service";
 import type { WithdrawalRecord } from "@/lib/deals/withdrawals-store";
 
 export const dynamic = "force-dynamic";
@@ -177,22 +181,55 @@ export async function POST(request: NextRequest) {
 
       if (!rpcErr && rpcRes && rpcRes.success) {
         const createdReq = (rpcRes.request as Record<string, unknown>) || {};
-        // Gửi email thông báo cho các Admin (chạy nền non-blocking, không chặn phản hồi của user)
-        sendWithdrawalAlertToAdmins({
-          withdrawalId: String(createdReq.id || `w_${Date.now()}`),
+        const withdrawalId = String(createdReq.id || `w_${Date.now()}`);
+        const createdAt = String(createdReq.created_at || new Date().toISOString());
+        const userName = String(user.user_metadata?.full_name || bank_account_name || "");
+        const userRefCode = String(user.user_metadata?.ref_code || `u_${user.id.slice(0, 8)}`);
+        const withdrawalNote = typeof createdReq.note === "string" ? createdReq.note : null;
+
+        // 1. Gửi email thông báo cho các Admin (chạy nền non-blocking, không chặn phản hồi của user)
+        const adminAlertPromise = sendWithdrawalAlertToAdmins({
+          withdrawalId,
           userId: user.id,
           userEmail: user.email || undefined,
-          userName: String(user.user_metadata?.full_name || bank_account_name || ""),
-          userRefCode: String(user.user_metadata?.ref_code || `u_${user.id.slice(0, 8)}`),
+          userName,
+          userRefCode,
           amount,
           bankName: bank_name,
           bankAccountNo: bank_account_no,
           bankAccountName: bank_account_name,
-          createdAt: String(createdReq.created_at || new Date().toISOString()),
-          note: typeof createdReq.note === "string" ? createdReq.note : null,
+          createdAt,
+          note: withdrawalNote,
         }).catch((alertErr) => {
           console.error("Non-blocking withdrawal alert error:", alertErr);
         });
+
+        // 2. Gửi email biên nhận cho chính User vừa yêu cầu rút tiền
+        const userReceiptPromise = user.email
+          ? sendWithdrawalReceiptToUser({
+              withdrawalId,
+              userId: user.id,
+              userEmail: user.email,
+              userName,
+              amount,
+              bankName: bank_name,
+              bankAccountNo: bank_account_no,
+              bankAccountName: bank_account_name,
+              createdAt,
+              note: withdrawalNote,
+            }).catch((receiptErr) => {
+              console.error("Non-blocking user receipt alert error:", receiptErr);
+            })
+          : Promise.resolve();
+
+        // Giữ serverless context sống trên Vercel/Next.js cho đến khi gửi email hoàn tất
+        try {
+          after(async () => {
+            await Promise.allSettled([adminAlertPromise, userReceiptPromise]);
+          });
+        } catch {
+          // Fallback nếu gọi ngoài request context
+        }
 
         return NextResponse.json({
           success: true,
@@ -270,41 +307,102 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Sau khi ghi CSDL thành công, trừ số dư trong user_wallets
+    // 2. Sau khi ghi CSDL thành công, trừ số dư trong user_wallets kèm điều kiện lạc quan (balance >= amount)
     const newBalance = Math.max(0, currentBalance - amount);
     const newWithdrawn = Number(wallet?.total_withdrawn ?? 0) + amount;
+    const finalRecord = inserted || newRequest;
+    const finalWithdrawalId = String(finalRecord.id);
 
-    const { error: updateWalletError } = await dbClient
+    const { data: updatedWalletRow, error: updateWalletError } = await dbClient
       .from("user_wallets")
       .update({
         balance: newBalance,
         total_withdrawn: newWithdrawn,
         updated_at: new Date().toISOString(),
       })
-      .eq("user_id", user.id);
+      .eq("user_id", user.id)
+      .gte("balance", amount)
+      .select("balance")
+      .maybeSingle();
 
-    if (updateWalletError) {
-      console.warn("Wallet deduction warning:", updateWalletError);
+    if (updateWalletError || !updatedWalletRow) {
+      // Hoàn tác lệnh rút vừa chèn để tuyệt đối không tạo lệnh rút mà chưa trừ được ví
+      console.error("Wallet deduction failed in fallback, rolling back withdrawal:", updateWalletError);
+      await dbClient.from("withdrawal_requests").delete().eq("id", finalWithdrawalId);
+      return NextResponse.json(
+        { error: "Số dư khả dụng vừa thay đổi hoặc không đủ để thực hiện lệnh rút này. Vui lòng thử lại." },
+        { status: 400 }
+      );
     }
 
-    const finalRecord = inserted || newRequest;
+    // Ghi Sổ cái cho nhánh fallback (tránh bỏ sót biến động rút tiền)
+    await appendWalletLedgerFallback({
+      userId: user.id,
+      entryType: "withdrawal_requested",
+      deltaBalance: -amount,
+      deltaWithdrawn: amount,
+      referenceType: "withdrawal_request",
+      referenceId: finalWithdrawalId,
+      idempotencyKey: `wd_req:${finalWithdrawalId}`,
+      actorType: "user",
+      actorId: user.id,
+      note: `Yêu cầu rút ${amount.toLocaleString("vi-VN")}đ về ${bank_name} (${bank_account_no})`,
+      metadata: {
+        withdrawal_id: finalWithdrawalId,
+        amount,
+        bank_name,
+        bank_account_no,
+        bank_account_name,
+      },
+    });
+    const finalCreatedAt = finalRecord.created_at;
+    const finalUserName = String(user.user_metadata?.full_name || bank_account_name || "");
+    const finalUserRefCode = String(user.user_metadata?.ref_code || `u_${user.id.slice(0, 8)}`);
+    const finalNote = finalRecord.note || null;
 
-    // Gửi email thông báo cho các Admin (chạy nền non-blocking, không chặn phản hồi của user)
-    sendWithdrawalAlertToAdmins({
-      withdrawalId: String(finalRecord.id),
+    // 1. Gửi email thông báo cho các Admin (chạy nền non-blocking, không chặn phản hồi của user)
+    const adminAlertPromise = sendWithdrawalAlertToAdmins({
+      withdrawalId: finalWithdrawalId,
       userId: user.id,
       userEmail: user.email || undefined,
-      userName: String(user.user_metadata?.full_name || bank_account_name || ""),
-      userRefCode: String(user.user_metadata?.ref_code || `u_${user.id.slice(0, 8)}`),
+      userName: finalUserName,
+      userRefCode: finalUserRefCode,
       amount,
       bankName: bank_name,
       bankAccountNo: bank_account_no,
       bankAccountName: bank_account_name,
-      createdAt: finalRecord.created_at,
-      note: finalRecord.note || null,
+      createdAt: finalCreatedAt,
+      note: finalNote,
     }).catch((alertErr) => {
       console.error("Non-blocking withdrawal alert error:", alertErr);
     });
+
+    // 2. Gửi email biên nhận cho chính User vừa yêu cầu rút tiền
+    const userReceiptPromise = user.email
+      ? sendWithdrawalReceiptToUser({
+          withdrawalId: finalWithdrawalId,
+          userId: user.id,
+          userEmail: user.email,
+          userName: finalUserName,
+          amount,
+          bankName: bank_name,
+          bankAccountNo: bank_account_no,
+          bankAccountName: bank_account_name,
+          createdAt: finalCreatedAt,
+          note: finalNote,
+        }).catch((receiptErr) => {
+          console.error("Non-blocking user receipt alert error:", receiptErr);
+        })
+      : Promise.resolve();
+
+    // Giữ serverless context sống trên Vercel/Next.js cho đến khi gửi email hoàn tất
+    try {
+      after(async () => {
+        await Promise.allSettled([adminAlertPromise, userReceiptPromise]);
+      });
+    } catch {
+      // Fallback nếu gọi ngoài request context
+    }
 
     return NextResponse.json({
       success: true,

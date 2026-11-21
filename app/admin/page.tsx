@@ -74,6 +74,10 @@ export default async function AdminPage(props: {
       ? "settings"
       : searchParams?.tab === "withdrawals" || searchParams?.tab === "rut-tien"
       ? "withdrawals"
+      : searchParams?.tab === "referrals" || searchParams?.tab === "gioi-thieu"
+      ? "referrals"
+      : searchParams?.tab === "ledger" || searchParams?.tab === "so-cai"
+      ? "ledger"
       : "users";
 
   return (
