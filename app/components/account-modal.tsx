@@ -883,9 +883,6 @@ export default function AccountModal({
               <div className={s.empty}>
                 <span className={s.emptyIcon}><ShoppingBag size={36} weight="light" /></span>
                 <h3>Chưa có đơn hoàn tiền</h3>
-                <p className={s.emptyHint}>
-                  Đơn hàng của bạn sẽ được Shopee cập nhật sau 9h hàng ngày
-                </p>
               </div>
             ) : (
               <div className={s.list}>
@@ -1168,9 +1165,6 @@ export default function AccountModal({
                     <div className={s.empty}>
                       <span className={s.emptyIcon}><Gift size={36} weight="light" /></span>
                       <h3>Chưa có bạn bè nào</h3>
-                      <p className={s.emptyHint}>
-                        Gửi link ở trên qua Zalo hoặc Messenger để mời bạn bè
-                      </p>
                     </div>
                   )
                 ) : (
