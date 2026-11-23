@@ -46,10 +46,11 @@ export function CashbackStory() {
         Dán link, xem tiền hoàn.<br />
         Mua món bạn thích, nhận lại một phần tiền.
       </p>
-      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee và ShopeeFood">
+      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, ShopeeFood và Lazada">
         <span>Hỗ trợ:</span>
         <MarketplaceBrand platform="Shopee" />
         <MarketplaceBrand platform="ShopeeFood" />
+        <MarketplaceBrand platform="Lazada" />
       </div>
       <div className={styles.heroIllustration} aria-hidden="true">
         <Image className={styles.shoppingBag} src="/hero/deal-hoan-shopping-bag.webp" width={640} height={520} alt="" preload sizes="(max-width: 900px) 220px, 520px" />
@@ -125,7 +126,7 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
           </li>
         ))}
       </ol>
-      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee và ShopeeFood.</p>
+      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee, ShopeeFood và Lazada.</p>
       <div className={styles.guideFooter}>
         <a href="#how" className={styles.guideLink}>Cách lấy link sản phẩm <ArrowRightIcon size={22} aria-hidden="true" /></a>
       </div>
@@ -165,14 +166,28 @@ export function CashbackReceipt({
 
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const isFood = product.platform?.toLowerCase().includes("food");
+  const isLazada = product.platform?.toLowerCase().includes("lazada");
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : (isFood ? 6.0 : 0));
   const hasPrice = price > 0;
-  const reward = hasPrice ? formatPrice(cashback).replace(/đ$/, "") : (isFood ? `Hoàn ${cashbackRate}%` : "Chưa xác định");
-  const targetUrl = trackedLink || product.trackedLink || (product.platform?.toLowerCase().includes("shopee") ? "https://shopee.vn" : "https://dealhoan.com");
+  const hasRateOnly = !hasPrice && cashbackRate > 0;
+  const showRewardBadge = hasPrice || isFood || hasRateOnly;
+  const reward = hasPrice
+    ? formatPrice(cashback).replace(/đ$/, "")
+    : isFood || hasRateOnly
+      ? `Hoàn ${cashbackRate}%`
+      : "Chưa xác định";
+  const targetUrl =
+    trackedLink ||
+    product.trackedLink ||
+    (isLazada
+      ? "https://www.lazada.vn"
+      : product.platform?.toLowerCase().includes("shopee")
+        ? "https://shopee.vn"
+        : "https://dealhoan.com");
   const displayImageUrl =
     isFood && (!product.imageUrl || product.imageUrl === "/brand/shopeefood-logo.png" || product.imageUrl.includes("unsplash.com"))
       ? "/brand/shopeefood-icon.png"
-      : (product.imageUrl || (isFood ? "/brand/shopeefood-icon.png" : undefined));
+      : (product.imageUrl || (isFood ? "/brand/shopeefood-icon.png" : isLazada ? "/brand/lazada-icon.png" : undefined));
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>
@@ -191,6 +206,8 @@ export function CashbackReceipt({
             onError={(e) => {
               if (isFood) {
                 e.currentTarget.src = "/brand/shopeefood-icon.png";
+              } else if (isLazada) {
+                e.currentTarget.src = "/brand/lazada-icon.png";
               }
             }}
           />
@@ -198,7 +215,7 @@ export function CashbackReceipt({
         <div>
           <h3 title={product.name}>{product.name}</h3>
           <div className={styles.productPrice}>
-            <strong>{hasPrice ? formatPrice(price) : (isFood ? "Đơn đặt món ShopeeFood" : "Chưa có giá")}</strong>
+            <strong>{hasPrice ? formatPrice(price) : (isFood ? "Đơn đặt món ShopeeFood" : isLazada ? "Sản phẩm Lazada" : "Chưa có giá")}</strong>
           </div>
         </div>
         <span className={styles.platformBadge}><MarketplaceBrand platform={product.platform} /></span>
@@ -209,23 +226,23 @@ export function CashbackReceipt({
         onPointerLeave={(event) => resetGlassLight(event, event.currentTarget)}
         onPointerCancel={(event) => resetGlassLight(event, event.currentTarget)}
       >
-        {(hasPrice || isFood) && <>
+        {showRewardBadge && <>
           <PercentIcon className={styles.rewardPercent} weight="bold" aria-hidden="true" />
           <PercentIcon className={`${styles.rewardPercent} ${styles.rewardPercentRight}`} weight="bold" aria-hidden="true" />
         </>}
         <div className={styles.rewardContent}>
           <p>Bạn được hoàn dự kiến</p>
           <div className={styles.rewardAmountRow}>
-            {(hasPrice || isFood) && <Image className={styles.rewardCoin} src="/hero/cashback-coin-stack.webp" width={272} height={216} alt="" sizes="(max-width: 600px) 28px, 34px" />}
+            {showRewardBadge && <Image className={styles.rewardCoin} src="/hero/cashback-coin-stack.webp" width={272} height={216} alt="" sizes="(max-width: 600px) 28px, 34px" />}
             <strong className={reward.length > 9 ? styles.longAmount : ""}>
               {reward}{hasPrice && <span className={styles.rewardCurrency}> đồng</span>}
             </strong>
           </div>
-          {!hasPrice && !isFood && (
+          {!showRewardBadge && (
             <span className={styles.rewardTiming}>Chưa có giá và tiền hoàn từ sàn cho sản phẩm này.</span>
           )}
         </div>
-        {(hasPrice || isFood) && (
+        {showRewardBadge && (
           <div className={styles.rewardRate}>
             <span className={styles.ratePill}>
               {`Hoàn ${cashbackRate.toLocaleString("vi-VN")}% giá trị đơn hàng`}

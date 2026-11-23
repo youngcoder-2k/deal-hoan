@@ -3,10 +3,13 @@ import {
   buildShopeeAffiliateUrl,
   isShopeeUrl,
   cleanShopeeUrl,
+  isLazadaUrl,
+  cleanLazadaUrl,
   isTikTokUrl,
   cleanTikTokUrl,
   generateAccessTradeTikTokLink,
 } from "@/lib/deals/affiliate";
+import { generateLazadaAffiliateLink } from "@/lib/deals/lazada-affiliate";
 import { lookupFastShopeeProduct } from "@/lib/deals/providers/fast-shopee";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
@@ -32,6 +35,7 @@ function isAllowedRedirectUrl(urlStr: string): boolean {
       "shp.ee",
       "tiktok.com",
       "lazada.vn",
+      "lzd.co",
       "shopeefood.vn",
       "now.vn",
       "accesstrade.vn",
@@ -42,9 +46,10 @@ function isAllowedRedirectUrl(urlStr: string): boolean {
   }
 }
 
-function renderZaloRedirectHtml(targetUrl: string): string {
+function renderZaloRedirectHtml(targetUrl: string, platformLabel = "Shopee"): string {
   const cleanTarget = targetUrl.replace(/^https?:\/\//, "");
   const safeTargetHref = escapeHtml(targetUrl);
+  const safePlatform = escapeHtml(platformLabel);
   const jsonTarget = JSON.stringify(targetUrl);
   const jsonCleanTarget = JSON.stringify(cleanTarget);
 
@@ -53,7 +58,7 @@ function renderZaloRedirectHtml(targetUrl: string): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Đang mở Shopee — DealHoàn</title>
+  <title>Đang mở ${safePlatform} — DealHoàn</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #faf3ef; color: #17212f; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; text-align: center; }
     .card { background: white; border-radius: 20px; padding: 32px 24px; max-width: 420px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.08); border: 1px solid #fed7aa; }
@@ -66,12 +71,12 @@ function renderZaloRedirectHtml(targetUrl: string): string {
 <body>
   <div class="card">
     <div class="logo">DealHoàn</div>
-    <h2 style="font-size: 18px; margin: 0 0 8px 0; color: #0f172a;">Đang chuyển tiếp tới Shopee</h2>
+    <h2 style="font-size: 18px; margin: 0 0 8px 0; color: #0f172a;">Đang chuyển tiếp tới ${safePlatform}</h2>
     <div class="notice">
       <b>⚠️ Bạn đang mở qua Zalo:</b><br />
-      Vui lòng bấm dấu <b>[ ··· ]</b> ở góc trên bên phải màn hình → chọn <b>"Mở bằng trình duyệt"</b> (Safari / Chrome) để Shopee tự động cộng tiền hoàn.
+      Vui lòng bấm dấu <b>[ ··· ]</b> ở góc trên bên phải màn hình → chọn <b>"Mở bằng trình duyệt"</b> (Safari / Chrome) để ${safePlatform} tự động cộng tiền hoàn.
     </div>
-    <a href="${safeTargetHref}" class="btn" id="openBtn">Bấm vào đây để mở Shopee</a>
+    <a href="${safeTargetHref}" class="btn" id="openBtn">Bấm vào đây để mở ${safePlatform}</a>
     <p class="hint">Đang tự động chuyển tiếp trong giây lát...</p>
   </div>
   <script>
@@ -147,7 +152,30 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 2. TikTok Shop: Convert via AccessTrade API
+  // 2. Lazada: Convert directly via Official Lazada Open Platform Affiliate API
+  if (isLazadaUrl(targetUrl)) {
+    const cleanTarget = cleanLazadaUrl(targetUrl);
+    const lazadaRes = await generateLazadaAffiliateLink(cleanTarget, { subId });
+    const redirectUrl =
+      lazadaRes.success && lazadaRes.affiliateUrl ? lazadaRes.affiliateUrl : cleanTarget;
+    if (isZalo) {
+      return new NextResponse(renderZaloRedirectHtml(redirectUrl, "Lazada"), {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store, max-age=0",
+        },
+      });
+    }
+    return NextResponse.redirect(redirectUrl, {
+      status: 307,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  }
+
+  // 3. TikTok Shop: Convert via AccessTrade API
   if (isTikTokUrl(targetUrl)) {
     const cleanTarget = cleanTikTokUrl(targetUrl);
     const atToken = getAccessTradeToken();

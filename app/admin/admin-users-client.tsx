@@ -423,6 +423,11 @@ export default function AdminUsersClient({
   const [showCookieGuide, setShowCookieGuide] = useState(false);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isUploadingCsv, setIsUploadingCsv] = useState(false);
+  const [isSyncingLazada, setIsSyncingLazada] = useState(false);
+  const [lazadaSyncResult, setLazadaSyncResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
   const [csvUploadProgress, setCsvUploadProgress] = useState<string | null>(null);
   const [csvUploadResult, setCsvUploadResult] = useState<{
     success: boolean;
@@ -2849,7 +2854,79 @@ export default function AdminUsersClient({
               )}
             </div>
 
-            {/* Thống kê nhanh hoa hồng và DealHoàn nhận lại từ các đơn đã ghi nhận */}
+            {/* 1B. ĐỒNG BỘ ĐƠN HÀNG LAZADA AFFILIATE CHÍNH CHỦ (OPEN API) */}
+            <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 text-indigo-600 flex items-center justify-center shrink-0 shadow-xs">
+                  <ArrowClockwise size={20} weight="bold" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-stone-900 m-0">
+                    Đồng Bộ Đơn Lazada Chính Chủ (Open API)
+                  </h3>
+                  <p className="text-xs text-stone-500 m-0 mt-0.5">
+                    Kéo báo cáo đơn 30 ngày gần nhất trực tiếp từ Lazada Affiliate API (không qua AccessTrade)
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={isSyncingLazada}
+                onClick={async () => {
+                  setIsSyncingLazada(true);
+                  setLazadaSyncResult(null);
+                  try {
+                    const res = await fetch("/api/admin/lazada/sync", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ daysBack: 30 }),
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.success) {
+                      setLazadaSyncResult({
+                        success: true,
+                        message: `Đã quét ${data.scanned ?? 0} đơn Lazada (${data.dateStart} → ${data.dateEnd}) · Ghi nhận ${data.processed ?? 0} đơn · Chưa khớp user: ${data.unmatched ?? 0}.`,
+                      });
+                    } else {
+                      setLazadaSyncResult({
+                        success: false,
+                        message: data.message || data.error || "Không thể đồng bộ đơn Lazada lúc này.",
+                      });
+                    }
+                  } catch {
+                    setLazadaSyncResult({
+                      success: false,
+                      message: "Lỗi kết nối máy chủ khi đồng bộ Lazada.",
+                    });
+                  } finally {
+                    setIsSyncingLazada(false);
+                  }
+                }}
+                className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-bold py-2.5 px-5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+              >
+                <ArrowClockwise size={16} weight="bold" className={isSyncingLazada ? "animate-spin" : ""} />
+                <span>{isSyncingLazada ? "Đang đồng bộ Lazada..." : "Đồng bộ Lazada ngay"}</span>
+              </button>
+
+              {lazadaSyncResult && (
+                <div
+                  className={`w-full p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
+                    lazadaSyncResult.success
+                      ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
+                      : "bg-red-50 text-red-900 border border-red-300"
+                  }`}
+                >
+                  {lazadaSyncResult.success ? (
+                    <CheckCircle size={18} weight="fill" className="text-emerald-600 shrink-0" />
+                  ) : (
+                    <WarningCircle size={18} weight="fill" className="text-red-600 shrink-0" />
+                  )}
+                  <span>{lazadaSyncResult.message}</span>
+                </div>
+              )}
+            </div>
+
             {/* Thống kê nhanh hoa hồng và DealHoàn nhận lại từ các đơn đã ghi nhận */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               <div className="p-4 rounded-xl border border-stone-200 bg-white shadow-xs">

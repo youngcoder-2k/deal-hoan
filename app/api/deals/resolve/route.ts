@@ -7,6 +7,7 @@ import {
   cleanShopeeUrl,
   isShopeeUrl,
   isShopeeFoodUrl,
+  isLazadaUrl,
   unshortenShopeeFoodUrl,
   isTikTokUrl,
   cleanTikTokUrl,
@@ -15,6 +16,7 @@ import {
   extractUrlFromText,
   formatSubIdForUser,
 } from "@/lib/deals/affiliate";
+import { resolveLazadaProduct } from "@/lib/deals/lazada-affiliate";
 import { cashbackFor } from "@/lib/deals/score";
 import type { Platform } from "@/lib/deals/types";
 import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resolve";
@@ -75,10 +77,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "invalid_url", message: "Link chưa hợp lệ. Hãy sao chép liên kết sản phẩm rồi dán lại." }, { status: 400 });
     }
     const host = inputUrl.hostname.toLowerCase();
-    const allowedDomains = ["shopee.vn", "shopeefood.vn", "shopeefood.com.vn", "now.vn", "shope.ee", "shp.ee"];
+    const allowedDomains = [
+      "shopee.vn",
+      "shopeefood.vn",
+      "shopeefood.com.vn",
+      "now.vn",
+      "shope.ee",
+      "shp.ee",
+      "lazada.vn",
+      "lzd.co",
+    ];
     const allowedHost = allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
     if (!allowedHost) {
-      return NextResponse.json({ error: "unsupported_platform", message: "Hãy dán link sản phẩm Shopee hoặc ShopeeFood." }, { status: 400 });
+      return NextResponse.json({ error: "unsupported_platform", message: "Hãy dán link sản phẩm Shopee, ShopeeFood hoặc Lazada." }, { status: 400 });
     }
     if (inputUrl?.hostname === "sv.shopee.vn" && inputUrl.pathname.startsWith("/share-video/")) {
       return NextResponse.json({
@@ -100,6 +111,138 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing url parameter" }, { status: 400 });
     }
 
+    // Direct Official Lazada Open Platform Affiliate flow (no AccessTrade)
+    if (isLazadaUrl(rawUrl)) {
+      const [lazadaResult, boosterSettings] = await Promise.all([
+        resolveLazadaProduct(rawUrl, { subId }),
+        getBoosterSettings(),
+      ]);
+
+      if (!lazadaResult.ok || !lazadaResult.product) {
+        return NextResponse.json(
+          {
+            error: lazadaResult.errorCode || "product_unresolved",
+            message:
+              lazadaResult.message ||
+              "Chưa tìm thấy sản phẩm từ link Lazada này. Hãy sao chép lại link sản phẩm trên Lazada rồi thử lại.",
+          },
+          { status: lazadaResult.errorCode === "lazada_not_configured" ? 503 : 422 }
+        );
+      }
+
+      const lp = lazadaResult.product;
+      let finalName = lp.name;
+      let finalImage = lp.imageUrl;
+      let finalPrice = lp.price;
+      let isVerifiedPrice = lp.isVerifiedPrice;
+
+      // Best-effort OG metadata fallback only when /marketing/product/feed lacks price or image
+      if (!finalName || !finalImage || finalPrice <= 0) {
+        try {
+          const metaRes = await fetch(lp.canonicalUrl, {
+            headers: {
+              "User-Agent":
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+              Accept: "text/html,application/xhtml+xml",
+              "Accept-Language": "vi-VN,vi;q=0.9",
+            },
+            redirect: "follow",
+            signal: AbortSignal.timeout(2200),
+          });
+          if (metaRes.ok) {
+            const html = await metaRes.text();
+            if (!finalImage) {
+              const img = extractMeta(html, "og:image") || extractMeta(html, "twitter:image");
+              if (img && img.startsWith("http")) finalImage = img;
+            }
+            if (!finalName) {
+              const title =
+                extractMeta(html, "og:title") ||
+                html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1];
+              if (title) {
+                finalName = title
+                  .replace(/&amp;/g, "&")
+                  .replace(/\s*[|–-]\s*Lazada(\.vn)?.*$/i, "")
+                  .trim();
+              }
+            }
+            if (finalPrice <= 0) {
+              const rawPriceStr =
+                extractMeta(html, "product:price:amount") ||
+                extractMeta(html, "og:price:amount");
+              if (rawPriceStr) {
+                const parsed = Number(rawPriceStr.replace(/[,.]/g, ""));
+                if (Number.isFinite(parsed) && parsed > 1000) {
+                  finalPrice = parsed;
+                  isVerifiedPrice = true;
+                }
+              }
+            }
+          }
+        } catch {}
+      }
+
+      if (!finalName) {
+        finalName = "Sản phẩm Lazada";
+      }
+
+      const grossCommission =
+        lp.grossCommission > 0
+          ? lp.grossCommission
+          : finalPrice > 0 && lp.commissionRatePercent > 0
+            ? Math.round((finalPrice * lp.commissionRatePercent) / 100)
+            : 0;
+
+      let finalCashback = 0;
+      let cashbackRate = 0;
+      if (grossCommission > 0 || lp.commissionRatePercent > 0) {
+        const boosted = boostCashbackRate(
+          lp.commissionRatePercent,
+          finalPrice,
+          grossCommission > 0 ? grossCommission : undefined,
+          boosterSettings
+        );
+        finalCashback = boosted.cashbackAmount;
+        cashbackRate = boosted.finalRate;
+      }
+
+      let matchedVouchers: MatchedCoupon[] = [];
+      let bestVoucherDiscount = 0;
+      try {
+        const allCoupons = await getVouchers();
+        const matchResult = matchVouchersForProduct(finalPrice, "Lazada", allCoupons);
+        matchedVouchers = matchResult.matched;
+        bestVoucherDiscount = matchResult.bestDiscount;
+      } catch (e) {
+        console.error("[VoucherMatching] Lỗi so khớp mã giảm giá Lazada:", e);
+      }
+
+      const resolvedProduct: CalculatedProduct = {
+        name: finalName,
+        imageUrl: finalImage || "/brand/lazada-icon.png",
+        price: finalPrice,
+        originalPrice: finalPrice,
+        cashback: finalCashback,
+        platform: "Lazada",
+        seller: lp.seller || "Lazada",
+        trackedLink: lp.affiliateUrl,
+        discountPercent: 0,
+        savingsPercent: cashbackRate,
+        isVerifiedPrice,
+        priceType: isVerifiedPrice ? "exact" : "estimated",
+        isExactCashback: true,
+        cashbackRate,
+        matchedVouchers,
+        bestVoucherDiscount,
+      };
+
+      return NextResponse.json({
+        success: true,
+        product: resolvedProduct,
+        trackedLink: lp.affiliateUrl,
+      });
+    }
+
     const isShopeeFood = isShopeeFoodUrl(rawUrl);
     const isShopee = isShopeeUrl(rawUrl) || isShopeeFood;
 
@@ -107,7 +250,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "unsupported_platform",
-          message: "DealHoàn hiện chỉ hỗ trợ nhận hoàn tiền cho link Shopee và ShopeeFood.",
+          message: "DealHoàn hiện hỗ trợ nhận hoàn tiền cho link Shopee, ShopeeFood và Lazada.",
         },
         { status: 400 }
       );

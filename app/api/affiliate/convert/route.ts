@@ -7,6 +7,8 @@ import {
   cleanShopeeUrl,
   isShopeeUrl,
   isShopeeFoodUrl,
+  isLazadaUrl,
+  cleanLazadaUrl,
   isTikTokUrl,
   cleanTikTokUrl,
   generateAccessTradeTikTokLink,
@@ -14,6 +16,7 @@ import {
   formatSubIdForUser,
   DEFAULT_SHOPEE_AFFILIATE_ID,
 } from "@/lib/deals/affiliate";
+import { generateLazadaAffiliateLink } from "@/lib/deals/lazada-affiliate";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
@@ -82,7 +85,32 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 3. TIKTOK SHOP (Via AccessTrade API)
+    // 3. LAZADA (Direct Official Lazada Open Platform API — no AccessTrade)
+    if (isLazadaUrl(rawUrl)) {
+      const cleanUrl = cleanLazadaUrl(rawUrl);
+      const lazadaRes = await generateLazadaAffiliateLink(cleanUrl, { subId });
+      const customShortLink = buildCustomShortUrl(cleanUrl, {
+        baseUrl: origin,
+        subId,
+      });
+
+      return NextResponse.json({
+        success: true,
+        platform: "lazada",
+        isLazada: true,
+        cleanUrl,
+        affiliateUrl: lazadaRes.affiliateUrl,
+        shortUrl: lazadaRes.success ? lazadaRes.affiliateUrl : customShortLink,
+        trackedLink: lazadaRes.affiliateUrl,
+        hasCommission: lazadaRes.success && lazadaRes.commissionRatePercent > 0,
+        commissionRatePercent: lazadaRes.commissionRatePercent,
+        message: lazadaRes.success
+          ? "Đã gắn mã hoàn tiền Lazada Affiliate chính chủ"
+          : (lazadaRes.error || "Không thể tạo link Lazada Affiliate cho sản phẩm này"),
+      });
+    }
+
+    // 4. TIKTOK SHOP (Via AccessTrade API)
     if (isTikTokUrl(rawUrl)) {
       const cleanUrl = cleanTikTokUrl(rawUrl);
       const atToken = getAccessTradeToken();

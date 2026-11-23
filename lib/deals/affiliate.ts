@@ -306,6 +306,102 @@ export function isShopeeUrl(rawUrl: string): boolean {
 }
 
 /**
+ * Checks if a URL belongs to Lazada Vietnam (web, mobile, shortlinks)
+ */
+export function isLazadaUrl(rawUrl: string): boolean {
+  const parsed = parseHost(rawUrl);
+  if (!parsed) return false;
+  const { host } = parsed;
+  return (
+    matchesDomain(host, "lazada.vn") ||
+    matchesDomain(host, "lzd.co")
+  );
+}
+
+/**
+ * Extracts numeric Lazada productId (itemId) from standard Lazada PDP or deeplink URLs.
+ * Examples:
+ * - https://www.lazada.vn/products/pdp-i13415412621-s117139082455.html -> "13415412621"
+ * - https://www.lazada.vn/products/ten-san-pham-i987654321.html -> "987654321"
+ * - lazada://vn/pdp?itemId=13415412621 -> "13415412621"
+ */
+export function extractLazadaProductId(rawUrl: string): string | null {
+  if (!rawUrl) return null;
+  const m1 = rawUrl.match(/-i(\d{5,})(?:-s\d+)?(?:\.html|[/?#]|$)/i);
+  if (m1) return m1[1];
+  const m2 = rawUrl.match(/[?&](?:itemId|item_id|productId|product_id)=(\d{5,})/i);
+  if (m2) return m2[1];
+  return null;
+}
+
+/**
+ * Cleans a Lazada URL before sending to Lazada Open Platform /marketing/getlink.
+ * - Preserves required query parameters (like `?t=...`) on shortlinks (`s.lazada.vn`, `c.lazada.vn`, `lzd.co`)
+ *   while stripping previous affiliate sub-tracking overrides.
+ * - Strips tracking/UTM noise from full `lazada.vn` product URLs.
+ */
+export function cleanLazadaUrl(rawUrl: string): string {
+  const extracted = extractUrlFromText(rawUrl);
+  if (!extracted) return rawUrl.trim();
+  const normalized =
+    extracted.startsWith("http://") || extracted.startsWith("https://")
+      ? extracted
+      : `https://${extracted}`;
+  try {
+    const u = new URL(normalized);
+    const host = u.hostname.toLowerCase();
+    const isShort =
+      host === "s.lazada.vn" ||
+      host === "c.lazada.vn" ||
+      host === "lzd.co" ||
+      host.endsWith(".lzd.co");
+
+    const subKeys = [
+      "sub_aff_id",
+      "subAffId",
+      "sub_id1",
+      "sub_id2",
+      "sub_id3",
+      "sub_id4",
+      "sub_id5",
+      "sub_id6",
+      "subId1",
+      "subId2",
+      "subId3",
+      "subId4",
+      "subId5",
+      "subId6",
+    ];
+    for (const k of subKeys) u.searchParams.delete(k);
+
+    if (!isShort) {
+      const stripKeys = [
+        "spm",
+        "clickTrackInfo",
+        "pvid",
+        "scm",
+        "exlaz",
+        "dsource",
+        "laz_share_info",
+        "laz_token",
+        "from_affiliate",
+        "fbclid",
+        "gclid",
+        "utm_source",
+        "utm_medium",
+        "utm_campaign",
+        "utm_content",
+        "utm_term",
+      ];
+      for (const k of stripKeys) u.searchParams.delete(k);
+    }
+    return u.toString();
+  } catch {
+    return normalized;
+  }
+}
+
+/**
  * Checks if a URL belongs to TikTok or TikTok Shop
  */
 export function isTikTokUrl(rawUrl: string): boolean {

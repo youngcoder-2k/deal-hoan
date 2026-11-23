@@ -1,6 +1,7 @@
 import { isAuthorizedCron } from "@/lib/cron/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { syncShopeeOrders } from "@/lib/deals/order-sync";
+import { isLazadaAffiliateConfigured, syncLazadaOrders } from "@/lib/deals/lazada-affiliate";
 import { autoSettleHoldPeriodOrders } from "@/lib/deals/cashback";
 import { expireOverdueReferrals } from "@/lib/referral/service";
 
@@ -11,29 +12,39 @@ export async function POST(request: NextRequest) { return handleSync(request); }
 async function handleSync(request: NextRequest) {
   if (!isAuthorizedCron(request)) return NextResponse.json({ error: "Unauthorized cron execution" }, { status: 401 });
   
-  // Tự động kiểm tra đối soát T+15 mỗi 15 phút (chuyển pending -> completed & chuyển tiền vào ví khả dụng cho khách)
-  const [settlement, expiredReferrals] = await Promise.all([
+  // Tự động kiểm tra đối soát T+15 mỗi 15 phút + hết hạn thưởng giới thiệu + đồng bộ Lazada Open API
+  const [settlement, expiredReferrals, lazadaSync] = await Promise.all([
     autoSettleHoldPeriodOrders().catch((e) => {
       console.error("[cron/sync-orders] autoSettle error:", e);
       return { settledCount: 0, revertedCount: 0, reconciledCount: 0 };
     }),
     expireOverdueReferrals().catch(() => 0),
+    isLazadaAffiliateConfigured()
+      ? syncLazadaOrders({ daysBack: 30 }).catch((e) => {
+          console.error("[cron/sync-orders] syncLazadaOrders error:", e);
+          return { code: 502, body: { success: false, status: "lazada_sync_error", processed: 0, scanned: 0, unmatched: 0, failed: 0 } };
+        })
+      : Promise.resolve(null),
   ]);
 
   try {
     const result = await syncShopeeOrders();
     const body = typeof result.body === "object" && result.body !== null ? result.body : {};
+    const statusCode =
+      result.code === 503 && lazadaSync?.code === 200 ? 200 : result.code;
     return NextResponse.json({
       ...body,
+      lazada: lazadaSync ? lazadaSync.body : { status: "not_configured" },
       autoSettled: settlement.settledCount,
       autoReverted: settlement.revertedCount,
       autoReconciled: settlement.reconciledCount,
       expiredReferrals,
-    }, { status: result.code, headers: { "Cache-Control": "no-store" } });
+    }, { status: statusCode, headers: { "Cache-Control": "no-store" } });
   } catch {
     return NextResponse.json({
       success: true,
       status: "order_sync_partial",
+      lazada: lazadaSync ? lazadaSync.body : { status: "not_configured" },
       autoSettled: settlement.settledCount,
       autoReverted: settlement.revertedCount,
       autoReconciled: settlement.reconciledCount,

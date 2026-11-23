@@ -16,7 +16,7 @@ import { getAccessTradeToken } from "../shopee-sync-config";
 const DATAFEED_URL = `${process.env.ACCESSTRADE_API_BASE ?? "https://api.accesstrade.vn"}/v1/datafeeds`;
 const PER_MERCHANT_LIMIT = 50;
 
-const DEFAULT_MERCHANTS = ["shopee", "lazada", "tiktokshop"];
+const DEFAULT_MERCHANTS = ["shopee", "tiktokshop"];
 
 const MERCHANT_PLATFORM: Record<string, Platform> = {
   shopee: "Shopee",

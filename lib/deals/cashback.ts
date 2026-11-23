@@ -237,6 +237,10 @@ export async function autoSettleHoldPeriodOrders(options: {
       );
 
       for (const ord of pendingOrders) {
+        // Đơn Lazada được đối soát trực tiếp qua Lazada Open API (/marketing/conversion/report), không áp quy tắc tự duyệt Shopee T+15
+        if (ord.platform === "Lazada") {
+          continue;
+        }
         const note = String(ord.note || "").toLowerCase();
         // Không tự duyệt nếu đơn đã có ghi chú bị hủy/từ chối từ Shopee
         if (note.includes("hủy") || note.includes("huỷ") || note.includes("từ chối") || note.includes("reject")) {
