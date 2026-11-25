@@ -7,31 +7,40 @@ test('ShopeeFood universal URL preserves canonical paths and removes tracking ju
   const load = loadTs({});
   const { toShopeeFoodUniversalUrl, buildShopeeFoodAffiliateUrl } = load('lib/deals/affiliate.ts');
 
-  // 1. Presale deals detail URL
+  // 1. Presale deals detail URL maps to shopee.vn/universal-link/now-food/... (not blank shopeefood.vn/now-food/...)
   const rawDeal = 'https://shopeefood.vn/now-food/presale-deals-detail/3304425207541760?brandId=8934&merchantId=0&restaurantId=1170300&shareChannel=copy_link&stm_medium=referral&uls_trackid=57252ls500jv';
   const cleanDeal = toShopeeFoodUniversalUrl(rawDeal);
-  assert.ok(cleanDeal.includes('/now-food/presale-deals-detail/3304425207541760'), 'Must preserve /now-food/presale-deals-detail path');
+  assert.ok(cleanDeal.startsWith('https://shopee.vn/universal-link/now-food/presale-deals-detail/3304425207541760'), 'Must map /now-food/presale-deals-detail to shopee.vn universal link');
   assert.ok(cleanDeal.includes('restaurantId=1170300'), 'Must preserve restaurantId');
   assert.ok(cleanDeal.includes('brandId=8934'), 'Must preserve brandId');
   assert.ok(!cleanDeal.includes('shareChannel'), 'Must strip shareChannel tracking junk');
   assert.ok(!cleanDeal.includes('uls_trackid'), 'Must strip uls_trackid tracking junk');
 
-  // 2. Shopee universal-link to ShopeeFood shop
+  // 2. Shopee universal-link to ShopeeFood shop stays on shopee.vn/universal-link/now-food/shop/:id
   const shopeeShop = 'https://shopee.vn/universal-link/now-food/shop/1170300';
   const cleanShop = toShopeeFoodUniversalUrl(shopeeShop);
-  assert.equal(cleanShop, 'https://shopeefood.vn/now-food/shop/1170300', 'Must map universal-link to shopeefood.vn/now-food/shop/:id');
+  assert.equal(cleanShop, 'https://shopee.vn/universal-link/now-food/shop/1170300', 'Must keep shopee.vn universal-link for /now-food/shop/:id');
 
-  // 3. City restaurant path
+  // 3. City restaurant path stays on shopeefood.vn (web route)
   const cityPath = 'https://shopeefood.vn/ho-chi-minh/tra-sua-mixue-nguyen-trai?fbclid=xyz';
   const cleanCity = toShopeeFoodUniversalUrl(cityPath);
   assert.equal(cleanCity, 'https://shopeefood.vn/ho-chi-minh/tra-sua-mixue-nguyen-trai', 'Must preserve city restaurant path');
 
-  // 4. Affiliate URL tracking parameter attachment
+  // 4. Affiliate URL wraps shopee.vn universal-link via official s.shopee.vn/an_redir with sub_id + affiliate_id
   const affiliateUrl = buildShopeeFoodAffiliateUrl(rawDeal, { subId: '12345', affiliateId: '17333200656' });
-  assert.ok(affiliateUrl.includes('/now-food/presale-deals-detail/3304425207541760'));
-  assert.ok(affiliateUrl.includes('restaurantId=1170300'));
-  assert.ok(affiliateUrl.includes('sub_id=dh12345'));
-  assert.ok(affiliateUrl.includes('affiliate_id=17333200656'));
+  const parsedAff = new URL(affiliateUrl);
+  assert.equal(parsedAff.origin + parsedAff.pathname, 'https://s.shopee.vn/an_redir');
+  assert.equal(parsedAff.searchParams.get('sub_id'), 'dh12345');
+  assert.equal(parsedAff.searchParams.get('affiliate_id'), '17333200656');
+  const originLink = parsedAff.searchParams.get('origin_link') || '';
+  assert.ok(originLink.startsWith('https://shopee.vn/universal-link/now-food/presale-deals-detail/3304425207541760'));
+  assert.ok(originLink.includes('restaurantId=1170300'));
+
+  // Re-wrapping an already-wrapped an_redir URL must not double-wrap
+  const rewrapped = buildShopeeFoodAffiliateUrl(affiliateUrl, { subId: '99999', affiliateId: '17333200656' });
+  const parsedRewrapped = new URL(rewrapped);
+  assert.equal(parsedRewrapped.searchParams.get('sub_id'), 'dh99999');
+  assert.equal(parsedRewrapped.searchParams.get('origin_link'), originLink);
 });
 
 test('CashbackReceipt renders ShopeeFood as dynamic 6% order-level cashback without flat 4.000đ', () => {
@@ -153,15 +162,17 @@ test('ShopeeFood shortlinks (vn.shp.ee, s.shopee.vn, spf.shopee.vn, shopeefood.v
   assert.equal(resolvedBroken, 'https://spf.shopee.vn/broken123');
   const universalSpf = toShopeeFoodUniversalUrl(resolvedBroken);
   assert.equal(universalSpf, 'https://spf.shopee.vn/broken123');
-  assert.equal(toShopeeFoodUniversalUrl('https://shopeefood.vn/error_page'), 'https://shopeefood.vn');
+  assert.equal(toShopeeFoodUniversalUrl('https://shopeefood.vn/error_page'), 'https://shopee.vn/universal-link/now-food');
 
   // 4. s.shopee.vn returning ULS HTML bridge page extracts embedded shopeefood.vn destination
   const resolvedUls = await resolveShopeeShortlink('https://s.shopee.vn/ulsfood', { fetcher: mockFetcher });
   assert.equal(resolvedUls, 'https://shopeefood.vn/now-food/shop/998877');
   assert.equal(isShopeeFoodUrl(resolvedUls), true);
 
-  // 5. buildShopeeFoodAffiliateUrl always preserves default affiliate_id even if omitted
+  // 5. buildShopeeFoodAffiliateUrl wraps /now-food/shop/998877 through s.shopee.vn/an_redir with default affiliate_id
   const aff = buildShopeeFoodAffiliateUrl(resolvedUls, { subId: '1f162a51-8baa-404e-b16a-ca4e2d2c4b8d' });
+  assert.ok(aff.startsWith('https://s.shopee.vn/an_redir?'));
   assert.ok(aff.includes('affiliate_id=17333200656'));
   assert.ok(aff.includes('sub_id=dh1f162a518baa404eb16aca4e2d2c4b8d'));
+  assert.equal(isShopeeFoodUrl(aff), true);
 });
