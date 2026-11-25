@@ -13,6 +13,7 @@ import {
   generateAccessTradeTikTokLink,
 } from "@/lib/deals/affiliate";
 import { generateLazadaAffiliateLink } from "@/lib/deals/lazada-affiliate";
+import { generateRioHubTikTokLink, isRioHubConfigured } from "@/lib/deals/riohub-affiliate";
 import { lookupFastShopeeProduct } from "@/lib/deals/providers/fast-shopee";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
@@ -37,6 +38,7 @@ function isAllowedRedirectUrl(urlStr: string): boolean {
       "shope.ee",
       "shp.ee",
       "tiktok.com",
+      "tiktokv.com",
       "lazada.vn",
       "lzd.co",
       "shopeefood.vn",
@@ -202,12 +204,18 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  // 3. TikTok Shop: Convert via AccessTrade API
+  // 3. TikTok Shop: Convert via RioHub Partner API (fallback AccessTrade)
   if (isTikTokUrl(targetUrl)) {
     const cleanTarget = cleanTikTokUrl(targetUrl);
-    const atToken = getAccessTradeToken();
-    const atResult = await generateAccessTradeTikTokLink(cleanTarget, { subId, authToken: atToken });
-    const redirectUrl = atResult.success && atResult.affiliateUrl ? atResult.affiliateUrl : cleanTarget;
+    let redirectUrl = cleanTarget;
+    if (isRioHubConfigured()) {
+      const rioRes = await generateRioHubTikTokLink(cleanTarget, { subId });
+      if (rioRes.success && rioRes.affiliateUrl) redirectUrl = rioRes.affiliateUrl;
+    } else {
+      const atToken = getAccessTradeToken();
+      const atResult = await generateAccessTradeTikTokLink(cleanTarget, { subId, authToken: atToken });
+      if (atResult.success && atResult.affiliateUrl) redirectUrl = atResult.affiliateUrl;
+    }
     return NextResponse.redirect(redirectUrl, {
       status: 307,
       headers: {

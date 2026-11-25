@@ -17,6 +17,7 @@ import {
   DEFAULT_SHOPEE_AFFILIATE_ID,
 } from "@/lib/deals/affiliate";
 import { generateLazadaAffiliateLink } from "@/lib/deals/lazada-affiliate";
+import { generateRioHubTikTokLink, isRioHubConfigured } from "@/lib/deals/riohub-affiliate";
 import { getAccessTradeToken } from "@/lib/deals/shopee-sync-config";
 
 export const dynamic = "force-dynamic";
@@ -110,16 +111,33 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 4. TIKTOK SHOP (Via AccessTrade API)
+    // 4. TIKTOK SHOP (Prioritize RioHub Official API, fallback to AccessTrade)
     if (isTikTokUrl(rawUrl)) {
       const cleanUrl = cleanTikTokUrl(rawUrl);
-      const atToken = getAccessTradeToken();
-      const atResult = await generateAccessTradeTikTokLink(cleanUrl, { subId, authToken: atToken });
-
       const customShortLink = buildCustomShortUrl(cleanUrl, {
         baseUrl: origin,
         subId,
       });
+
+      if (isRioHubConfigured()) {
+        const rioRes = await generateRioHubTikTokLink(cleanUrl, { subId });
+        return NextResponse.json({
+          success: true,
+          platform: "tiktok",
+          isTikTok: true,
+          cleanUrl,
+          affiliateUrl: rioRes.affiliateUrl,
+          shortUrl: rioRes.success ? rioRes.affiliateUrl : customShortLink,
+          trackedLink: rioRes.affiliateUrl,
+          hasCommission: rioRes.success,
+          message: rioRes.success
+            ? "Đã gắn mã hoàn tiền TikTok Shop qua RioHub"
+            : (rioRes.message || "Sản phẩm chưa hỗ trợ tạo link hoàn tiền"),
+        });
+      }
+
+      const atToken = getAccessTradeToken();
+      const atResult = await generateAccessTradeTikTokLink(cleanUrl, { subId, authToken: atToken });
 
       return NextResponse.json({
         success: true,

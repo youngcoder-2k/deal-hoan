@@ -27,7 +27,7 @@ export function extractUrlFromText(input: string): string {
     return url;
   }
   const bareMatch = trimmed.match(
-    /(?:^|[\s:(\[])((?:[a-z0-9-]+\.)?(?:shopee\.vn|shopeefood\.vn|shopeefood\.com\.vn|now\.vn|shope\.ee|shp\.ee|lazada\.vn|lzd\.co)(?:\/[^\s<>"'`]*)?)/i
+    /(?:^|[\s:(\[])((?:[a-z0-9-]+\.)?(?:shopee\.vn|shopeefood\.vn|shopeefood\.com\.vn|now\.vn|shope\.ee|shp\.ee|lazada\.vn|lzd\.co|tiktok\.com|tiktokv\.com)(?:\/[^\s<>"'`]*)?)/i
   );
   if (bareMatch && bareMatch[1]) {
     const bare = bareMatch[1].replace(/[.,;!?)"'\]>]+$/, "");
@@ -601,8 +601,22 @@ export function isTikTokUrl(rawUrl: string): boolean {
   const { host } = parsed;
   return (
     matchesDomain(host, "tiktok.com") ||
+    matchesDomain(host, "tiktokv.com") ||
     matchesDomain(host, "douyin.com")
   );
+}
+
+/**
+ * Extracts numeric TikTok Shop product_id when present in full PDP URLs.
+ * e.g. https://shop.tiktok.com/view/product/1736270422342206747 -> "1736270422342206747"
+ */
+export function extractTikTokProductId(rawUrl: string): string | null {
+  if (!rawUrl) return null;
+  const m1 = rawUrl.match(/\/product\/(\d{10,})/i);
+  if (m1) return m1[1];
+  const m2 = rawUrl.match(/[?&](?:product_id|productId)=(\d{10,})/i);
+  if (m2) return m2[1];
+  return null;
 }
 
 /**

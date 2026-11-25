@@ -5,6 +5,12 @@ import {
   buildLazadaOrderId,
   parseLazadaConversionStatus,
 } from "@/lib/deals/lazada-affiliate";
+import {
+  buildRioHubOrderId,
+  extractRioHubSubId,
+  parseRioHubOrderStatus,
+  verifyRioHubWebhookSignature,
+} from "@/lib/deals/riohub-affiliate";
 
 export const dynamic = "force-dynamic";
 function validSecret(provided: string | null, expected: string) {
@@ -143,9 +149,22 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const rawBody = await request.text();
     const webhookSecret = process.env.AFFILIATE_WEBHOOK_SECRET?.trim();
-    if (!webhookSecret) return NextResponse.json({ error: "Webhook chưa được cấu hình." }, { status: 503 });
-    {
+    const riohubSecret = process.env.RIOHUB_WEBHOOK_SECRET?.trim();
+    const riohubSig =
+      request.headers.get("x-riohub-signature") ||
+      request.headers.get("x-signature") ||
+      request.headers.get("x-hub-signature-256");
+
+    const isValidRioHubHmac = Boolean(
+      riohubSecret && verifyRioHubWebhookSignature(rawBody, riohubSig, riohubSecret)
+    );
+
+    if (!isValidRioHubHmac) {
+      if (!webhookSecret) {
+        return NextResponse.json({ error: "Webhook chưa được cấu hình." }, { status: 503 });
+      }
       const headerSecret = request.headers.get("x-webhook-secret");
       const urlSecret = request.nextUrl.searchParams.get("secret");
       if (!validSecret(headerSecret, webhookSecret) && !validSecret(urlSecret, webhookSecret)) {
@@ -153,10 +172,26 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const body = await request.json().catch(() => ({}));
+    let parsedJson: Record<string, unknown> = {};
+    try {
+      const p = JSON.parse(rawBody || "{}");
+      if (p && typeof p === "object") parsedJson = p as Record<string, unknown>;
+    } catch {}
+    // Unwrap nested RioHub event payload (`{ event: "...", data: { ... } }`) if present
+    const body: Record<string, unknown> =
+      parsedJson.data && typeof parsedJson.data === "object" && !Array.isArray(parsedJson.data)
+        ? { ...parsedJson, ...(parsedJson.data as Record<string, unknown>) }
+        : parsedJson;
 
-    // Hỗ trợ cả định dạng Lazada Open API, AccessTrade, Shopee Open API và định dạng chuẩn DealHoàn
-    const rawPlatform = String(body.platform || body.merchant || "Shopee").toLowerCase();
+    // Hỗ trợ định dạng RioHub TikTok Shop, Lazada Open API, AccessTrade, Shopee Open API và DealHoàn
+    const queryPlatform = request.nextUrl.searchParams.get("platform") || "";
+    const inferredRioHub =
+      isValidRioHubHmac ||
+      Boolean(body.creator_username) ||
+      Boolean(body.actual_commission !== undefined || body.estimated_commission !== undefined);
+    const rawPlatform = String(
+      body.platform || body.merchant || queryPlatform || (inferredRioHub ? "tiktok" : "Shopee")
+    ).toLowerCase();
 
     const platform: "Shopee" | "ShopeeFood" | "TikTok Shop" | "Lazada" = rawPlatform.includes("tiktok")
       ? "TikTok Shop"
@@ -168,33 +203,53 @@ export async function POST(request: NextRequest) {
 
     const orderId =
       platform === "Lazada"
-        ? buildLazadaOrderId(body as Record<string, unknown>)
-        : String(body.orderId || body.order_id || body.order_code || "").trim();
-    const subId = String(
-      body.subAffId ||
-        body.sub_aff_id ||
-        body.subId1 ||
-        body.sub_id1 ||
-        body.subId ||
-        body.sub_id ||
-        body.sub1 ||
-        body.sub_1 ||
-        ""
-    ).trim();
+        ? buildLazadaOrderId(body)
+        : platform === "TikTok Shop"
+          ? buildRioHubOrderId(body)
+          : String(body.orderId || body.order_id || body.order_code || "").trim();
+    const subId =
+      platform === "TikTok Shop"
+        ? extractRioHubSubId(body)
+        : String(
+            body.subAffId ||
+              body.sub_aff_id ||
+              body.subId1 ||
+              body.sub_id1 ||
+              body.subId ||
+              body.sub_id ||
+              body.sub1 ||
+              body.sub_1 ||
+              ""
+          ).trim();
     // The partner must send the tracking reference, never an independently supplied owner.
 
-    const productName =
+    const productName = String(
       body.productName ||
-      body.product_name ||
-      body.skuName ||
-      body.sku_name ||
-      (platform === "Lazada" ? "Sản phẩm Lazada mua qua DealHoàn" : "Sản phẩm mua qua DealHoàn");
-    const productImage = body.productImage || body.product_image || "";
-    const orderValueRaw = body.orderValue ?? body.order_value ?? body.orderAmt ?? body.order_amt ?? body.transaction_value;
+        body.product_name ||
+        body.title ||
+        body.skuName ||
+        body.sku_name ||
+        (platform === "Lazada"
+          ? "Sản phẩm Lazada mua qua DealHoàn"
+          : platform === "TikTok Shop"
+            ? "Sản phẩm TikTok Shop mua qua DealHoàn"
+            : "Sản phẩm mua qua DealHoàn")
+    );
+    const productImage = String(body.productImage || body.product_image || body.main_image_url || "");
+    const orderValueRaw =
+      body.orderValue ??
+      body.order_value ??
+      body.payment_amount ??
+      body.gmv ??
+      body.orderAmt ??
+      body.order_amt ??
+      body.transaction_value;
     const orderValue = orderValueRaw === undefined ? undefined : Number(orderValueRaw);
     const commissionRaw =
       body.commissionAmount ??
       body.commission_amount ??
+      body.actual_commission ??
+      body.estimated_commission ??
       body.estPayout ??
       body.est_payout ??
       body.payout ??
@@ -202,16 +257,18 @@ export async function POST(request: NextRequest) {
       body.commission;
     const commissionAmount = commissionRaw === undefined ? undefined : Number(commissionRaw);
     const cashbackAmount = body.cashbackAmount === undefined ? undefined : Number(body.cashbackAmount);
-    const rawStatus = String(body.status || "pending").toLowerCase();
+    const rawStatus = String(body.status || body.order_status || "pending").toLowerCase();
 
     const status: "pending" | "completed" | "rejected" =
       platform === "Lazada"
-        ? (parseLazadaConversionStatus(body as Record<string, unknown>) ?? "pending")
-        : rawStatus === "2" || rawStatus === "approved" || rawStatus === "completed"
-          ? "completed"
-          : rawStatus === "3" || rawStatus === "rejected" || rawStatus === "cancelled"
-            ? "rejected"
-            : "pending";
+        ? (parseLazadaConversionStatus(body) ?? "pending")
+        : platform === "TikTok Shop"
+          ? (parseRioHubOrderStatus(body) ?? "pending")
+          : rawStatus === "2" || rawStatus === "approved" || rawStatus === "completed"
+            ? "completed"
+            : rawStatus === "3" || rawStatus === "rejected" || rawStatus === "cancelled"
+              ? "rejected"
+              : "pending";
 
     if (!orderId) {
       return NextResponse.json({ error: "Thiếu thông tin orderId" }, { status: 400 });
@@ -227,7 +284,10 @@ export async function POST(request: NextRequest) {
       commissionAmount,
       cashbackAmount,
       status,
-      note: body.note || `Ghi nhận qua Webhook ${platform}`,
+      note:
+        typeof body.note === "string" && body.note.trim()
+          ? body.note.trim()
+          : `Ghi nhận qua Webhook ${platform}`,
       actorType: "webhook",
       actorId: platform,
     });

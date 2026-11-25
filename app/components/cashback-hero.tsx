@@ -46,11 +46,12 @@ export function CashbackStory() {
         Dán link, xem tiền hoàn.<br />
         Mua món bạn thích, nhận lại một phần tiền.
       </p>
-      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, ShopeeFood và Lazada">
+      <div className={styles.marketplaces} aria-label="Hỗ trợ Shopee, ShopeeFood, Lazada và TikTok Shop">
         <span>Hỗ trợ:</span>
         <MarketplaceBrand platform="Shopee" />
         <MarketplaceBrand platform="ShopeeFood" />
         <MarketplaceBrand platform="Lazada" />
+        <MarketplaceBrand platform="TikTok Shop" />
       </div>
       <div className={styles.heroIllustration} aria-hidden="true">
         <Image className={styles.shoppingBag} src="/hero/deal-hoan-shopping-bag.webp" width={640} height={520} alt="" preload sizes="(max-width: 900px) 220px, 520px" />
@@ -126,7 +127,7 @@ export function CashbackEmpty({ busy }: { busy: boolean }) {
           </li>
         ))}
       </ol>
-      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee, ShopeeFood và Lazada.</p>
+      <p className={styles.emptySupport}>Hỗ trợ link từ Shopee, ShopeeFood, Lazada và TikTok Shop.</p>
       <div className={styles.guideFooter}>
         <a href="#how" className={styles.guideLink}>Cách lấy link sản phẩm <ArrowRightIcon size={22} aria-hidden="true" /></a>
       </div>
@@ -167,6 +168,7 @@ export function CashbackReceipt({
   // Savings may include marketplace discounts, so it is not the cashback rate.
   const isFood = product.platform?.toLowerCase().includes("food");
   const isLazada = product.platform?.toLowerCase().includes("lazada");
+  const isTikTok = product.platform?.toLowerCase().includes("tiktok");
   const cashbackRate = product.cashbackRate ?? (price > 0 ? Math.round(cashback / price * 1000) / 10 : (isFood ? 6.0 : 0));
   const hasPrice = price > 0;
   const hasRateOnly = !hasPrice && cashbackRate > 0;
@@ -181,13 +183,15 @@ export function CashbackReceipt({
     product.trackedLink ||
     (isLazada
       ? "https://www.lazada.vn"
-      : product.platform?.toLowerCase().includes("shopee")
-        ? "https://shopee.vn"
-        : "https://dealhoan.com");
+      : isTikTok
+        ? "https://shop.tiktok.com"
+        : product.platform?.toLowerCase().includes("shopee")
+          ? "https://shopee.vn"
+          : "https://dealhoan.com");
   const displayImageUrl =
     isFood && (!product.imageUrl || product.imageUrl === "/brand/shopeefood-logo.png" || product.imageUrl.includes("unsplash.com"))
       ? "/brand/shopeefood-icon.png"
-      : (product.imageUrl || (isFood ? "/brand/shopeefood-icon.png" : isLazada ? "/brand/lazada-icon.png" : undefined));
+      : (product.imageUrl || (isFood ? "/brand/shopeefood-icon.png" : isLazada ? "/brand/lazada-icon.png" : isTikTok ? "/brand/tiktok.svg" : undefined));
   return (
     <div className={styles.receipt} aria-labelledby="cashback-result-title">
       <div className={styles.receiptHeading}>

@@ -237,8 +237,8 @@ export async function autoSettleHoldPeriodOrders(options: {
       );
 
       for (const ord of pendingOrders) {
-        // Đơn Lazada được đối soát trực tiếp qua Lazada Open API (/marketing/conversion/report), không áp quy tắc tự duyệt Shopee T+15
-        if (ord.platform === "Lazada") {
+        // Đơn Lazada & TikTok Shop được đối soát trực tiếp qua API đối tác (Lazada Open API / RioHub), không áp quy tắc tự duyệt Shopee T+15
+        if (ord.platform === "Lazada" || ord.platform === "TikTok Shop") {
           continue;
         }
         const note = String(ord.note || "").toLowerCase();

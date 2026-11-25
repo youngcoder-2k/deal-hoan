@@ -19,6 +19,7 @@ import {
   formatSubIdForUser,
 } from "@/lib/deals/affiliate";
 import { resolveLazadaProduct } from "@/lib/deals/lazada-affiliate";
+import { resolveRioHubTikTokProduct } from "@/lib/deals/riohub-affiliate";
 import { cashbackFor } from "@/lib/deals/score";
 import type { Platform } from "@/lib/deals/types";
 import { resolveProductLocally, type CalculatedProduct } from "@/lib/deals/resolve";
@@ -88,10 +89,12 @@ export async function POST(request: NextRequest) {
       "shp.ee",
       "lazada.vn",
       "lzd.co",
+      "tiktok.com",
+      "tiktokv.com",
     ];
     const allowedHost = allowedDomains.some((domain) => host === domain || host.endsWith(`.${domain}`));
     if (!allowedHost) {
-      return NextResponse.json({ error: "unsupported_platform", message: "Hãy dán link sản phẩm Shopee, ShopeeFood hoặc Lazada." }, { status: 400 });
+      return NextResponse.json({ error: "unsupported_platform", message: "Hãy dán link sản phẩm Shopee, ShopeeFood, Lazada hoặc TikTok Shop." }, { status: 400 });
     }
     if (inputUrl?.hostname === "sv.shopee.vn" && inputUrl.pathname.startsWith("/share-video/")) {
       return NextResponse.json({
@@ -245,6 +248,79 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Direct TikTok Shop Affiliate via RioHub Partner API (no AccessTrade)
+    if (isTikTokUrl(rawUrl)) {
+      const [rioResult, boosterSettings] = await Promise.all([
+        resolveRioHubTikTokProduct(rawUrl, { subId }),
+        getBoosterSettings(),
+      ]);
+
+      if (!rioResult.ok || !rioResult.product) {
+        return NextResponse.json(
+          {
+            error: rioResult.errorCode || "product_unresolved",
+            message:
+              rioResult.message ||
+              "Sản phẩm TikTok Shop này chưa hỗ trợ hoàn tiền hoặc link không hợp lệ.",
+          },
+          { status: rioResult.errorCode === "riohub_not_configured" ? 503 : 422 }
+        );
+      }
+
+      const rp = rioResult.product;
+      const finalPrice = rp.price;
+      const finalOriginalPrice = rp.originalPrice > finalPrice ? rp.originalPrice : finalPrice;
+      const grossCommission =
+        rp.grossCommission > 0
+          ? rp.grossCommission
+          : finalPrice > 0 && rp.commissionRatePercent > 0
+            ? Math.round((finalPrice * rp.commissionRatePercent) / 100)
+            : 0;
+
+      let finalCashback = 0;
+      let cashbackRate = 0;
+      if (grossCommission > 0 || rp.commissionRatePercent > 0) {
+        const boosted = boostCashbackRate(
+          rp.commissionRatePercent,
+          finalPrice,
+          grossCommission > 0 ? grossCommission : undefined,
+          boosterSettings
+        );
+        finalCashback = boosted.cashbackAmount;
+        cashbackRate = boosted.finalRate;
+      }
+
+      const discountPercent =
+        finalOriginalPrice > finalPrice && finalPrice > 0
+          ? Math.round(((finalOriginalPrice - finalPrice) / finalOriginalPrice) * 100)
+          : 0;
+
+      const resolvedProduct: CalculatedProduct = {
+        name: rp.name || "Sản phẩm TikTok Shop",
+        imageUrl: rp.imageUrl || "/brand/tiktok.svg",
+        price: finalPrice,
+        originalPrice: finalOriginalPrice,
+        cashback: finalCashback,
+        platform: "TikTok Shop",
+        seller: rp.seller || "TikTok Shop",
+        trackedLink: rp.affiliateUrl,
+        discountPercent,
+        savingsPercent: cashbackRate,
+        isVerifiedPrice: rp.isVerifiedPrice,
+        priceType: rp.isVerifiedPrice ? "exact" : "estimated",
+        isExactCashback: true,
+        cashbackRate,
+        matchedVouchers: [],
+        bestVoucherDiscount: 0,
+      };
+
+      return NextResponse.json({
+        success: true,
+        product: resolvedProduct,
+        trackedLink: rp.affiliateUrl,
+      });
+    }
+
     const isShopeeFood = isShopeeFoodUrl(rawUrl);
     const isShopee = isShopeeUrl(rawUrl) || isShopeeFood;
 
@@ -252,7 +328,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           error: "unsupported_platform",
-          message: "DealHoàn hiện hỗ trợ nhận hoàn tiền cho link Shopee, ShopeeFood và Lazada.",
+          message: "DealHoàn hiện hỗ trợ nhận hoàn tiền cho link Shopee, ShopeeFood, Lazada và TikTok Shop.",
         },
         { status: 400 }
       );

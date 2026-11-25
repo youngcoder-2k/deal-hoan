@@ -428,6 +428,11 @@ export default function AdminUsersClient({
     success: boolean;
     message: string;
   } | null>(null);
+  const [isSyncingTikTok, setIsSyncingTikTok] = useState(false);
+  const [tikTokSyncResult, setTikTokSyncResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
   const [csvUploadProgress, setCsvUploadProgress] = useState<string | null>(null);
   const [csvUploadResult, setCsvUploadResult] = useState<{
     success: boolean;
@@ -2923,6 +2928,78 @@ export default function AdminUsersClient({
                     <WarningCircle size={18} weight="fill" className="text-red-600 shrink-0" />
                   )}
                   <span>{lazadaSyncResult.message}</span>
+                </div>
+              )}
+            </div>
+
+            {/* 1C. ĐỒNG BỘ ĐƠN HÀNG TIKTOK SHOP QUA RIOHUB API */}
+            <div className="bg-white rounded-2xl border border-stone-200 p-6 shadow-sm flex items-center justify-between flex-wrap gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-stone-900 text-white flex items-center justify-center shrink-0 shadow-xs">
+                  <ArrowClockwise size={20} weight="bold" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-stone-900 m-0">
+                    Đồng Bộ Đơn TikTok Shop (RioHub API)
+                  </h3>
+                  <p className="text-xs text-stone-500 m-0 mt-0.5">
+                    Kéo đơn hàng và hoa hồng TikTok Shop trực tiếp từ kênh creator đã liên kết trên RioHub
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={isSyncingTikTok}
+                onClick={async () => {
+                  setIsSyncingTikTok(true);
+                  setTikTokSyncResult(null);
+                  try {
+                    const res = await fetch("/api/admin/tiktok/sync", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (res.ok && data.success) {
+                      setTikTokSyncResult({
+                        success: true,
+                        message: `Đã quét ${data.scanned ?? 0} đơn TikTok Shop (@${data.creatorUsername || ""}) · Ghi nhận ${data.processed ?? 0} đơn · Chưa khớp user: ${data.unmatched ?? 0}.`,
+                      });
+                    } else {
+                      setTikTokSyncResult({
+                        success: false,
+                        message: data.message || data.error || "Không thể đồng bộ đơn TikTok Shop lúc này.",
+                      });
+                    }
+                  } catch {
+                    setTikTokSyncResult({
+                      success: false,
+                      message: "Lỗi kết nối máy chủ khi đồng bộ TikTok Shop.",
+                    });
+                  } finally {
+                    setIsSyncingTikTok(false);
+                  }
+                }}
+                className="bg-stone-900 hover:bg-stone-800 disabled:opacity-50 text-white font-bold py-2.5 px-5 rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm"
+              >
+                <ArrowClockwise size={16} weight="bold" className={isSyncingTikTok ? "animate-spin" : ""} />
+                <span>{isSyncingTikTok ? "Đang đồng bộ TikTok..." : "Đồng bộ TikTok Shop ngay"}</span>
+              </button>
+
+              {tikTokSyncResult && (
+                <div
+                  className={`w-full p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 ${
+                    tikTokSyncResult.success
+                      ? "bg-emerald-50 text-emerald-900 border border-emerald-300"
+                      : "bg-red-50 text-red-900 border border-red-300"
+                  }`}
+                >
+                  {tikTokSyncResult.success ? (
+                    <CheckCircle size={18} weight="fill" className="text-emerald-600 shrink-0" />
+                  ) : (
+                    <WarningCircle size={18} weight="fill" className="text-red-600 shrink-0" />
+                  )}
+                  <span>{tikTokSyncResult.message}</span>
                 </div>
               )}
             </div>

@@ -25,6 +25,7 @@ import {
   isShopeeUrl,
   isShopeeFoodUrl,
   isLazadaUrl,
+  isTikTokUrl,
   buildCustomShortUrl,
   extractUrlFromText,
   formatSubIdForUser,
@@ -574,7 +575,7 @@ export default function HomeClient({
       showTopToast({
         type: "warning",
         title: "Chưa có đường link",
-        message: "Hãy dán link Shopee, ShopeeFood hoặc Lazada.",
+        message: "Hãy dán link Shopee, ShopeeFood, Lazada hoặc TikTok Shop.",
       });
       setTimeout(() => {
         (document.activeElement as HTMLElement | null)?.blur();
@@ -582,17 +583,18 @@ export default function HomeClient({
       return notify("Vui lòng dán link sản phẩm 🙂");
     }
 
-    // Kiểm tra tính hợp lệ: Chấp nhận link Shopee, ShopeeFood hoặc Lazada
+    // Kiểm tra tính hợp lệ: Chấp nhận link Shopee, ShopeeFood, Lazada hoặc TikTok Shop
     const isFood = isShopeeFoodUrl(trimmed);
     const isShopee = isShopeeUrl(trimmed) || isFood;
     const isLazada = isLazadaUrl(trimmed);
+    const isTikTok = isTikTokUrl(trimmed);
 
-    if (!isShopee && !isLazada) {
+    if (!isShopee && !isLazada && !isTikTok) {
       setBusy(false);
 
       const lower = trimmed.toLowerCase();
       let errorTitle = "Chưa hỗ trợ đường link này";
-      let errorMsg = "Hãy dán link Shopee, ShopeeFood hoặc Lazada.";
+      let errorMsg = "Hãy dán link Shopee, ShopeeFood, Lazada hoặc TikTok Shop.";
 
       if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
         errorTitle = "Đường dẫn không hợp lệ";
@@ -604,7 +606,7 @@ export default function HomeClient({
         title: errorTitle,
         message: errorMsg,
       });
-      return notify("Link không hợp lệ: Chỉ hỗ trợ link Shopee, ShopeeFood và Lazada.");
+      return notify("Link không hợp lệ: Chỉ hỗ trợ link Shopee, ShopeeFood, Lazada và TikTok Shop.");
     }
 
     if (closingTimerRef.current) clearTimeout(closingTimerRef.current);
@@ -718,8 +720,28 @@ export default function HomeClient({
           setCalculatedProduct((prev) => (prev ? { ...prev, trackedLink: updated } : null));
         }
       } catch {}
+    } else if (calculatedProduct?.platform === "TikTok Shop" && isTikTokUrl(trackedLink)) {
+      // TikTok Shop shortlinks bind sub_id server-side in RioHub; refresh once after login so the link belongs to this user
+      const refreshKey = `${user.id}:${trackedLink}`;
+      if (typeof window !== "undefined" && sessionStorage.getItem("dealhoan_tiktok_refreshed") !== refreshKey) {
+        sessionStorage.setItem("dealhoan_tiktok_refreshed", refreshKey);
+        fetch("/api/affiliate/convert", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: link || trackedLink }),
+        })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data) => {
+            if (data?.affiliateUrl && data.affiliateUrl !== trackedLink) {
+              sessionStorage.setItem("dealhoan_tiktok_refreshed", `${user.id}:${data.affiliateUrl}`);
+              setTrackedLink(data.affiliateUrl);
+              setCalculatedProduct((prev) => (prev ? { ...prev, trackedLink: data.affiliateUrl } : null));
+            }
+          })
+          .catch(() => {});
+      }
     }
-  }, [user, trackedLink]);
+  }, [user, trackedLink, calculatedProduct?.platform, link]);
 
   const [readingClipboard, setReadingClipboard] = useState(false);
   const pasteCopiedLink = async () => {
@@ -853,11 +875,11 @@ export default function HomeClient({
               e.preventDefault();
               const rawUrl = extractUrlFromText(searchQuery);
               if (rawUrl) {
-                if (!isShopeeUrl(rawUrl) && !isShopeeFoodUrl(rawUrl) && !isLazadaUrl(rawUrl)) {
+                if (!isShopeeUrl(rawUrl) && !isShopeeFoodUrl(rawUrl) && !isLazadaUrl(rawUrl) && !isTikTokUrl(rawUrl)) {
                   showTopToast({
                     type: "error",
                     title: "Chưa hỗ trợ đường link này",
-                    message: "Hãy dán link Shopee, ShopeeFood hoặc Lazada.",
+                    message: "Hãy dán link Shopee, ShopeeFood, Lazada hoặc TikTok Shop.",
                   });
                   return;
                 }
@@ -940,7 +962,7 @@ export default function HomeClient({
                     const next = e.target.value;
                     setLink(next);
                     const extracted = extractUrlFromText(next);
-                    if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted) || isLazadaUrl(extracted))) {
+                    if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted) || isLazadaUrl(extracted) || isTikTokUrl(extracted))) {
                       executeCalculation(extracted);
                     }
                   }}
