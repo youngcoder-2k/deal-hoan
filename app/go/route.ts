@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import {
   buildShopeeAffiliateUrl,
+  buildShopeeFoodAffiliateUrl,
   isShopeeUrl,
+  isShopeeFoodUrl,
+  unshortenShopeeFoodUrl,
   cleanShopeeUrl,
   isLazadaUrl,
   cleanLazadaUrl,
@@ -117,7 +120,31 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
-  // 1. Shopee: Convert to official Shopee Affiliate tracking link
+  // 1. ShopeeFood: Unshorten & route directly to ShopeeFood app/web without an_redir 404
+  if (isShopeeFoodUrl(targetUrl)) {
+    const expanded = await unshortenShopeeFoodUrl(targetUrl).catch(() => targetUrl);
+    const affiliateUrl = buildShopeeFoodAffiliateUrl(expanded, {
+      affiliateId: "17333200656",
+      subId,
+    });
+    if (isZalo) {
+      return new NextResponse(renderZaloRedirectHtml(affiliateUrl, "ShopeeFood"), {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store, max-age=0",
+        },
+      });
+    }
+    return NextResponse.redirect(affiliateUrl, {
+      status: 307,
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  }
+
+  // 2. Shopee: Convert to official Shopee Affiliate tracking link
   if (isShopeeUrl(targetUrl)) {
     let cleanTarget = cleanShopeeUrl(targetUrl);
     // If it's a shortlink (s.shopee.vn, vn.shp.ee) without explicit /product/ or -i.

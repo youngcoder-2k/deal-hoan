@@ -8,7 +8,9 @@ import {
   isShopeeUrl,
   isShopeeFoodUrl,
   isLazadaUrl,
-  unshortenShopeeFoodUrl,
+  isShopeeShortlinkUrl,
+  isShopeeErrorOrGateUrl,
+  resolveShopeeShortlink,
   isTikTokUrl,
   cleanTikTokUrl,
   generateAccessTradeTikTokLink,
@@ -259,26 +261,27 @@ export async function POST(request: NextRequest) {
     const isTikTok = isTikTokUrl(rawUrl);
 
     let canonicalUrl = rawUrl;
-    if (isShopeeFood) {
-      const unshortened = await unshortenShopeeFoodUrl(rawUrl).catch(() => null);
-      if (unshortened && unshortened !== rawUrl) {
+    if (isShopeeFood || isShopeeShortlinkUrl(rawUrl)) {
+      const unshortened = await resolveShopeeShortlink(rawUrl).catch(() => null);
+      if (unshortened && unshortened !== rawUrl && !isShopeeErrorOrGateUrl(unshortened)) {
         canonicalUrl = unshortened;
       }
     }
+    const isFoodResolved = isShopeeFood || isShopeeFoodUrl(canonicalUrl);
     let ogTitle: string | null = null;
     let ogImage: string | null = null;
     let extractedPrice: number | null = null;
     let showDiscount: number | null = null;
 
     // 1. Resolve Shopee and TikTok share/direct links through the same HoanNgay provider.
-    const hoanNgayDirectPromise = (!isShopeeFood && (isShopee || isTikTok))
-      ? lookupHoanNgayProduct(rawUrl).catch(() => null)
+    const hoanNgayDirectPromise = (!isFoodResolved && (isShopee || isTikTok))
+      ? lookupHoanNgayProduct(canonicalUrl).catch(() => null)
       : Promise.resolve(null);
 
-    // 2. Concurrently expand shortlink or fetch OpenGraph metadata with quick 1800ms timeout
+    // 2. Concurrently expand shortlink or fetch OpenGraph metadata with quick 2500ms timeout
     const metadataPromise = (async () => {
       try {
-        const fetchHeaders: HeadersInit = isShopeeFood
+        const fetchHeaders: HeadersInit = isFoodResolved
           ? {
               "User-Agent":
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
@@ -321,7 +324,13 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (metaResult) {
-      canonicalUrl = metaResult.finalFetchedUrl;
+      if (
+        metaResult.finalFetchedUrl &&
+        !isShopeeErrorOrGateUrl(metaResult.finalFetchedUrl) &&
+        (!isFoodResolved || isShopeeFoodUrl(metaResult.finalFetchedUrl))
+      ) {
+        canonicalUrl = metaResult.finalFetchedUrl;
+      }
       const html = metaResult.html;
 
       // Extract destination URL if shortlink contains CONFIG.httpUrl
@@ -333,6 +342,14 @@ export async function POST(request: NextRequest) {
           try {
             unpackedUrl = httpMatch[1].replace(/\\u0026/g, "&").replace(/\\\//g, "/");
           } catch {}
+        }
+      }
+      if (!unpackedUrl) {
+        const foodEmbed = html.match(
+          /https?:\\?\/\\?\/(?:(?:www\.)?shopeefood\.vn|(?:www\.)?shopee\.vn\\?\/(?:universal-link\\?\/)?now-food)[^"'\\\s<>)]*/i
+        );
+        if (foodEmbed?.[0]) {
+          unpackedUrl = foodEmbed[0].replace(/\\u0026/g, "&").replace(/\\\//g, "/");
         }
       }
 
@@ -368,8 +385,8 @@ export async function POST(request: NextRequest) {
         }, { status: 422 });
       }
 
-      // If shortlink unpacked into a direct product URL, use it as canonicalUrl
-      if (unpackedUrl && isShopeeUrl(unpackedUrl)) {
+      // If shortlink unpacked into a direct product/food URL, use it as canonicalUrl
+      if (unpackedUrl && isShopeeUrl(unpackedUrl) && !isShopeeErrorOrGateUrl(unpackedUrl)) {
         canonicalUrl = unpackedUrl;
       }
 
@@ -389,14 +406,23 @@ export async function POST(request: NextRequest) {
           .replace(/&amp;/g, "&")
           .replace(/\s*[|–-]\s*(Shopee Việt Nam|ShopeeFood(\.vn)?|Now\.vn|Lazada\.vn|TikTok Shop|Tiki\.vn|Mua và Bán.*|Đặt Món.*)$/i, "")
           .trim();
+        const cleanedLower = cleaned.toLowerCase();
         const isGenericShopeeFood =
-          cleaned.toLowerCase().includes("đặt đồ ăn trực tuyến ở 25 tỉnh thành") ||
-          cleaned.toLowerCase().includes("giao hàng tận nơi") ||
-          cleaned.toLowerCase().includes("đặt món & giao ship tận nơi") ||
-          cleaned.toLowerCase().startsWith("shopeefood") ||
-          cleaned.toLowerCase().startsWith("now.vn");
+          cleanedLower.includes("đặt đồ ăn trực tuyến ở 25 tỉnh thành") ||
+          cleanedLower.includes("giao hàng tận nơi") ||
+          cleanedLower.includes("đặt món & giao ship tận nơi") ||
+          cleanedLower.includes("mkt single page application") ||
+          cleanedLower.includes("error_page") ||
+          cleanedLower.includes("page not found") ||
+          cleanedLower.includes("access denied") ||
+          cleanedLower.startsWith("shopeefood") ||
+          cleanedLower.startsWith("now.vn") ||
+          cleanedLower === "shopee" ||
+          cleanedLower === "error" ||
+          cleanedLower === "404" ||
+          cleanedLower === "đăng nhập";
 
-        if (!isGenericShopeeFood && cleaned.length > 3 && !cleaned.toLowerCase().startsWith("shopee việt nam")) {
+        if (!isGenericShopeeFood && cleaned.length > 3 && !cleanedLower.startsWith("shopee việt nam")) {
           ogTitle = cleaned;
         }
       }

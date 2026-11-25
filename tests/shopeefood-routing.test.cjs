@@ -98,3 +98,70 @@ test('CashbackReceipt renders ShopeeFood as dynamic 6% order-level cashback with
   assert.ok(jsonStr.includes('Hoàn 6%'), 'ShopeeFood card must clearly display Hoàn 6%');
   assert.ok(jsonStr.includes('Đơn đặt món ShopeeFood'), 'ShopeeFood card must describe price as restaurant order');
 });
+
+test('ShopeeFood shortlinks (vn.shp.ee, s.shopee.vn, spf.shopee.vn, shopeefood.vn/u/) resolve safely without error_page or 404 mangling', async () => {
+  const load = loadTs({});
+  const {
+    extractUrlFromText,
+    isShopeeFoodUrl,
+    resolveShopeeShortlink,
+    toShopeeFoodUniversalUrl,
+    buildShopeeFoodAffiliateUrl,
+  } = load('lib/deals/affiliate.ts');
+
+  // 1. Bare ShopeeFood URL inside Vietnamese share text
+  assert.equal(
+    extractUrlFromText('Đặt món ngon cùng mình: shopeefood.vn/u/abc123!'),
+    'https://shopeefood.vn/u/abc123'
+  );
+  assert.equal(
+    extractUrlFromText('Quán này ngon nè spf.shopee.vn/7fXyZ123'),
+    'https://spf.shopee.vn/7fXyZ123'
+  );
+
+  // 2. vn.shp.ee redirecting to ShopeeFood universal-link stops before login/verify gate
+  const hops = [];
+  const mockFetcher = async (url) => {
+    hops.push(url);
+    if (url === 'https://vn.shp.ee/food123') {
+      return new Response('', {
+        status: 302,
+        headers: { location: 'https://shopee.vn/universal-link/now-food/shop/1170300?utm_source=share' },
+      });
+    }
+    if (url === 'https://spf.shopee.vn/broken123') {
+      return new Response('', {
+        status: 307,
+        headers: { location: 'https://shope.ee/error_page' },
+      });
+    }
+    if (url === 'https://s.shopee.vn/ulsfood') {
+      return new Response(
+        '<html><script>var deepLinkUrl="shopeevn://home?url=https%3A%2F%2Fshopeefood.vn%2Fnow-food%2Fshop%2F998877";</script></html>',
+        { status: 200, headers: { 'content-type': 'text/html' } }
+      );
+    }
+    return new Response('', { status: 404 });
+  };
+
+  const resolvedFood = await resolveShopeeShortlink('https://vn.shp.ee/food123', { fetcher: mockFetcher });
+  assert.equal(resolvedFood, 'https://shopee.vn/universal-link/now-food/shop/1170300?utm_source=share');
+  assert.equal(isShopeeFoodUrl(resolvedFood), true);
+
+  // 3. spf.shopee.vn redirecting to error_page keeps original spf.shopee.vn host (never shopeefood.vn/error_page or shopeefood.vn/broken123)
+  const resolvedBroken = await resolveShopeeShortlink('https://spf.shopee.vn/broken123', { fetcher: mockFetcher });
+  assert.equal(resolvedBroken, 'https://spf.shopee.vn/broken123');
+  const universalSpf = toShopeeFoodUniversalUrl(resolvedBroken);
+  assert.equal(universalSpf, 'https://spf.shopee.vn/broken123');
+  assert.equal(toShopeeFoodUniversalUrl('https://shopeefood.vn/error_page'), 'https://shopeefood.vn');
+
+  // 4. s.shopee.vn returning ULS HTML bridge page extracts embedded shopeefood.vn destination
+  const resolvedUls = await resolveShopeeShortlink('https://s.shopee.vn/ulsfood', { fetcher: mockFetcher });
+  assert.equal(resolvedUls, 'https://shopeefood.vn/now-food/shop/998877');
+  assert.equal(isShopeeFoodUrl(resolvedUls), true);
+
+  // 5. buildShopeeFoodAffiliateUrl always preserves default affiliate_id even if omitted
+  const aff = buildShopeeFoodAffiliateUrl(resolvedUls, { subId: '1f162a51-8baa-404e-b16a-ca4e2d2c4b8d' });
+  assert.ok(aff.includes('affiliate_id=17333200656'));
+  assert.ok(aff.includes('sub_id=dh1f162a518baa404eb16aca4e2d2c4b8d'));
+});

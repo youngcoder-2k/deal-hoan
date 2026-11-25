@@ -13,16 +13,25 @@ export const DEFAULT_SHOPEE_AFFILIATE_ID =
 /**
  * Extracts a clean URL from a string that may contain text around it.
  * e.g.: "Mua Áo thun tại Shopee ngay: https://s.shopee.vn/abcxyz" -> "https://s.shopee.vn/abcxyz"
+ * Also handles scheme-less marketplace URLs embedded in Vietnamese share text
+ * e.g.: "Đặt món tại Quán A: shopeefood.vn/u/abc123" -> "https://shopeefood.vn/u/abc123"
  */
 export function extractUrlFromText(input: string): string {
   if (!input) return "";
   const trimmed = input.trim();
-  const match = trimmed.match(/(https?:\/\/[^\s]+)/i);
+  const match = trimmed.match(/(https?:\/\/[^\s<>"'`]+)/i);
   if (match) {
     let url = match[1];
     // Strip trailing punctuation often attached at the end of sentences
     url = url.replace(/[.,;!?)"'\]>]+$/, "");
     return url;
+  }
+  const bareMatch = trimmed.match(
+    /(?:^|[\s:(\[])((?:[a-z0-9-]+\.)?(?:shopee\.vn|shopeefood\.vn|shopeefood\.com\.vn|now\.vn|shope\.ee|shp\.ee|lazada\.vn|lzd\.co)(?:\/[^\s<>"'`]*)?)/i
+  );
+  if (bareMatch && bareMatch[1]) {
+    const bare = bareMatch[1].replace(/[.,;!?)"'\]>]+$/, "");
+    return `https://${bare}`;
   }
   return trimmed;
 }
@@ -140,7 +149,7 @@ function matchesDomain(host: string, domain: string): boolean {
 }
 
 /**
- * Checks if a URL belongs to ShopeeFood (now.vn, food.shopee.vn, shopeefood.vn, shopee.vn/now-food)
+ * Checks if a URL belongs to ShopeeFood (now.vn, food.shopee.vn, spf.shopee.vn, shopeefood.vn, shopee.vn/now-food)
  */
 export function isShopeeFoodUrl(rawUrl: string): boolean {
   const parsed = parseHost(rawUrl);
@@ -158,66 +167,186 @@ export function isShopeeFoodUrl(rawUrl: string): boolean {
     if (
       pathname.startsWith("/now-food") ||
       pathname.startsWith("/universal-link/now-food") ||
-      pathname.startsWith("/universal-link/shopeefood")
+      pathname.startsWith("/universal-link/shopeefood") ||
+      pathname.startsWith("/universal-link/food") ||
+      pathname.startsWith("/shopeefood") ||
+      pathname.startsWith("/m/shopeefood")
     ) {
       return true;
     }
   }
+  // Unwrap nested origin_link / url if already wrapped in an_redir or universal gateway
+  try {
+    const extracted = extractUrlFromText(rawUrl);
+    const full = extracted.startsWith("http://") || extracted.startsWith("https://") ? extracted : `https://${extracted}`;
+    const u = new URL(full);
+    const nested = u.searchParams.get("origin_link") || u.searchParams.get("url");
+    if (nested && nested !== rawUrl) {
+      let decoded = nested;
+      try {
+        decoded = decodeURIComponent(nested);
+      } catch {}
+      if (decoded !== rawUrl && isShopeeFoodUrl(decoded)) return true;
+    }
+  } catch {}
   return false;
 }
 
 export const DEFAULT_SHOPEEFOOD_URL = "https://shopeefood.vn";
 
-/**
- * Unshortens ShopeeFood shortlinks (e.g. shopeefood.vn/u/<slug> or food.shopee.vn/u/<slug>)
- * by performing a quick HTTP HEAD/GET with desktop User-Agent to follow the 301/302 redirect
- * to the canonical restaurant / deal URL.
- */
-export async function unshortenShopeeFoodUrl(rawUrl: string): Promise<string> {
-  if (!rawUrl) return rawUrl;
+export function isShopeeErrorOrGateUrl(rawUrl: string): boolean {
   try {
-    const extracted = extractUrlFromText(rawUrl);
-    if (!extracted.startsWith("http://") && !extracted.startsWith("https://")) {
-      return extracted;
-    }
-    const parsed = new URL(extracted);
-    const isShort =
-      parsed.pathname.startsWith("/u/") ||
-      parsed.pathname.startsWith("/s/") ||
-      parsed.hostname.includes("food.shopee");
+    const u = new URL(rawUrl);
+    const p = u.pathname.toLowerCase();
+    return (
+      p === "/error_page" ||
+      p.startsWith("/error_page/") ||
+      p.startsWith("/verify/") ||
+      p.startsWith("/buyer/login") ||
+      p === "/404" ||
+      p.startsWith("/404/")
+    );
+  } catch {
+    return false;
+  }
+}
 
-    if (!isShort) return extracted;
+export function isShopeeShortlinkUrl(rawUrl: string): boolean {
+  const parsed = parseHost(rawUrl);
+  if (!parsed) return false;
+  const { host, pathname } = parsed;
+  return (
+    host === "spf.shopee.vn" ||
+    host === "s.shopee.vn" ||
+    host === "vn.shp.ee" ||
+    matchesDomain(host, "shp.ee") ||
+    matchesDomain(host, "shope.ee") ||
+    host.includes("food.shopee") ||
+    ((matchesDomain(host, "shopeefood.vn") || matchesDomain(host, "now.vn")) &&
+      (pathname.startsWith("/u/") || pathname.startsWith("/s/")))
+  );
+}
 
-    // Use desktop Chrome UA so Shopee SGW returns an HTTP 301 Location header
-    // instead of an app-install interstitial HTML page
-    const res = await fetch(extracted, {
-      method: "GET",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      },
-      redirect: "manual",
-      signal: AbortSignal.timeout(3000),
-    });
-
-    const location = res.headers.get("location");
-    if (location) {
-      return new URL(location, extracted).toString();
-    }
-
-    // Fallback: If 200 with HTML, check if HTML contains ULS deepLinkUrl with destination url=
-    if (res.ok) {
-      const html = await res.text();
-      const matchUrl = html.match(/[?&]url=([^"&'\s]+)/i);
-      if (matchUrl && matchUrl[1]) {
-        try {
-          return decodeURIComponent(matchUrl[1]);
-        } catch {}
+function extractEmbeddedShopeeDestination(html: string): string | null {
+  if (!html) return null;
+  // 1. Shopee CONFIG.httpUrl
+  const configMatch = html.match(/CONFIG\s*=\s*(\{[\s\S]*?\});/);
+  if (configMatch) {
+    const httpMatch = configMatch[1].match(/httpUrl:\s*"([^"]+)"/);
+    if (httpMatch?.[1]) {
+      const candidate = httpMatch[1].replace(/\\u0026/g, "&").replace(/\\\//g, "/");
+      if (candidate.startsWith("http") && !isShopeeErrorOrGateUrl(candidate)) {
+        return candidate;
       }
     }
-  } catch {}
-  return rawUrl;
+  }
+  // 2. Direct ShopeeFood or universal-link/now-food URL embedded in ULS bridge HTML / scripts
+  const directFoodMatch = html.match(
+    /https?:\\?\/\\?\/(?:(?:www\.)?shopeefood\.vn|(?:www\.)?shopee\.vn\\?\/(?:universal-link\\?\/)?now-food)[^"'\\\s<>)]*/i
+  );
+  if (directFoodMatch?.[0]) {
+    const candidate = directFoodMatch[0].replace(/\\u0026/g, "&").replace(/\\\//g, "/");
+    if (!isShopeeErrorOrGateUrl(candidate)) return candidate;
+  }
+  // 3. Query param url=... inside ULS deepLinkUrl
+  const matchUrl = html.match(/[?&](?:url|origin_link)=([^"&'\s]+)/i);
+  if (matchUrl?.[1]) {
+    try {
+      const decoded = decodeURIComponent(matchUrl[1]);
+      if (decoded.startsWith("http") && !isShopeeErrorOrGateUrl(decoded)) {
+        return decoded;
+      }
+    } catch {}
+  }
+  // 4. Encoded shopeefood.vn / now-food inside deepLinkUrl (e.g. shopeevn://...now-food%2Fshop%2F123456)
+  const encodedFoodPath = html.match(/(?:now-food|shopeefood)(?:%2F|\/)(?:shop|presale-deals-detail)(?:%2F|\/)([0-9A-Za-z_-]+)/i);
+  if (encodedFoodPath) {
+    const seg = encodedFoodPath[0].replace(/%2F/gi, "/").replace(/^shopeefood\//i, "now-food/");
+    return `https://shopeefood.vn/${seg}`;
+  }
+  return null;
+}
+
+/**
+ * Safely resolves Shopee & ShopeeFood shortlinks (spf.shopee.vn, shopeefood.vn/u/, food.shopee.vn,
+ * vn.shp.ee, s.shopee.vn, shope.ee) hop-by-hop using manual redirects so cloud IPs never lose the
+ * real restaurant/product URL when Shopee redirects downstream to /buyer/login or /error_page.
+ */
+export async function resolveShopeeShortlink(
+  rawUrl: string,
+  options?: { fetcher?: typeof fetch; maxHops?: number }
+): Promise<string> {
+  if (!rawUrl) return rawUrl;
+  const extracted = extractUrlFromText(rawUrl);
+  if (!extracted.startsWith("http://") && !extracted.startsWith("https://")) {
+    return extracted;
+  }
+  if (!isShopeeShortlinkUrl(extracted)) {
+    return extracted;
+  }
+
+  const fetcher = options?.fetcher ?? fetch;
+  const maxHops = options?.maxHops ?? 4;
+  let current = extracted;
+
+  for (let hop = 0; hop < maxHops; hop++) {
+    if (!isShopeeShortlinkUrl(current)) break;
+    try {
+      const res = await fetcher(current, {
+        method: "GET",
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "vi-VN,vi;q=0.9,en-US;q=0.8",
+        },
+        redirect: "manual",
+        signal: AbortSignal.timeout(3000),
+      });
+
+      const location = res.headers.get("location");
+      if (location) {
+        const nextUrl = new URL(location, current).toString();
+        if (isShopeeErrorOrGateUrl(nextUrl)) {
+          break;
+        }
+        current = nextUrl;
+        // Stop immediately once we reach a canonical restaurant or product URL
+        if (
+          !isShopeeShortlinkUrl(current) &&
+          (isShopeeFoodUrl(current) || current.includes("/product/") || /-i\.\d+\.\d+/.test(current))
+        ) {
+          return current;
+        }
+        continue;
+      }
+
+      if (res.ok) {
+        const html = await res.text();
+        const embedded = extractEmbeddedShopeeDestination(html);
+        if (embedded && embedded !== current && !isShopeeErrorOrGateUrl(embedded)) {
+          current = embedded;
+          if (!isShopeeShortlinkUrl(current)) return current;
+          continue;
+        }
+      }
+      break;
+    } catch {
+      break;
+    }
+  }
+
+  return current;
+}
+
+/**
+ * Unshortens ShopeeFood shortlinks (e.g. shopeefood.vn/u/<slug>, spf.shopee.vn/<slug>, food.shopee.vn/u/<slug>)
+ */
+export async function unshortenShopeeFoodUrl(
+  rawUrl: string,
+  options?: { fetcher?: typeof fetch }
+): Promise<string> {
+  return resolveShopeeShortlink(rawUrl, options);
 }
 
 /**
@@ -232,13 +361,24 @@ export function toShopeeFoodUniversalUrl(rawUrl?: string): string {
     if (!extracted.startsWith("http://") && !extracted.startsWith("https://")) {
       return DEFAULT_SHOPEEFOOD_URL;
     }
+    if (isShopeeErrorOrGateUrl(extracted)) {
+      return DEFAULT_SHOPEEFOOD_URL;
+    }
     const parsed = new URL(extracted);
+    const host = parsed.hostname.toLowerCase();
+
+    // Never mangle an unexpanded shortlink host (e.g. spf.shopee.vn/<code>) onto shopeefood.vn/<code> (which 404s)
+    if (host === "spf.shopee.vn" || host === "s.shopee.vn" || host === "vn.shp.ee" || matchesDomain(host, "shp.ee") || matchesDomain(host, "shope.ee")) {
+      return parsed.toString();
+    }
 
     let pathname = parsed.pathname;
     if (pathname.startsWith("/universal-link/now-food")) {
       pathname = pathname.replace(/^\/universal-link/, "");
     } else if (pathname.startsWith("/universal-link/shopeefood")) {
       pathname = pathname.replace(/^\/universal-link\/shopeefood/, "/now-food");
+    } else if (pathname.startsWith("/universal-link/food")) {
+      pathname = pathname.replace(/^\/universal-link\/food/, "/now-food");
     }
 
     const cleanPath = pathname.replace(/^\/+/, "");
@@ -274,13 +414,14 @@ export function buildShopeeFoodAffiliateUrl(
   }
 ): string {
   const targetUrl = toShopeeFoodUniversalUrl(rawUrl);
+  const affiliateId = options?.affiliateId || DEFAULT_SHOPEE_AFFILIATE_ID;
   try {
     const parsed = new URL(targetUrl);
     if (options?.subId) {
       parsed.searchParams.set("sub_id", toShopeeSubId(options.subId));
     }
-    if (options?.affiliateId) {
-      parsed.searchParams.set("affiliate_id", options.affiliateId);
+    if (affiliateId) {
+      parsed.searchParams.set("affiliate_id", affiliateId);
     }
     return parsed.toString();
   } catch {

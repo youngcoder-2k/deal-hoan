@@ -940,7 +940,7 @@ export default function HomeClient({
                     const next = e.target.value;
                     setLink(next);
                     const extracted = extractUrlFromText(next);
-                    if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted))) {
+                    if (extracted && (isShopeeUrl(extracted) || isShopeeFoodUrl(extracted) || isLazadaUrl(extracted))) {
                       executeCalculation(extracted);
                     }
                   }}
@@ -948,6 +948,7 @@ export default function HomeClient({
                     const pasted = e.clipboardData.getData("text");
                     const extracted = extractUrlFromText(pasted) || pasted.trim();
                     if (extracted) {
+                      e.preventDefault();
                       setLink(extracted);
                       executeCalculation(extracted);
                     }
